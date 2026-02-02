@@ -1,8 +1,8 @@
 name: trydos_wallet
 description: "مكتبة محفظة Trydos - سحب، إيداع، ومعاملات. صفحة البداية وواجهات المحفظة."
 version: 0.0.1
-homepage: https://github.com/your-username/trydos_wallet
-repository: https://github.com/your-username/trydos_wallet
+homepage: https://gitlab.com/trydos_app/trydos_wallet
+repository: https://gitlab.com/trydos_app/trydos_wallet.git
 
 environment:
   sdk: ^3.9.2
@@ -22,6 +22,7 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  uses-material-design: true
 
   # To add assets to your package, add an assets section, like this:
   # assets:
