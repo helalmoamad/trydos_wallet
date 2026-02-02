@@ -1,0 +1,12 @@
+name: trydos_wallet_example
+description: تطبيق مثال لعرض وتصميم شاشات المحفظة.
+publish_to: 'none'
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  trydos_wallet:
+    path: ..
