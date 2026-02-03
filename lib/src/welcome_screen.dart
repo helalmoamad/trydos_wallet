@@ -14,11 +14,11 @@ class TrydosWalletWelcomeScreen extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(
-              'مرحبا بك في المحفظه',
+              'تريدوس - مرحبا بك في المحفظه',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
         ),
