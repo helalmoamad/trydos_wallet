@@ -5,3 +5,5 @@
 library trydos_wallet;
 
 export 'src/welcome_screen.dart';
+export 'src/styles.dart';
+export 'src/assets.dart';

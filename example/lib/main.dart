@@ -17,6 +17,7 @@ class TrydosWalletExampleApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+        fontFamily: 'packages/trydos_wallet/Quicksand',
       ),
       home: const TrydosWalletWelcomeScreen(),
     );
