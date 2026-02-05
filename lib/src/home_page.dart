@@ -1,20 +1,72 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'styles.dart';
+
 import 'assets.dart';
+import 'bloc/bloc.dart';
+import 'models/models.dart';
+import 'services/currencies_api_service.dart';
+import 'styles.dart';
 
 /// الصفحة الرئيسية للمحفظة الرقمية.
-class TrydosWalletHomePage extends StatefulWidget {
+class TrydosWalletHomePage extends StatelessWidget {
   const TrydosWalletHomePage({super.key});
 
   @override
-  State<TrydosWalletHomePage> createState() => _TrydosWalletHomePageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => PaginatedApiBloc<Currency>(
+        fetcher: (page, limit) => CurrenciesApiService().getCurrencies(
+          CurrenciesQueryParams(page: page, limit: limit),
+        ),
+        defaultErrorMessage: 'فشل تحميل العملات',
+      )..add(const ApiLoadRequested()),
+      child: const _TrydosWalletHomePageContent(),
+    );
+  }
 }
 
-class _TrydosWalletHomePageState extends State<TrydosWalletHomePage> {
+class _TrydosWalletHomePageContent extends StatefulWidget {
+  const _TrydosWalletHomePageContent();
+
+  @override
+  State<_TrydosWalletHomePageContent> createState() =>
+      _TrydosWalletHomePageContentState();
+}
+
+class _TrydosWalletHomePageContentState
+    extends State<_TrydosWalletHomePageContent> {
   int _selectedIndex = 0;
-  int _selectedTransactionIndex = 0; // لحفظ العنصر المختار
-  final List<String> _selectedCurrencies = []; // قائمة العملات المختارة للفلترة
+  int _selectedTransactionIndex = 0;
+  final List<String> _selectedCurrencies = [];
+  final ScrollController _currenciesScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _currenciesScrollController.addListener(_onCurrenciesScroll);
+  }
+
+  @override
+  void dispose() {
+    _currenciesScrollController.removeListener(_onCurrenciesScroll);
+    _currenciesScrollController.dispose();
+    super.dispose();
+  }
+
+  void _onCurrenciesScroll() {
+    final bloc = context.read<PaginatedApiBloc<Currency>>();
+    final state = bloc.state;
+    if (state is! ApiLoaded<Currency> ||
+        !state.hasNext ||
+        state.isLoadingMore) {
+      return;
+    }
+    final pos = _currenciesScrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 50) {
+      bloc.add(const ApiLoadMoreRequested());
+    }
+  }
 
   // دالة مساعدة لتوليد نص عنوان المعاملات بناءً على الفلترة
   String get _transactionsTitle {
@@ -104,73 +156,124 @@ class _TrydosWalletHomePageState extends State<TrydosWalletHomePage> {
                       color: const Color(0xff1D1D1D),
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: () {},
-                    icon: SvgPicture.asset(
-                      TrydosWalletAssets.addCurrency,
-                      package: TrydosWalletStyles.packageName,
-                    ),
-                    label: Text(
-                      'Add Currency',
-                      style: TrydosWalletStyles.bodySmall.copyWith(
-                        color: const Color(0xFF388CFF),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
+                  BlocBuilder<PaginatedApiBloc<Currency>, ApiState<Currency>>(
+                    buildWhen: (prev, curr) =>
+                        curr is ApiLoading<Currency> ||
+                        curr is ApiLoaded<Currency> ||
+                        curr is ApiError<Currency>,
+                    builder: (context, state) {
+                      final isLoading = state is ApiLoading<Currency>;
+                      return TextButton.icon(
+                        onPressed: isLoading
+                            ? null
+                            : () => context
+                                  .read<PaginatedApiBloc<Currency>>()
+                                  .add(const ApiRefreshRequested()),
+                        icon: SvgPicture.asset(
+                          TrydosWalletAssets.addCurrency,
+                          package: TrydosWalletStyles.packageName,
+                        ),
+                        label: Text(
+                          'Add Currency',
+                          style: TrydosWalletStyles.bodySmall.copyWith(
+                            color: const Color(0xFF388CFF),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
             ),
 
-            // Balance Cards
+            // Balance Cards من API عبر BlocBuilder
             SizedBox(
               height: 120,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                children: [
-                  BalanceCard(
-                    symbol: '\$',
-                    currencyName: 'American Dollars',
-                    amount: '1000',
-                    currencyCode: 'USD',
-                    color: _selectedCurrencies.contains('USD')
-                        ? const Color(0xff315391)
-                        : const Color(0xFF3C3C3C),
-                    isSelected: _selectedCurrencies.contains('USD'),
-                    onTap: () {
-                      setState(() {
-                        if (_selectedCurrencies.contains('USD')) {
-                          _selectedCurrencies.remove('USD');
-                        } else {
-                          _selectedCurrencies.add('USD');
-                        }
-                      });
+              child:
+                  BlocBuilder<PaginatedApiBloc<Currency>, ApiState<Currency>>(
+                    builder: (context, state) {
+                      if (state is ApiInitial<Currency> ||
+                          state is ApiLoading<Currency>) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (state is ApiError<Currency>) {
+                        return Center(
+                          child: TextButton(
+                            onPressed: () => context
+                                .read<PaginatedApiBloc<Currency>>()
+                                .add(const ApiRefreshRequested()),
+                            child: const Text('إعادة المحاولة'),
+                          ),
+                        );
+                      }
+                      final loadedState = state is ApiLoaded<Currency>
+                          ? state
+                          : null;
+                      final currencies = loadedState?.items ?? <Currency>[];
+                      final hasNext = loadedState?.hasNext ?? false;
+                      final isLoadingMore = loadedState?.isLoadingMore ?? false;
+
+                      return ListView.builder(
+                        controller: _currenciesScrollController,
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        itemCount: currencies.length + (hasNext ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == currencies.length) {
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: SizedBox(
+                                width: 40,
+                                child: isLoadingMore
+                                    ? const Center(
+                                        child: SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      )
+                                    : const SizedBox.shrink(),
+                              ),
+                            );
+                          }
+                          final currency = currencies[index];
+                          return Padding(
+                            padding: EdgeInsets.only(left: index > 0 ? 5 : 0),
+                            child: BalanceCard(
+                              symbolImageUrl: currency.symbolImageUrl,
+                              symbol: currency.symbol,
+                              currencyName: currency.displayName.isNotEmpty
+                                  ? currency.displayName
+                                  : currency.name,
+                              amount: '550',
+                              currencyCode: currency.symbol,
+                              color:
+                                  _selectedCurrencies.contains(currency.symbol)
+                                  ? const Color(0xff315391)
+                                  : const Color(0xFF3C3C3C),
+                              isSelected: _selectedCurrencies.contains(
+                                currency.symbol,
+                              ),
+                              onTap: () {
+                                setState(() {
+                                  final code = currency.symbol;
+                                  if (_selectedCurrencies.contains(code)) {
+                                    _selectedCurrencies.remove(code);
+                                  } else {
+                                    _selectedCurrencies.add(code);
+                                  }
+                                });
+                              },
+                            ),
+                          );
+                        },
+                      );
                     },
                   ),
-                  const SizedBox(width: 5),
-                  BalanceCard(
-                    flag: '🇸🇾', // Use a flag or icon if available
-                    currencyName: 'Syrian Pounds',
-                    amount: '1000',
-                    currencyCode: 'SYP',
-                    color: _selectedCurrencies.contains('SYP')
-                        ? const Color(0xff315391)
-                        : const Color(0xFF3C3C3C),
-                    isSelected: _selectedCurrencies.contains('SYP'),
-                    onTap: () {
-                      setState(() {
-                        if (_selectedCurrencies.contains('SYP')) {
-                          _selectedCurrencies.remove('SYP');
-                        } else {
-                          _selectedCurrencies.add('SYP');
-                        }
-                      });
-                    },
-                  ),
-                ],
-              ),
             ),
 
             const SizedBox(height: 15),
@@ -367,7 +470,10 @@ class _TrydosWalletHomePageState extends State<TrydosWalletHomePage> {
 }
 
 /// ويدجت لعرض بطاقة الرصيد.
+/// [symbolImageUrl] صورة العملة (png) من الـ API - تُعرض عند توفرها.
+/// [symbol] أو [flag] كبديل عند عدم وجود صورة.
 class BalanceCard extends StatelessWidget {
+  final String? symbolImageUrl;
   final String? symbol;
   final String? flag;
   final String currencyName;
@@ -379,6 +485,7 @@ class BalanceCard extends StatelessWidget {
 
   const BalanceCard({
     super.key,
+    this.symbolImageUrl,
     this.symbol,
     this.flag,
     required this.currencyName,
@@ -401,8 +508,7 @@ class BalanceCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
-              // ignore: deprecated_member_use
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -415,16 +521,19 @@ class BalanceCard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (symbol != null)
-                  Text(
-                    symbol!,
-                    style: TrydosWalletStyles.headlineMedium.copyWith(
-                      color: Colors.white,
-                      fontSize: 20,
+                if (symbolImageUrl != null && symbolImageUrl!.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      symbolImageUrl!,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _buildFallbackIcon(),
                     ),
                   )
-                else if (flag != null)
-                  Text(flag!, style: const TextStyle(fontSize: 24)),
+                else
+                  _buildFallbackIcon(),
                 const SizedBox(height: 4),
                 Text(
                   currencyName,
@@ -462,6 +571,30 @@ class BalanceCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFallbackIcon() {
+    if (symbol != null && symbol!.isNotEmpty) {
+      return Text(
+        symbol!,
+        style: TrydosWalletStyles.headlineMedium.copyWith(
+          color: Colors.white,
+          fontSize: 20,
+        ),
+      );
+    }
+    if (flag != null) {
+      return Text(flag!, style: const TextStyle(fontSize: 24));
+    }
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Icon(Icons.currency_exchange, color: Colors.white),
     );
   }
 }
