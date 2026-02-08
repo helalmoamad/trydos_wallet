@@ -3,9 +3,9 @@ import 'dart:io' show Platform;
 import '../api/api_client.dart';
 import '../api/api_headers.dart';
 
-/// تهيئة المكتبة - يُمرَّر عند استدعاء المكتبة من التطبيق المستهلك.
+/// Library config - passed when initializing from the consuming app.
 ///
-/// يحتوي على baseURL، التوكن، اللغة، وإصدار التطبيق.
+/// Contains baseURL, token, language, and app version.
 class TrydosWalletConfig {
   TrydosWalletConfig({
     required this.baseUrl,
@@ -14,7 +14,7 @@ class TrydosWalletConfig {
     this.isKurdish = false,
     this.applicationVersion = '1.0.0',
     this.debug = false,
-    /// تجاوز التحقق من شهادة SSL (للتطوير فقط - لا تستخدمه في الإنتاج).
+    /// Skip SSL certificate verification (dev only - do not use in production).
     this.allowBadCertificate = false,
   });
 
@@ -42,7 +42,7 @@ class TrydosWalletConfig {
       );
 }
 
-/// مخزن التهيئة العام - يُعيّن مرة واحدة عند بدء التطبيق.
+/// Global config store - set once at app startup.
 class TrydosWallet {
   static TrydosWalletConfig? _config;
   static ApiClient? _apiClient;
@@ -65,13 +65,13 @@ class TrydosWallet {
     return _apiClient!;
   }
 
-  /// تهيئة المكتبة - استدعِها في main() أو عند بدء التطبيق.
+  /// Initialize the library - call in main() or at app startup.
   static void init(TrydosWalletConfig config) {
     _config = config;
     _apiClient = config.createApiClient();
   }
 
-  /// تحديث التوكن لاحقاً (مثلاً بعد تسجيل الدخول).
+  /// Update the token later (e.g. after login).
   static void updateToken(String? token) {
     if (_config == null) return;
     _config = TrydosWalletConfig(

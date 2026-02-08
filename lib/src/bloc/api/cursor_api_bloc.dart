@@ -1,42 +1,41 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../api/api.dart';
-import '../../models/paginated_response.dart';
+import '../../models/cursor_paginated_response.dart';
 
 import 'api_event.dart';
 import 'api_state.dart';
 
-/// نوع الدالة التي تجلب بيانات من API (paginated).
-typedef ApiFetcher<T> =
-    Future<ApiResult<PaginatedResponse<T>>> Function(int page, int limit);
+/// نوع الدالة التي تجلب بيانات cursor-paginated.
+typedef CursorApiFetcher<T> = Future<ApiResult<CursorPaginatedResponse<T>>>
+    Function(String? cursor, int limit);
 
-/// Bloc عام لإدارة بيانات API مع pagination.
-/// يُستخدم مع أي API يرجع [PaginatedResponse].
-class PaginatedApiBloc<T> extends Bloc<ApiEvent, ApiState<T>> {
-  PaginatedApiBloc({
-    required ApiFetcher<T> fetcher,
+/// Bloc عام لـ API مع cursor-based pagination.
+class CursorPaginatedApiBloc<T> extends Bloc<ApiEvent, ApiState<T>> {
+  CursorPaginatedApiBloc({
+    required CursorApiFetcher<T> fetcher,
     this.limit = 10,
     this.defaultErrorMessage = 'Failed to load data',
-  }) : _fetcher = fetcher,
-       super(const ApiInitial()) {
+  })  : _fetcher = fetcher,
+        super(const ApiInitial()) {
     on<ApiLoadRequested>(_onLoadRequested);
     on<ApiRefreshRequested>(_onRefreshRequested);
     on<ApiLoadMoreRequested>(_onLoadMoreRequested);
   }
 
-  final ApiFetcher<T> _fetcher;
+  final CursorApiFetcher<T> _fetcher;
   final int limit;
   final String defaultErrorMessage;
 
-  int _currentPage = 0;
+  String? _nextCursor;
 
   Future<void> _onLoadRequested(
     ApiLoadRequested event,
     Emitter<ApiState<T>> emit,
   ) async {
     emit(const ApiLoading());
-    _currentPage = 0;
-    await _fetch(emit, page: 0, append: false);
+    _nextCursor = null;
+    await _fetch(emit, cursor: null, append: false);
   }
 
   Future<void> _onRefreshRequested(
@@ -44,8 +43,8 @@ class PaginatedApiBloc<T> extends Bloc<ApiEvent, ApiState<T>> {
     Emitter<ApiState<T>> emit,
   ) async {
     emit(const ApiLoading());
-    _currentPage = 0;
-    await _fetch(emit, page: 0, append: false);
+    _nextCursor = null;
+    await _fetch(emit, cursor: null, append: false);
   }
 
   Future<void> _onLoadMoreRequested(
@@ -56,6 +55,7 @@ class PaginatedApiBloc<T> extends Bloc<ApiEvent, ApiState<T>> {
     if (state is! ApiLoaded<T> || !state.hasNext || state.isLoadingMore) {
       return;
     }
+    if (_nextCursor == null) return;
 
     emit(
       ApiLoaded<T>(
@@ -67,7 +67,7 @@ class PaginatedApiBloc<T> extends Bloc<ApiEvent, ApiState<T>> {
 
     await _fetch(
       emit,
-      page: _currentPage + 1,
+      cursor: _nextCursor,
       append: true,
       previousItems: state.items,
     );
@@ -75,20 +75,20 @@ class PaginatedApiBloc<T> extends Bloc<ApiEvent, ApiState<T>> {
 
   Future<void> _fetch(
     Emitter<ApiState<T>> emit, {
-    required int page,
+    required String? cursor,
     required bool append,
     List<T> previousItems = const [],
   }) async {
     try {
-      final result = await _fetcher(page, limit);
+      final result = await _fetcher(cursor, limit);
       if (result.isSuccess && result.data != null) {
         final data = result.data!;
-        _currentPage = data.page;
+        _nextCursor = data.hasNextPage ? data.endCursor : null;
         final items = append ? [...previousItems, ...data.items] : data.items;
         emit(
           ApiLoaded<T>(
             items: items,
-            hasNext: data.hasNext,
+            hasNext: data.hasNextPage,
             isLoadingMore: false,
           ),
         );
@@ -102,7 +102,9 @@ class PaginatedApiBloc<T> extends Bloc<ApiEvent, ApiState<T>> {
             ),
           );
         } else {
-          emit(ApiError<T>(result.error?.message ?? defaultErrorMessage));
+          emit(
+            ApiError<T>(result.error?.message ?? defaultErrorMessage),
+          );
         }
       }
     } catch (e) {

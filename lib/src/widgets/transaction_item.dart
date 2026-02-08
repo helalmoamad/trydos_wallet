@@ -1,0 +1,113 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+import '../styles.dart';
+
+/// ويدجت لعرض معاملة واحدة في القائمة.
+class TransactionItem extends StatelessWidget {
+  final String icon;
+  final String directionIcon;
+  final String title;
+  final Color titleColor;
+  final String subtitle;
+  final Color subtitleColor;
+  final String amount;
+  final Color amountColor;
+  final String status;
+  final Color statusColor;
+  final bool isSelected;
+  final VoidCallback? onTap;
+
+  const TransactionItem({
+    super.key,
+    required this.icon,
+    required this.directionIcon,
+    required this.title,
+    this.titleColor = Colors.black87,
+    required this.subtitle,
+    this.subtitleColor = Colors.grey,
+    required this.amount,
+    this.amountColor = Colors.black,
+    required this.status,
+    this.statusColor = Colors.grey,
+    this.isSelected = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 5),
+        padding: const EdgeInsets.only(right: 14, bottom: 8, left: 10, top: 8),
+        decoration: BoxDecoration(
+          border: isSelected
+              ? Border.all(color: const Color(0xFFD3D3D3))
+              : Border.all(color: Colors.transparent),
+          color: const Color(0xFFFCFCFC),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          children: [
+            Column(
+              children: [
+                SvgPicture.asset(icon, package: TrydosWalletStyles.packageName),
+                const SizedBox(height: 4),
+                SvgPicture.asset(
+                  directionIcon,
+                  package: TrydosWalletStyles.packageName,
+                ),
+              ],
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TrydosWalletStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 13,
+                      color: titleColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TrydosWalletStyles.bodySmall.copyWith(
+                      color: subtitleColor,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  amount,
+                  style: TrydosWalletStyles.bodyMedium.copyWith(
+                    fontWeight: isSelected ? FontWeight.bold : null,
+                    color: amountColor,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  status,
+                  style: TrydosWalletStyles.bodySmall.copyWith(
+                    color: statusColor,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -1,19 +1,19 @@
-/// أحداث عامة لأي Bloc يستدعي API (paginated).
+/// Common events for API-backed Bloc (paginated).
 sealed class ApiEvent {
   const ApiEvent();
 }
 
-/// تحميل البيانات من API.
+/// Load data from API.
 final class ApiLoadRequested extends ApiEvent {
   const ApiLoadRequested();
 }
 
-/// إعادة تحميل البيانات (سحب للتحديث أو زر Refresh).
+/// Refresh data (pull-to-refresh or Refresh button).
 final class ApiRefreshRequested extends ApiEvent {
   const ApiRefreshRequested();
 }
 
-/// تحميل المزيد عند الوصول لنهاية السكرول (pagination).
+/// Load more when reaching scroll end (pagination).
 final class ApiLoadMoreRequested extends ApiEvent {
   const ApiLoadMoreRequested();
 }

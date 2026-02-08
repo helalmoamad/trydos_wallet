@@ -1,19 +1,19 @@
-/// حالات عامة لأي Bloc يستدعي API (paginated).
+/// Common states for API-backed Bloc (paginated).
 sealed class ApiState<T> {
   const ApiState();
 }
 
-/// الحالة الأولية - لم يُطلب التحميل بعد.
+/// Initial state - load not requested yet.
 final class ApiInitial<T> extends ApiState<T> {
   const ApiInitial();
 }
 
-/// جارٍ تحميل البيانات.
+/// Loading data.
 final class ApiLoading<T> extends ApiState<T> {
   const ApiLoading();
 }
 
-/// تم تحميل البيانات بنجاح.
+/// Data loaded successfully.
 final class ApiLoaded<T> extends ApiState<T> {
   const ApiLoaded({
     required this.items,
@@ -26,7 +26,7 @@ final class ApiLoaded<T> extends ApiState<T> {
   final bool isLoadingMore;
 }
 
-/// فشل التحميل.
+/// Load failed.
 final class ApiError<T> extends ApiState<T> {
   const ApiError(this.message);
   final String message;

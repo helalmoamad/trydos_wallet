@@ -5,7 +5,7 @@ import 'package:trydos_wallet/src/home_page.dart';
 import 'styles.dart';
 import 'assets.dart';
 
-/// الشاشة الافتتاحية (Splash Screen) للمحفظة.
+/// Wallet splash screen. Preloads home page data during 5 seconds.
 class TrydosWalletWelcomeScreen extends StatefulWidget {
   const TrydosWalletWelcomeScreen({super.key});
 
@@ -18,6 +18,7 @@ class _TrydosWalletWelcomeScreenState extends State<TrydosWalletWelcomeScreen>
     with SingleTickerProviderStateMixin {
   double _progress = 0.0;
   late Timer _timer;
+  bool _showSplash = true;
 
   @override
   void initState() {
@@ -25,7 +26,7 @@ class _TrydosWalletWelcomeScreenState extends State<TrydosWalletWelcomeScreen>
     _startSteppedProgress();
   }
 
-  /// محاكاة للتحميل على دفعات خلال 5 ثوانٍ
+  /// Stepped progress over 5 seconds while data loads in background
   void _startSteppedProgress() {
     const totalSteps = 10;
     const stepDuration = Duration(milliseconds: 500); // 500ms * 10 = 5 seconds
@@ -39,15 +40,9 @@ class _TrydosWalletWelcomeScreenState extends State<TrydosWalletWelcomeScreen>
 
       if (currentStep >= totalSteps) {
         timer.cancel();
-        _navigateToMain();
+        setState(() => _showSplash = false);
       }
     });
-  }
-
-  void _navigateToMain() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const TrydosWalletHomePage()),
-    );
   }
 
   @override
@@ -55,6 +50,33 @@ class _TrydosWalletWelcomeScreenState extends State<TrydosWalletWelcomeScreen>
     _timer.cancel();
     super.dispose();
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Stack(
+        children: [
+        const TrydosWalletHomePage(),
+        AnimatedOpacity(
+          opacity: _showSplash ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 300),
+          onEnd: () {},
+          child: IgnorePointer(
+            ignoring: !_showSplash,
+            child: _SplashOverlay(progress: _progress),
+          ),
+        ),
+      ],
+      ),
+    );
+  }
+}
+
+class _SplashOverlay extends StatelessWidget {
+  final double progress;
+
+  const _SplashOverlay({required this.progress});
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +89,7 @@ class _TrydosWalletWelcomeScreenState extends State<TrydosWalletWelcomeScreen>
           children: [
             const Spacer(flex: 3),
 
-            // الجزء العلوي: الشعار والنص
+            // Logo section
             SizedBox(
               width: double.infinity,
               child: Column(
@@ -89,34 +111,34 @@ class _TrydosWalletWelcomeScreenState extends State<TrydosWalletWelcomeScreen>
 
             const Spacer(flex: 4),
 
-            // الجزء الأوسط: شريط التحميل وكلمة Safe
+            // Progress bar and Safe text
             SizedBox(
               width: double.infinity,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // شريط التحميل المخصص
+                  // Custom progress bar
                   Container(
-                    width: 180, // عرض الشاشة كما في الصورة
+                    width: 180,
                     height: 10,
                     decoration: BoxDecoration(
-                      color: Colors.white, // قلبه أبيض
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(15),
                       border: Border.all(
-                        color: const Color(0xFF707070), // اللون الخارجي
+                        color: const Color(0xFF707070),
                         width: 0.8,
                       ),
                     ),
-                    padding: const EdgeInsets.all(1.5), // مسافة الحشو الداخلية
+                    padding: const EdgeInsets.all(1.5),
                     child: Stack(
                       children: [
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 400),
                           curve: Curves.easeInOut,
-                          width: 177 * _progress,
+                          width: 177 * progress,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF3066CC), // اللون الأزرق
+                            color: const Color(0xFF3066CC),
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
@@ -139,7 +161,7 @@ class _TrydosWalletWelcomeScreenState extends State<TrydosWalletWelcomeScreen>
 
             const Spacer(flex: 2),
 
-            // الجزء السفلي: Powered By
+            // Powered By section
             Padding(
               padding: const EdgeInsets.only(bottom: 40),
               child: Center(

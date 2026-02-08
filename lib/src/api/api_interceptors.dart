@@ -56,13 +56,13 @@ class ApiDebugInterceptor extends Interceptor {
     _log('$prefix RESPONSE [FAILED]');
     _log('${err.requestOptions.method} ${err.requestOptions.uri}');
     _log('Error Type: ${err.type}');
-    _log('Status: ${res?.statusCode ?? "N/A (لا يوجد استجابة من الخادم)"}');
+    _log('Status: ${res?.statusCode ?? "N/A (no server response)"}');
     _log('Message: ${err.message ?? "—"}');
     _log('Underlying Error: ${err.error ?? "—"}');
     if (res?.data != null) {
       _log('Response Data: ${res!.data}');
     } else {
-      _log('Response Data: N/A (ربما خطأ شبكة، انقطاع، أو timeout)');
+      _log('Response Data: N/A (network error, disconnect, or timeout)');
     }
     _log('StackTrace: ${err.stackTrace}');
     _log('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
