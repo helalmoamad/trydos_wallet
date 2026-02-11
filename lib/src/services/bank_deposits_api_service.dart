@@ -22,6 +22,21 @@ class BankDepositsApiService {
     );
   }
 
+  /// Get user deposit requests (paginated).
+  Future<ApiResult<PaginatedResponse<BankDepositRequest>>> getDepositRequests({
+    int page = 0,
+    int limit = 10,
+  }) async {
+    return _client.get<PaginatedResponse<BankDepositRequest>>(
+      ApiPaths.bankDeposits,
+      queryParameters: {'page': page, 'limit': limit},
+      fromJson: (d) => PaginatedResponse<BankDepositRequest>.fromJson(
+        d as Map<String, dynamic>,
+        (e) => BankDepositRequest.fromJson(e as Map<String, dynamic>),
+      ),
+    );
+  }
+
   /// Create bank deposit request.
   Future<ApiResult<BankDepositResponse>> createDeposit({
     required String bankId,

@@ -73,7 +73,7 @@ class _DepositModalState extends State<DepositModal> {
     if (amount == null || amount <= 0) {
       return;
     }
-    _debounceTimer = Timer(const Duration(seconds: 2), () {
+    _debounceTimer = Timer(const Duration(seconds: 1), () {
       _fetchFees();
     });
   }
@@ -334,21 +334,13 @@ class _DepositModalState extends State<DepositModal> {
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: const Color(0xffE0E0E0)),
                           ),
-                          child: Column(
-                            children: [
-                              Text(
-                                state.message,
-                                style: TrydosWalletStyles.bodySmall.copyWith(
-                                  color: Colors.red,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () => context
-                                    .read<PaginatedApiBloc<Bank>>()
-                                    .add(const ApiRefreshRequested()),
-                                child: const Text('Retry'),
-                              ),
-                            ],
+                          child: Center(
+                            child: TextButton(
+                              onPressed: () => context
+                                  .read<PaginatedApiBloc<Bank>>()
+                                  .add(const ApiRefreshRequested()),
+                              child: const Text('Retry'),
+                            ),
                           ),
                         );
                       }
@@ -523,7 +515,25 @@ class _DepositModalState extends State<DepositModal> {
                               ),
                             ),
                             Text(
-                              '${_feesResult!.totalDeductions.toStringAsFixed(0)} ${_feesResult!.currencySymbol}',
+                              '${_feesResult!.feeAmount.toStringAsFixed(0)} ${_feesResult!.currencySymbol}',
+                              style: TrydosWalletStyles.bodySmall.copyWith(
+                                color: const Color(0xff1D1D1D),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Tax:',
+                              style: TrydosWalletStyles.bodySmall.copyWith(
+                                color: const Color(0xff1D1D1D),
+                              ),
+                            ),
+                            Text(
+                              '${_feesResult!.taxAmount.toStringAsFixed(0)} ${_feesResult!.currencySymbol}',
                               style: TrydosWalletStyles.bodySmall.copyWith(
                                 color: const Color(0xff1D1D1D),
                               ),

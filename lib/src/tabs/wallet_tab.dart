@@ -17,6 +17,7 @@ class WalletTab extends StatefulWidget {
 
 class _WalletTabState extends State<WalletTab> {
   String? _selectedWalletCurrencyId;
+  int _depositRequestsRefreshKey = 0;
   final ScrollController _currenciesScrollController = ScrollController();
 
   @override
@@ -46,8 +47,8 @@ class _WalletTabState extends State<WalletTab> {
     }
   }
 
-  void _showDepositModal(BuildContext context, Currency currency) {
-    showModalBottomSheet<void>(
+  Future<void> _showDepositModal(BuildContext context, Currency currency) async {
+    final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -62,6 +63,9 @@ class _WalletTabState extends State<WalletTab> {
         child: DepositModal(currency: currency),
       ),
     );
+    if (result == true && mounted) {
+      setState(() => _depositRequestsRefreshKey++);
+    }
   }
 
   @override
@@ -257,7 +261,7 @@ class _WalletTabState extends State<WalletTab> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: () =>
+                            onPressed: () async =>
                                 _showDepositModal(context, selectedCurrency!),
 
                             label: Text(
@@ -277,13 +281,20 @@ class _WalletTabState extends State<WalletTab> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
-                          ),
                         ),
+                      ),
                     ],
                   ),
                 ),
               );
             },
+          ),
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: DepositRequestsTable(
+              key: ValueKey(_depositRequestsRefreshKey),
+            ),
           ),
           const SizedBox(height: 24),
         ],

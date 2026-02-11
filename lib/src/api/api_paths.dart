@@ -27,8 +27,9 @@ abstract class ApiPaths {
   static const String bankDepositsCalculateFees =
       '/bank-deposits/calculate-fees';
 
-  /// Create bank deposit request (POST).
-  /// Body: bankId, currencyId, amount, transferImageUrl, transactionReference?, idempotencyKey
+  /// Bank deposits - GET (list user requests) or POST (create).
+  /// GET: Query page (0-indexed), limit (default: 10, max: 100)
+  /// POST Body: bankId, currencyId, amount, transferImageUrl, transactionReference?, idempotencyKey
   static const String bankDeposits = '/bank-deposits';
 
   // ─── Media ───

@@ -2,6 +2,7 @@ library;
 
 export 'balance/balance.dart';
 export 'bank/bank.dart';
+export 'bank_deposit_request/bank_deposit_request.dart';
 export 'bank_deposit_response/bank_deposit_response.dart';
 export 'deposit_fees_result/deposit_fees_result.dart';
 export 'media_upload_response/media_upload_response.dart';
