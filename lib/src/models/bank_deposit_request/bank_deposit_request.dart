@@ -9,7 +9,9 @@ class BankDepositRequest {
     required this.transactionReference,
     required this.status,
     required this.createdAt,
+    // ignore: library_private_types_in_public_api
     required this.bank,
+    // ignore: library_private_types_in_public_api
     required this.currency,
   });
 
@@ -20,8 +22,7 @@ class BankDepositRequest {
       taxAmount: (json['taxAmount'] as num?)?.toDouble() ?? 0,
       feeAmount: (json['feeAmount'] as num?)?.toDouble() ?? 0,
       netAmount: (json['netAmount'] as num?)?.toDouble() ?? 0,
-      transactionReference:
-          json['transactionReference'] as String? ?? '',
+      transactionReference: json['transactionReference'] as String? ?? '',
       status: json['status'] as String? ?? 'PENDING',
       createdAt: json['createdAt'] as String? ?? '',
       bank: json['bank'] != null
@@ -41,7 +42,9 @@ class BankDepositRequest {
   final String transactionReference;
   final String status;
   final String createdAt;
+  // ignore: library_private_types_in_public_api
   final _BankInfo bank;
+  // ignore: library_private_types_in_public_api
   final _CurrencyInfo currency;
 }
 

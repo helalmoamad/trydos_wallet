@@ -167,7 +167,9 @@ class _DepositModalState extends State<DepositModal> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result.error?.message ?? 'Failed to submit deposit request'),
+            content: Text(
+              result.error?.message ?? 'Failed to submit deposit request',
+            ),
             backgroundColor: Colors.red,
           ),
         );

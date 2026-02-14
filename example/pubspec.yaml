@@ -10,7 +10,6 @@ dependencies:
     sdk: flutter
   trydos_wallet:
     path: ..
-  image_picker: 1.0.6
 
 flutter:
   uses-material-design: true
