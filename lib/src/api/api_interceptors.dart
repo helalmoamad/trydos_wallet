@@ -1,5 +1,35 @@
 import 'package:dio/dio.dart';
 
+import 'dart:async';
+
+/// حدث بسيط لتمثيل حالات المصادقة الصالحة للإرسال للتطبيق المستدعي.
+class AuthEvent {
+  final String name;
+
+  const AuthEvent._(this.name);
+
+  factory AuthEvent.unauthenticated() => const AuthEvent._('unauthenticated');
+
+  @override
+  String toString() => 'AuthEvent.$name';
+}
+
+// Broadcast stream يسمح لأي عدد من المستمعين بالتسجيل.
+final StreamController<AuthEvent> _authEventController =
+    StreamController<AuthEvent>.broadcast();
+
+/// ستستعملها التطبيقات للاستماع لأحداث المصادقة.
+Stream<AuthEvent> get authEvents => _authEventController.stream;
+
+// دالة داخلية لإرسال حدث دون كسر الـ interceptor chain.
+void _emitAuthEvent(AuthEvent evt) {
+  try {
+    _authEventController.add(evt);
+  } catch (_) {
+    // ignore stream errors
+  }
+}
+
 /// Interceptor لطباعة الطلبات والردود في وضع Debug.
 class ApiDebugInterceptor extends Interceptor {
   ApiDebugInterceptor({this.enabled = true, this.prefix = '[API]'});
@@ -72,5 +102,49 @@ class ApiDebugInterceptor extends Interceptor {
   void _log(String msg) {
     // ignore: avoid_print
     print(msg);
+  }
+}
+
+/// Interceptor للكشف عن أخطاء المصادقة (مثال: 401 أو رسالة تحتوي على 'unAthu').
+class ApiAuthInterceptor extends Interceptor {
+  ApiAuthInterceptor();
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    final res = err.response;
+
+    var isAuthError = false;
+
+    if (res?.statusCode == 401) {
+      isAuthError = true;
+    } else if (res?.data != null) {
+      try {
+        final data = res!.data;
+        if (data is Map<String, dynamic>) {
+          final msg = data['message']?.toString() ?? '';
+          if (msg.toLowerCase().contains('unauth') ||
+              msg.toLowerCase().contains('unauthorized')) {
+            isAuthError = true;
+          }
+        } else if (data is String) {
+          if (data.toLowerCase().contains('unauth') ||
+              data.toLowerCase().contains('unauthorized')) {
+            isAuthError = true;
+          }
+        }
+      } catch (_) {
+        // ignore parsing errors
+      }
+    }
+
+    if (isAuthError) {
+      try {
+        _emitAuthEvent(AuthEvent.unauthenticated());
+      } catch (_) {
+        // swallow errors to avoid breaking the interceptor chain
+      }
+    }
+
+    handler.next(err);
   }
 }

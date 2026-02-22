@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 
-import 'api_client_io.dart' if (dart.library.html) 'api_client_stub.dart' as api_io;
+import 'api_client_io.dart'
+    if (dart.library.html) 'api_client_stub.dart'
+    as api_io;
 import 'api_headers.dart';
 import 'api_interceptors.dart';
 
@@ -25,17 +27,17 @@ class ApiClient {
     bool allowBadCertificate = false,
     Duration? connectTimeout,
     Duration? receiveTimeout,
-  })  : _dio = Dio(
-          BaseOptions(
-            baseUrl: baseUrl,
-            connectTimeout: connectTimeout ?? const Duration(seconds: 30),
-            receiveTimeout: receiveTimeout ?? const Duration(seconds: 30),
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-          ),
-        ) {
+  }) : _dio = Dio(
+         BaseOptions(
+           baseUrl: baseUrl,
+           connectTimeout: connectTimeout ?? const Duration(seconds: 30),
+           receiveTimeout: receiveTimeout ?? const Duration(seconds: 30),
+           headers: {
+             'Content-Type': 'application/json',
+             'Accept': 'application/json',
+           },
+         ),
+       ) {
     if (headersConfig != null) {
       ApiHeaders.apply(_dio, headersConfig);
     }
@@ -43,6 +45,7 @@ class ApiClient {
       api_io.configureAllowBadCertificate(_dio);
     }
     _dio.interceptors.add(ApiDebugInterceptor(enabled: debug));
+    _dio.interceptors.add(ApiAuthInterceptor());
   }
 
   final Dio _dio;
