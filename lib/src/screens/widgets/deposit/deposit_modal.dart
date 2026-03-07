@@ -4,13 +4,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/trydos_wallet.dart';
 import 'package:uuid/uuid.dart';
-
-import '../bloc/bloc.dart';
-import '../models/models.dart';
-import '../services/bank_deposits_api_service.dart';
-import '../services/media_api_service.dart';
-import '../styles.dart';
 
 /// Currency deposit modal.
 class DepositModal extends StatefulWidget {

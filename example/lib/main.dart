@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
 void main() {
@@ -25,17 +26,22 @@ class TrydosWalletExampleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Wallet - Example',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        fontFamily: 'packages/trydos_wallet/Quicksand',
-      ),
-      home: Directionality(
-        textDirection: TextDirection.ltr,
-        child: const TrydosWalletWelcomeScreen(),
+    return BlocProvider<LocalizationBloc>(
+      create: (context) => LocalizationBloc(initialLanguageCode: 'ar'),
+      child: BlocBuilder<LocalizationBloc, LocalizationState>(
+        builder: (context, locState) {
+          return MaterialApp(
+            title: 'Wallet - Example',
+            debugShowCheckedModeBanner: false,
+            locale: Locale(locState.languageCode),
+            theme: ThemeData(
+              useMaterial3: true,
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+              fontFamily: 'packages/trydos_wallet/Quicksand',
+            ),
+            home: const TrydosWalletWelcomeScreen(),
+          );
+        },
       ),
     );
   }

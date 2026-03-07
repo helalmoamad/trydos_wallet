@@ -4,9 +4,7 @@
 // ignore: unnecessary_library_name
 library trydos_wallet;
 
-export 'src/welcome_screen.dart';
-export 'src/styles.dart';
-export 'src/assets.dart';
+export 'src/screens/welcome_screen.dart';
 export 'src/api/api.dart';
 export 'src/bloc/bloc.dart';
 export 'src/config/trydos_wallet_config.dart';
@@ -17,3 +15,4 @@ export 'src/services/banks_api_service.dart';
 export 'src/services/transactions_api_service.dart';
 export 'src/services/bank_deposits_api_service.dart';
 export 'src/services/media_api_service.dart';
+export 'src/localization/localization.dart';

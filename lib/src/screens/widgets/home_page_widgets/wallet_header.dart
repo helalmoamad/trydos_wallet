@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
-import '../assets.dart';
-import '../styles.dart';
+import 'package:trydos_wallet/src/constent/assets.dart';
+import 'package:trydos_wallet/src/constent/styles.dart';
 
 /// رأس الصفحة (شعار + أيقونة QR).
 class WalletHeader extends StatelessWidget {

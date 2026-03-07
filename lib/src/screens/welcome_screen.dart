@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:trydos_wallet/src/home_page.dart';
-import 'styles.dart';
-import 'assets.dart';
+import 'package:trydos_wallet/src/constent/assets.dart';
+import 'package:trydos_wallet/src/screens/home_page.dart';
+import 'package:trydos_wallet/src/constent/styles.dart';
 
 /// Wallet splash screen. Preloads home page data during 5 seconds.
 class TrydosWalletWelcomeScreen extends StatefulWidget {
@@ -53,10 +53,8 @@ class _TrydosWalletWelcomeScreenState extends State<TrydosWalletWelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Stack(
-        children: [
+    return Stack(
+      children: [
         const TrydosWalletHomePage(),
         AnimatedOpacity(
           opacity: _showSplash ? 1.0 : 0.0,
@@ -68,7 +66,6 @@ class _TrydosWalletWelcomeScreenState extends State<TrydosWalletWelcomeScreen>
           ),
         ),
       ],
-      ),
     );
   }
 }

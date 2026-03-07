@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
-import '../styles.dart';
+import 'package:trydos_wallet/src/constent/styles.dart';
 
 /// ويدجت لعرض معاملة واحدة في القائمة.
 class TransactionItem extends StatelessWidget {
