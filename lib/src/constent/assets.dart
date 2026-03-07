@@ -28,6 +28,9 @@ class TrydosWalletAssets {
   static const String cancel = '$_svgPath/cancel.svg';
   static const String chart = '$_svgPath/chart.svg';
   static const String close = '$_svgPath/close.svg';
+  static const String chart1 = '$_svgPath/chart1.svg';
+  static const String chart2 = '$_svgPath/chart2.svg';
+  static const String chart3 = '$_svgPath/chart3.svg';
   static const String copy = '$_svgPath/copy.svg';
   static const String depositReceive = '$_svgPath/deposit_receive.svg';
   static const String done = '$_svgPath/done.svg';

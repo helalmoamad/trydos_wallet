@@ -14,7 +14,7 @@ class WalletTab extends StatefulWidget {
 
 class _WalletTabState extends State<WalletTab> {
   String? _selectedWalletCurrencyId;
-  int _depositRequestsRefreshKey = 0;
+  final int _depositRequestsRefreshKey = 0;
   final ScrollController _currenciesScrollController = ScrollController();
 
   @override
@@ -31,45 +31,41 @@ class _WalletTabState extends State<WalletTab> {
   }
 
   void _onCurrenciesScroll() {
-    final bloc = context.read<PaginatedApiBloc<Currency>>();
+    final bloc = context.read<WalletBloc>();
     final state = bloc.state;
-    if (state is! ApiLoaded<Currency> ||
-        !state.hasNext ||
-        state.isLoadingMore) {
+    if (state.currenciesStatus == WalletStatus.loading ||
+        !state.currenciesHasNext) {
       return;
     }
     final pos = _currenciesScrollController.position;
     if (pos.pixels >= pos.maxScrollExtent - 50) {
-      bloc.add(const ApiLoadMoreRequested());
+      bloc.add(const WalletCurrenciesLoadMoreRequested());
     }
   }
 
   Future<void> _showDepositModal(
     BuildContext context,
     Currency currency,
+    WalletState state,
   ) async {
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => BlocProvider<PaginatedApiBloc<Bank>>(
-        create: (_) => PaginatedApiBloc<Bank>(
-          fetcher: (page, limit) =>
-              BanksApiService().getBanks(page: page, limit: 10),
-          defaultErrorMessage: 'Failed to load banks',
-        )..add(const ApiLoadRequested()),
-        child: DepositModal(currency: currency),
-      ),
+      builder: (context) => DepositModal(currency: currency),
     );
     if (result == true && mounted) {
-      setState(() => _depositRequestsRefreshKey++);
+      // ignore: use_build_context_synchronously
+      context.read<WalletBloc>().add(
+        const WalletTransactionsRefreshRequested(),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<LocalizationBloc, LocalizationState>(
-      builder: (context, locState) {
+    return BlocBuilder<WalletBloc, WalletState>(
+      builder: (context, state) {
         return SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,7 +76,7 @@ class _WalletTabState extends State<WalletTab> {
                   start: 24,
                   end: 24,
                   top: 5,
-                  isRtl: locState.isRtl,
+                  isRtl: state.isRtl,
                 ),
                 child: const Divider(color: Color(0xffD3D3D3)),
               ),
@@ -88,7 +84,7 @@ class _WalletTabState extends State<WalletTab> {
                 padding: ResponsivePadding.horizontal(
                   start: 24,
                   end: 24,
-                  isRtl: locState.isRtl,
+                  isRtl: state.isRtl,
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -96,17 +92,14 @@ class _WalletTabState extends State<WalletTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        AppStrings.get(locState.languageCode, 'my_wallet'),
+                        AppStrings.get(state.languageCode, 'my_wallet'),
                         style: TrydosWalletStyles.headlineMedium.copyWith(
                           color: const Color(0xff1D1D1D),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        AppStrings.get(
-                          locState.languageCode,
-                          'manage_balances',
-                        ),
+                        AppStrings.get(state.languageCode, 'manage_balances'),
                         style: TrydosWalletStyles.bodyMedium.copyWith(
                           color: const Color(0xff8D8D8D),
                         ),
@@ -117,131 +110,112 @@ class _WalletTabState extends State<WalletTab> {
               ),
               SizedBox(
                 height: 120,
-                child: BlocBuilder<BalancesBloc, BalancesState>(
-                  buildWhen: (prev, curr) =>
-                      prev.balances != curr.balances ||
-                      prev.loadingIds != curr.loadingIds,
-                  builder: (context, balancesState) {
-                    return BlocBuilder<
-                      PaginatedApiBloc<Currency>,
-                      ApiState<Currency>
-                    >(
-                      builder: (context, state) {
-                        if (state is ApiInitial<Currency> ||
-                            state is ApiLoading<Currency>) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
+                child: Builder(
+                  builder: (context) {
+                    if (state.currenciesStatus == WalletStatus.loading &&
+                        state.currencies.isEmpty) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (state.currenciesStatus == WalletStatus.failure &&
+                        state.currencies.isEmpty) {
+                      return Center(
+                        child: TextButton(
+                          onPressed: () => context.read<WalletBloc>().add(
+                            const WalletCurrenciesRefreshRequested(),
+                          ),
+                          child: Text(
+                            AppStrings.get(state.languageCode, 'retry'),
+                          ),
+                        ),
+                      );
+                    }
+                    final currencies = state.currencies;
+                    final hasNext = state.currenciesHasNext;
+                    final isLoadingMore =
+                        state.currenciesStatus == WalletStatus.loading &&
+                        currencies.isNotEmpty;
+
+                    if (currencies.isEmpty && !isLoadingMore) {
+                      return Center(
+                        child: Text(
+                          AppStrings.get(state.languageCode, 'no_currencies'),
+                        ),
+                      );
+                    }
+                    if (_selectedWalletCurrencyId == null &&
+                        currencies.isNotEmpty) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        setState(() {
+                          _selectedWalletCurrencyId = currencies.first.id;
+                        });
+                        final bloc = context.read<WalletBloc>();
+                        for (final currency in currencies) {
+                          bloc.add(WalletBalanceLoadRequested(currency.id));
                         }
-                        if (state is ApiError<Currency>) {
-                          return Center(
-                            child: TextButton(
-                              onPressed: () => context
-                                  .read<PaginatedApiBloc<Currency>>()
-                                  .add(const ApiRefreshRequested()),
-                              child: Text(
-                                AppStrings.get(locState.languageCode, 'retry'),
-                              ),
+                      });
+                    }
+                    return ListView.builder(
+                      controller: _currenciesScrollController,
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: currencies.length + (hasNext ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == currencies.length) {
+                          return Padding(
+                            padding: state.isRtl
+                                ? const EdgeInsets.only(right: 8)
+                                : const EdgeInsets.only(left: 8),
+                            child: SizedBox(
+                              width: 40,
+                              child: isLoadingMore
+                                  ? const Center(
+                                      child: SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
                             ),
                           );
                         }
-                        final loadedState = state is ApiLoaded<Currency>
-                            ? state
-                            : null;
-                        final currencies = loadedState?.items ?? <Currency>[];
-                        final hasNext = loadedState?.hasNext ?? false;
-                        final isLoadingMore =
-                            loadedState?.isLoadingMore ?? false;
-                        if (currencies.isEmpty && !isLoadingMore) {
-                          return Center(
-                            child: Text(
-                              AppStrings.get(
-                                locState.languageCode,
-                                'no_currencies',
-                              ),
-                            ),
-                          );
-                        }
-                        if (_selectedWalletCurrencyId == null &&
-                            currencies.isNotEmpty) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            setState(() {
-                              _selectedWalletCurrencyId = currencies.first.id;
-                            });
-                            final balancesBloc = context.read<BalancesBloc>();
-                            for (final currency in currencies) {
-                              balancesBloc.add(
-                                BalanceLoadRequested(currency.id),
+                        final currency = currencies[index];
+                        final isSelected =
+                            _selectedWalletCurrencyId == currency.id;
+                        final balance = state.balances[currency.id];
+                        final isLoadingBalance = state.loadingBalanceIds
+                            .contains(currency.id);
+                        final amountStr = balance != null
+                            ? balance.available.toStringAsFixed(
+                                balance.available.truncateToDouble() ==
+                                        balance.available
+                                    ? 0
+                                    : 2,
+                              )
+                            : '0';
+                        return Padding(
+                          padding: state.isRtl
+                              ? EdgeInsets.only(right: index > 0 ? 8 : 0)
+                              : EdgeInsets.only(left: index > 0 ? 8 : 0),
+                          child: WalletBalanceCard(
+                            currencyName: currency.displayName.isNotEmpty
+                                ? currency.displayName
+                                : currency.name,
+                            currencyCode: currency.symbol,
+                            amount: amountStr,
+                            isSelected: isSelected,
+                            isLoadingBalance: isLoadingBalance,
+                            onTap: () {
+                              context.read<WalletBloc>().add(
+                                WalletBalanceLoadRequested(currency.id),
                               );
-                            }
-                          });
-                        }
-                        return ListView.builder(
-                          controller: _currenciesScrollController,
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: currencies.length + (hasNext ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == currencies.length) {
-                              return Padding(
-                                padding: locState.isRtl
-                                    ? const EdgeInsets.only(right: 8)
-                                    : const EdgeInsets.only(left: 8),
-                                child: SizedBox(
-                                  width: 40,
-                                  child: isLoadingMore
-                                      ? const Center(
-                                          child: SizedBox(
-                                            width: 24,
-                                            height: 24,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          ),
-                                        )
-                                      : const SizedBox.shrink(),
-                                ),
+                              setState(
+                                () => _selectedWalletCurrencyId = currency.id,
                               );
-                            }
-                            final currency = currencies[index];
-                            final isSelected =
-                                _selectedWalletCurrencyId == currency.id;
-                            final balance = balancesState.balance(currency.id);
-                            final isLoadingBalance = balancesState.isLoading(
-                              currency.id,
-                            );
-                            final amountStr = balance != null
-                                ? balance.available.toStringAsFixed(
-                                    balance.available.truncateToDouble() ==
-                                            balance.available
-                                        ? 0
-                                        : 2,
-                                  )
-                                : '0';
-                            return Padding(
-                              padding: locState.isRtl
-                                  ? EdgeInsets.only(right: index > 0 ? 8 : 0)
-                                  : EdgeInsets.only(left: index > 0 ? 8 : 0),
-                              child: WalletBalanceCard(
-                                currencyName: currency.displayName.isNotEmpty
-                                    ? currency.displayName
-                                    : currency.name,
-                                currencyCode: currency.symbol,
-                                amount: amountStr,
-                                isSelected: isSelected,
-                                isLoadingBalance: isLoadingBalance,
-                                onTap: () {
-                                  context.read<BalancesBloc>().add(
-                                    BalanceLoadRequested(currency.id),
-                                  );
-                                  setState(
-                                    () =>
-                                        _selectedWalletCurrencyId = currency.id,
-                                  );
-                                },
-                              ),
-                            );
-                          },
+                            },
+                          ),
                         );
                       },
                     );
@@ -249,11 +223,9 @@ class _WalletTabState extends State<WalletTab> {
                 ),
               ),
               const SizedBox(height: 16),
-              BlocBuilder<PaginatedApiBloc<Currency>, ApiState<Currency>>(
-                builder: (context, state) {
-                  final currencies =
-                      (state is ApiLoaded<Currency> ? state : null)?.items ??
-                      <Currency>[];
+              Builder(
+                builder: (context) {
+                  final currencies = state.currencies;
                   Currency? selectedCurrency;
                   if (_selectedWalletCurrencyId != null) {
                     for (final c in currencies) {
@@ -270,12 +242,12 @@ class _WalletTabState extends State<WalletTab> {
                       ? (selectedCurrency.displayName.isNotEmpty
                             ? selectedCurrency.displayName
                             : selectedCurrency.name)
-                      : AppStrings.get(locState.languageCode, 'balance');
+                      : AppStrings.get(state.languageCode, 'balance');
                   return Padding(
                     padding: ResponsivePadding.horizontal(
                       start: 16,
                       end: 16,
-                      isRtl: locState.isRtl,
+                      isRtl: state.isRtl,
                     ),
                     child: Container(
                       width: double.infinity,
@@ -289,7 +261,7 @@ class _WalletTabState extends State<WalletTab> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${AppStrings.get(locState.languageCode, 'actions_for')} $currencyLabel',
+                            '${AppStrings.get(state.languageCode, 'actions_for')} $currencyLabel',
                             style: TrydosWalletStyles.bodyMedium.copyWith(
                               fontWeight: FontWeight.bold,
                               color: const Color(0xff1D1D1D),
@@ -303,10 +275,11 @@ class _WalletTabState extends State<WalletTab> {
                                 onPressed: () async => _showDepositModal(
                                   context,
                                   selectedCurrency!,
+                                  state,
                                 ),
                                 label: Text(
                                   AppStrings.get(
-                                    locState.languageCode,
+                                    state.languageCode,
                                     'add_funds',
                                   ),
                                   style: TrydosWalletStyles.bodyMedium.copyWith(
@@ -337,7 +310,7 @@ class _WalletTabState extends State<WalletTab> {
                 padding: ResponsivePadding.horizontal(
                   start: 24,
                   end: 24,
-                  isRtl: locState.isRtl,
+                  isRtl: state.isRtl,
                 ),
                 child: DepositRequestsTable(
                   key: ValueKey(_depositRequestsRefreshKey),

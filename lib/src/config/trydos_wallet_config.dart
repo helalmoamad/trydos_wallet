@@ -14,7 +14,8 @@ class TrydosWalletConfig {
     this.isKurdish = false,
     this.applicationVersion = '1.0.0',
     this.debug = false,
-    /// Skip SSL certificate verification (dev only - do not use in production).
+    this.firstName = 'M*****',
+    this.lastName = 'A*****',
     this.allowBadCertificate = false,
   });
 
@@ -24,22 +25,24 @@ class TrydosWalletConfig {
   final bool isKurdish;
   final String applicationVersion;
   final bool debug;
+  final String firstName;
+  final String lastName;
   final bool allowBadCertificate;
 
   ApiHeadersConfig get headersConfig => ApiHeadersConfig(
-        languageCode: languageCode,
-        isKurdish: isKurdish,
-        applicationVersion: applicationVersion,
-        token: token,
-        isAndroid: Platform.isAndroid,
-      );
+    languageCode: languageCode,
+    isKurdish: isKurdish,
+    applicationVersion: applicationVersion,
+    token: token,
+    isAndroid: Platform.isAndroid,
+  );
 
   ApiClient createApiClient() => ApiClient(
-        baseUrl: baseUrl,
-        headersConfig: headersConfig,
-        debug: debug,
-        allowBadCertificate: allowBadCertificate,
-      );
+    baseUrl: baseUrl,
+    headersConfig: headersConfig,
+    debug: debug,
+    allowBadCertificate: allowBadCertificate,
+  );
 }
 
 /// Global config store - set once at app startup.
@@ -81,8 +84,43 @@ class TrydosWallet {
       isKurdish: _config!.isKurdish,
       applicationVersion: _config!.applicationVersion,
       debug: _config!.debug,
+      firstName: _config!.firstName,
+      lastName: _config!.lastName,
       allowBadCertificate: _config!.allowBadCertificate,
     );
     _apiClient?.updateHeaders(_config!.headersConfig);
+  }
+
+  /// Update the language later.
+  static void updateLanguage(String languageCode, {bool? isKurdish}) {
+    if (_config == null) return;
+    _config = TrydosWalletConfig(
+      baseUrl: _config!.baseUrl,
+      token: _config!.token,
+      languageCode: languageCode,
+      isKurdish: isKurdish ?? (languageCode == 'ku'),
+      applicationVersion: _config!.applicationVersion,
+      debug: _config!.debug,
+      firstName: _config!.firstName,
+      lastName: _config!.lastName,
+      allowBadCertificate: _config!.allowBadCertificate,
+    );
+    _apiClient?.updateHeaders(_config!.headersConfig);
+  }
+
+  /// Update user info later.
+  static void updateUserInfo({String? firstName, String? lastName}) {
+    if (_config == null) return;
+    _config = TrydosWalletConfig(
+      baseUrl: _config!.baseUrl,
+      token: _config!.token,
+      languageCode: _config!.languageCode,
+      isKurdish: _config!.isKurdish,
+      applicationVersion: _config!.applicationVersion,
+      debug: _config!.debug,
+      firstName: firstName ?? _config!.firstName,
+      lastName: lastName ?? _config!.lastName,
+      allowBadCertificate: _config!.allowBadCertificate,
+    );
   }
 }

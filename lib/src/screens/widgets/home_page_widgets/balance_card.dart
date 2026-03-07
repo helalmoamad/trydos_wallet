@@ -108,14 +108,71 @@ class BalanceCard extends StatelessWidget {
                           style: TrydosWalletStyles.bodySmall.copyWith(
                             color: Colors.white,
                             fontSize: 10,
-                            height: 0.6,
+                            height: 1.3,
                           ),
                         ),
+                        const Spacer(),
 
-                        SvgPicture.asset(
-                          TrydosWalletAssets.info,
-                          package: TrydosWalletStyles.packageName,
+                        Column(
+                          children: [
+                            SvgPicture.asset(
+                              TrydosWalletAssets.statistic,
+                              package: TrydosWalletStyles.packageName,
+                            ),
+                            SizedBox(height: 5),
+                            Text(
+                              "statistic",
+                              style: TrydosWalletStyles.bodySmall.copyWith(
+                                color: Color(0xffFCFCFC),
+                                fontSize: 9,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
                         ),
+                        SizedBox(width: 25),
+                        Column(
+                          children: [
+                            Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                SvgPicture.asset(
+                                  TrydosWalletAssets.chart1,
+
+                                  package: TrydosWalletStyles.packageName,
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 5),
+                            Text(
+                              "Info",
+                              style: TrydosWalletStyles.bodySmall.copyWith(
+                                color: Color(0xffFCFCFC),
+                                fontSize: 9,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(width: 25),
+                        Column(
+                          children: [
+                            SvgPicture.asset(
+                              TrydosWalletAssets.info,
+                              package: TrydosWalletStyles.packageName,
+                            ),
+                            SizedBox(height: 5),
+                            Text(
+                              "Info",
+                              style: TrydosWalletStyles.bodySmall.copyWith(
+                                color: Color(0xffFCFCFC),
+                                fontSize: 9,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(width: 10),
                       ],
                     ),
                   ),

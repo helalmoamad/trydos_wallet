@@ -38,30 +38,28 @@ class _HomeTabState extends State<HomeTab> {
   }
 
   void _onCurrenciesScroll() {
-    final bloc = context.read<PaginatedApiBloc<Currency>>();
+    final bloc = context.read<WalletBloc>();
     final state = bloc.state;
-    if (state is! ApiLoaded<Currency> ||
-        !state.hasNext ||
-        state.isLoadingMore) {
+    if (state.currenciesStatus == WalletStatus.loading ||
+        !state.currenciesHasNext) {
       return;
     }
     final pos = _currenciesScrollController.position;
     if (pos.pixels >= pos.maxScrollExtent - 50) {
-      bloc.add(const ApiLoadMoreRequested());
+      bloc.add(const WalletCurrenciesLoadMoreRequested());
     }
   }
 
   void _onTransactionsScroll() {
-    final bloc = context.read<CursorPaginatedApiBloc<Transaction>>();
+    final bloc = context.read<WalletBloc>();
     final state = bloc.state;
-    if (state is! ApiLoaded<Transaction> ||
-        !state.hasNext ||
-        state.isLoadingMore) {
+    if (state.transactionsStatus == WalletStatus.loading ||
+        !state.transactionsHasNext) {
       return;
     }
     final pos = _transactionsScrollController.position;
     if (pos.pixels >= pos.maxScrollExtent - 100) {
-      bloc.add(const ApiLoadMoreRequested());
+      bloc.add(const WalletTransactionsLoadMoreRequested());
     }
   }
 
@@ -69,7 +67,7 @@ class _HomeTabState extends State<HomeTab> {
     if (_selectedCurrencies.isEmpty) {
       return AppStrings.get(languageCode, 'all_transactions');
     }
-    return ' ${AppStrings.get(languageCode, 'transaction_history')} ${_selectedCurrencies.join(' & ')} ';
+    return '${AppStrings.get(languageCode, 'transaction_history')} ${_selectedCurrencies.join(' & ')}';
   }
 
   String _transactionIcon(Transaction t) {
@@ -108,8 +106,8 @@ class _HomeTabState extends State<HomeTab> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<LocalizationBloc, LocalizationState>(
-      builder: (context, locState) {
+    return BlocBuilder<WalletBloc, WalletState>(
+      builder: (context, state) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -119,208 +117,200 @@ class _HomeTabState extends State<HomeTab> {
               child: Divider(color: Color(0xffD3D3D3)),
             ),
             Padding(
-              padding: locState.isRtl
+              padding: state.isRtl
                   ? const EdgeInsets.only(left: 0, right: 24)
                   : const EdgeInsets.only(left: 24, right: 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    AppStrings.get(locState.languageCode, 'your_total_balance'),
+                    AppStrings.get(state.languageCode, 'your_total_balance'),
                     style: TrydosWalletStyles.bodyMedium.copyWith(
                       fontWeight: FontWeight.bold,
                       color: const Color(0xff1D1D1D),
                     ),
                   ),
-                  BlocBuilder<PaginatedApiBloc<Currency>, ApiState<Currency>>(
-                    buildWhen: (prev, curr) =>
-                        curr is ApiLoading<Currency> ||
-                        curr is ApiLoaded<Currency> ||
-                        curr is ApiError<Currency>,
-                    builder: (context, state) {
-                      final isLoading = state is ApiLoading<Currency>;
-                      return TextButton.icon(
-                        onPressed: isLoading
-                            ? null
-                            : () => context
-                                  .read<PaginatedApiBloc<Currency>>()
-                                  .add(const ApiRefreshRequested()),
-                        icon: SvgPicture.asset(
-                          TrydosWalletAssets.addCurrency,
-                          package: TrydosWalletStyles.packageName,
-                        ),
-                        label: Text(
-                          AppStrings.get(locState.languageCode, 'add_currency'),
-                          style: TrydosWalletStyles.bodySmall.copyWith(
-                            color: const Color(0xFF388CFF),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
+                  TextButton.icon(
+                    onPressed: state.currenciesStatus == WalletStatus.loading
+                        ? null
+                        : () => context.read<WalletBloc>().add(
+                            const WalletCurrenciesRefreshRequested(),
                           ),
-                        ),
-                      );
-                    },
+                    icon: SvgPicture.asset(
+                      TrydosWalletAssets.addCurrency,
+                      package: TrydosWalletStyles.packageName,
+                    ),
+                    label: Text(
+                      AppStrings.get(state.languageCode, 'add_currency'),
+                      style: TrydosWalletStyles.bodySmall.copyWith(
+                        color: const Color(0xFF388CFF),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
             SizedBox(
               height: 120,
-              child: BlocBuilder<BalancesBloc, BalancesState>(
-                buildWhen: (prev, curr) =>
-                    prev.balances != curr.balances ||
-                    prev.loadingIds != curr.loadingIds,
-                builder: (context, balancesState) {
-                  return BlocBuilder<
-                    PaginatedApiBloc<Currency>,
-                    ApiState<Currency>
-                  >(
-                    builder: (context, state) {
-                      if (state is ApiInitial<Currency> ||
-                          state is ApiLoading<Currency>) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (state is ApiError<Currency>) {
-                        return Center(
-                          child: TextButton(
-                            onPressed: () => context
-                                .read<PaginatedApiBloc<Currency>>()
-                                .add(const ApiRefreshRequested()),
-                            child: const Text('Retry'),
-                          ),
-                        );
-                      }
-                      final loadedState = state is ApiLoaded<Currency>
-                          ? state
-                          : null;
-                      final currencies = loadedState?.items ?? <Currency>[];
+              child: Builder(
+                builder: (context) {
+                  if (state.currenciesStatus == WalletStatus.loading &&
+                      state.currencies.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (state.currenciesStatus == WalletStatus.failure &&
+                      state.currencies.isEmpty) {
+                    return Center(
+                      child: TextButton(
+                        onPressed: () => context.read<WalletBloc>().add(
+                          const WalletCurrenciesLoadRequested(),
+                        ),
+                        child: Text(
+                          AppStrings.get(state.languageCode, 'retry'),
+                        ),
+                      ),
+                    );
+                  }
 
-                      final hasNext = loadedState?.hasNext ?? false;
-                      final isLoadingMore = loadedState?.isLoadingMore ?? false;
+                  final currencies = state.currencies;
+                  final hasNext = state.currenciesHasNext;
+                  final isLoadingMore =
+                      state.currenciesStatus == WalletStatus.loading &&
+                      currencies.isNotEmpty;
 
-                      if (_selectedCurrencies.isNotEmpty) {
-                        final currency = currencies.firstWhere(
-                          (element) =>
-                              _selectedCurrencies.contains(element.symbol),
-                        );
-                        final balance = balancesState.balance(currency.id);
-                        final isLoadingBalance = balancesState.isLoading(
-                          currency.id,
-                        );
-                        final amountStr = balance != null
-                            ? balance.available.toStringAsFixed(
-                                balance.available.truncateToDouble() ==
-                                        balance.available
-                                    ? 0
-                                    : 2,
-                              )
-                            : '0';
+                  if (_selectedCurrencies.isNotEmpty) {
+                    final currency = currencies.firstWhere(
+                      (element) => _selectedCurrencies.contains(element.symbol),
+                      orElse: () => currencies.first,
+                    );
+                    final balance = state.balances[currency.id];
+                    final isLoadingBalance = state.loadingBalanceIds.contains(
+                      currency.id,
+                    );
+                    final amountStr = balance != null
+                        ? balance.available.toStringAsFixed(
+                            balance.available.truncateToDouble() ==
+                                    balance.available
+                                ? 0
+                                : 2,
+                          )
+                        : '0';
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: BalanceCard(
+                        symbolImageUrl: currency.symbolImageUrl,
+                        symbol: currency.symbol,
+                        currencyName: currency.displayName.isNotEmpty
+                            ? currency.displayName
+                            : currency.name,
+                        amount: amountStr,
+                        currencyCode: currency.symbol,
+                        color: const Color(0xFF404040),
+                        isSelected: true,
+                        isLoadingBalance: isLoadingBalance,
+                        onTap: () {
+                          context.read<WalletBloc>().add(
+                            const BalanceCardIsSelected(isSelected: false),
+                          );
+                          context.read<WalletBloc>().add(
+                            WalletBalanceLoadRequested(currency.id),
+                          );
+                          setState(() {
+                            final code = currency.symbol;
+                            if (_selectedCurrencies.contains(code)) {
+                              _selectedCurrencies.remove(code);
+                            } else {
+                              _selectedCurrencies.add(code);
+                            }
+                          });
+                        },
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    controller: _currenciesScrollController,
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    itemCount: currencies.length + (hasNext ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == currencies.length) {
                         return Padding(
-                          padding: EdgeInsetsGeometry.symmetric(horizontal: 12),
-                          child: BalanceCard(
-                            symbolImageUrl: currency.symbolImageUrl,
-                            symbol: currency.symbol,
-                            currencyName: currency.displayName.isNotEmpty
-                                ? currency.displayName
-                                : currency.name,
-                            amount: amountStr,
-                            currencyCode: currency.symbol,
-                            color: const Color(0xFF404040),
-                            isSelected: _selectedCurrencies.contains(
-                              currency.symbol,
-                            ),
-                            isLoadingBalance: isLoadingBalance,
-                            onTap: () {
-                              context.read<BalancesBloc>().add(
-                                BalanceLoadRequested(currency.id),
-                              );
-                              setState(() {
-                                final code = currency.symbol;
-                                if (_selectedCurrencies.contains(code)) {
-                                  _selectedCurrencies.remove(code);
-                                } else {
-                                  _selectedCurrencies.add(code);
-                                }
-                              });
-                            },
+                          padding: state.isRtl
+                              ? const EdgeInsets.only(right: 8)
+                              : const EdgeInsets.only(left: 8),
+                          child: SizedBox(
+                            width: 40,
+                            child: isLoadingMore
+                                ? const Center(
+                                    child: SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
                           ),
                         );
                       }
-                      return ListView.builder(
-                        controller: _currenciesScrollController,
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        itemCount: currencies.length + (hasNext ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == currencies.length) {
-                            return Padding(
-                              padding: locState.isRtl
-                                  ? const EdgeInsets.only(right: 8)
-                                  : const EdgeInsets.only(left: 8),
-                              child: SizedBox(
-                                width: 40,
-                                child: isLoadingMore
-                                    ? const Center(
-                                        child: SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(),
+                      final currency = currencies[index];
+                      final balance = state.balances[currency.id];
+                      final isLoadingBalance = state.loadingBalanceIds.contains(
+                        currency.id,
+                      );
+                      final amountStr = balance != null
+                          ? balance.available.toStringAsFixed(
+                              balance.available.truncateToDouble() ==
+                                      balance.available
+                                  ? 0
+                                  : 2,
+                            )
+                          : '0';
+
+                      return Padding(
+                        padding: state.isRtl
+                            ? EdgeInsets.only(right: index > 0 ? 5 : 0)
+                            : EdgeInsets.only(left: index > 0 ? 5 : 0),
+                        child: BalanceCard(
+                          symbolImageUrl: currency.symbolImageUrl,
+                          symbol: currency.symbol,
+                          currencyName: currency.displayName.isNotEmpty
+                              ? currency.displayName
+                              : currency.name,
+                          amount: amountStr,
+                          currencyCode: currency.symbol,
+                          color: _selectedCurrencies.contains(currency.symbol)
+                              ? const Color(0xff315391)
+                              : const Color(0xFF404040),
+                          isSelected: _selectedCurrencies.contains(
+                            currency.symbol,
+                          ),
+                          isLoadingBalance: isLoadingBalance,
+                          onTap: () {
+                            context.read<WalletBloc>().add(
+                              BalanceCardIsSelected(
+                                isSelected: true,
+                                assetId: currency.id,
                               ),
                             );
-                          }
-                          final currency = currencies[index];
-                          final balance = balancesState.balance(currency.id);
-                          final isLoadingBalance = balancesState.isLoading(
-                            currency.id,
-                          );
-                          final amountStr = balance != null
-                              ? balance.available.toStringAsFixed(
-                                  balance.available.truncateToDouble() ==
-                                          balance.available
-                                      ? 0
-                                      : 2,
-                                )
-                              : '0';
-                          return Padding(
-                            padding: locState.isRtl
-                                ? EdgeInsets.only(right: index > 0 ? 5 : 0)
-                                : EdgeInsets.only(left: index > 0 ? 5 : 0),
-                            child: BalanceCard(
-                              symbolImageUrl: currency.symbolImageUrl,
-                              symbol: currency.symbol,
-                              currencyName: currency.displayName.isNotEmpty
-                                  ? currency.displayName
-                                  : currency.name,
-                              amount: amountStr,
-                              currencyCode: currency.symbol,
-                              color:
-                                  _selectedCurrencies.contains(currency.symbol)
-                                  ? const Color(0xff315391)
-                                  : const Color(0xFF404040),
-                              isSelected: _selectedCurrencies.contains(
-                                currency.symbol,
-                              ),
-                              isLoadingBalance: isLoadingBalance,
-                              onTap: () {
-                                context.read<BalancesBloc>().add(
-                                  BalanceLoadRequested(currency.id),
-                                );
-                                setState(() {
-                                  final code = currency.symbol;
-                                  if (_selectedCurrencies.contains(code)) {
-                                    _selectedCurrencies.remove(code);
-                                  } else {
-                                    _selectedCurrencies.add(code);
-                                  }
-                                });
-                              },
-                            ),
-                          );
-                        },
+                            context.read<WalletBloc>().add(
+                              WalletBalanceLoadRequested(currency.id),
+                            );
+                            setState(() {
+                              final code = currency.symbol;
+                              if (_selectedCurrencies.contains(code)) {
+                                _selectedCurrencies.remove(code);
+                              } else {
+                                _selectedCurrencies.add(code);
+                              }
+                            });
+                          },
+                        ),
                       );
                     },
                   );
@@ -331,7 +321,7 @@ class _HomeTabState extends State<HomeTab> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
-                _getTransactionsTitle(locState.languageCode),
+                _getTransactionsTitle(state.languageCode),
                 style: TrydosWalletStyles.bodyMedium.copyWith(
                   fontWeight: FontWeight.bold,
                   color: const Color(0xff1D1D1D),
@@ -340,76 +330,74 @@ class _HomeTabState extends State<HomeTab> {
             ),
             const SizedBox(height: 12),
             Expanded(
-              child:
-                  BlocBuilder<
-                    CursorPaginatedApiBloc<Transaction>,
-                    ApiState<Transaction>
-                  >(
-                    builder: (context, state) {
-                      if (state is ApiInitial<Transaction> ||
-                          state is ApiLoading<Transaction>) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (state is ApiError<Transaction>) {
-                        return Center(
-                          child: TextButton(
-                            onPressed: () => context
-                                .read<CursorPaginatedApiBloc<Transaction>>()
-                                .add(const ApiRefreshRequested()),
-                            child: const Text('Retry'),
+              child: Builder(
+                builder: (context) {
+                  if (state.transactionsStatus == WalletStatus.loading &&
+                      state.transactions.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (state.transactionsStatus == WalletStatus.failure &&
+                      state.transactions.isEmpty) {
+                    return Center(
+                      child: TextButton(
+                        onPressed: () => context.read<WalletBloc>().add(
+                          const WalletTransactionsLoadRequested(),
+                        ),
+                        child: Text(
+                          AppStrings.get(state.languageCode, 'retry'),
+                        ),
+                      ),
+                    );
+                  }
+
+                  final transactions = state.transactions;
+                  final hasNext = state.transactionsHasNext;
+                  final isLoadingMore =
+                      state.transactionsStatus == WalletStatus.loading &&
+                      transactions.isNotEmpty;
+
+                  return ListView.builder(
+                    controller: _transactionsScrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: transactions.length + (hasNext ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == transactions.length) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: isLoadingMore
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
                           ),
                         );
                       }
-                      final loadedState = state is ApiLoaded<Transaction>
-                          ? state
-                          : null;
-                      final transactions =
-                          loadedState?.items ?? <Transaction>[];
-                      final hasNext = loadedState?.hasNext ?? false;
-                      final isLoadingMore = loadedState?.isLoadingMore ?? false;
-
-                      return ListView.builder(
-                        controller: _transactionsScrollController,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: transactions.length + (hasNext ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == transactions.length) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              child: Center(
-                                child: isLoadingMore
-                                    ? const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(),
-                              ),
-                            );
-                          }
-                          final t = transactions[index];
-                          return TransactionItem(
-                            icon: _transactionIcon(t),
-                            directionIcon: _transactionDirectionIcon(t),
-                            title: t.title.isNotEmpty ? t.title : t.type,
-                            subtitle: _formatTransactionDate(t.createdAt),
-                            amount: _formatAmount(t),
-                            status: '',
-                            amountColor: const Color(0xff1D1D1D),
-                            titleColor: const Color(0xff1D1D1D),
-                            statusColor: const Color(0xff1D1D1D),
-                            subtitleColor: const Color(0xff8D8D8D),
-                            isSelected: _selectedTransactionIndex == index,
-                            onTap: () {
-                              setState(() => _selectedTransactionIndex = index);
-                            },
-                          );
+                      final t = transactions[index];
+                      return TransactionItem(
+                        icon: _transactionIcon(t),
+                        directionIcon: _transactionDirectionIcon(t),
+                        title: t.title.isNotEmpty ? t.title : t.type,
+                        subtitle: _formatTransactionDate(t.createdAt),
+                        amount: _formatAmount(t),
+                        status: '',
+                        amountColor: const Color(0xff1D1D1D),
+                        titleColor: const Color(0xff1D1D1D),
+                        statusColor: const Color(0xff1D1D1D),
+                        subtitleColor: const Color(0xff8D8D8D),
+                        isSelected: _selectedTransactionIndex == index,
+                        onTap: () {
+                          setState(() => _selectedTransactionIndex = index);
                         },
                       );
                     },
-                  ),
+                  );
+                },
+              ),
             ),
           ],
         );

@@ -1,21 +1,31 @@
 import 'package:dio/dio.dart';
-
-import 'api_client_io.dart'
-    if (dart.library.html) 'api_client_stub.dart'
+import 'package:trydos_wallet/src/api/api_client_io.dart'
+    if (dart.library.html) 'package:trydos_wallet/src/api/api_client_stub.dart'
     as api_io;
-import 'api_headers.dart';
-import 'api_interceptors.dart';
+import 'package:trydos_wallet/src/api/api_headers.dart';
+import 'package:trydos_wallet/src/api/api_interceptors.dart';
 
 /// نتيجة موحدة لطلبات API.
 class ApiResult<T> {
-  ApiResult.success(this.data) : error = null;
-  ApiResult.failure(this.error) : data = null;
+  ApiResult.success(this.data)
+    : error = null,
+      errorMessage = null,
+      _manualFailure = false;
+  ApiResult.failure(this.error, {this.errorMessage})
+    : data = null,
+      _manualFailure = false;
+  ApiResult.manualFailure({this.errorMessage})
+    : data = null,
+      error = null,
+      _manualFailure = true;
 
   final T? data;
   final DioException? error;
+  final String? errorMessage;
+  final bool _manualFailure;
 
-  bool get isSuccess => error == null;
-  bool get isFailure => error != null;
+  bool get isSuccess => error == null && !_manualFailure;
+  bool get isFailure => error != null || _manualFailure;
 }
 
 /// عميل DIO جاهز لطلبات GET, POST, PUT, DELETE مع Interceptor و Headers.
@@ -36,6 +46,7 @@ class ApiClient {
              'Content-Type': 'application/json',
              'Accept': 'application/json',
            },
+           validateStatus: (status) => status != null && status <= 400,
          ),
        ) {
     if (headersConfig != null) {
@@ -44,6 +55,7 @@ class ApiClient {
     if (allowBadCertificate) {
       api_io.configureAllowBadCertificate(_dio);
     }
+    // _dio.interceptors.add(ApiErrorInterceptor()); // Removed in favor of direct handling
     _dio.interceptors.add(ApiDebugInterceptor(enabled: debug));
     _dio.interceptors.add(ApiAuthInterceptor());
   }
@@ -55,6 +67,31 @@ class ApiClient {
   /// تحديث هيدر الـ client (مثلاً بعد تغيير التوكن).
   void updateHeaders(ApiHeadersConfig config) {
     ApiHeaders.apply(_dio, config);
+  }
+
+  String? _extractErrorMessage(DioException e) {
+    return _extractErrorMessageFromData(e.response?.data) ?? e.message;
+  }
+
+  String? _extractErrorMessageFromData(dynamic data) {
+    if (data == null) return null;
+    if (data is Map) {
+      return data['message']?.toString() ??
+          data['error']?.toString() ??
+          data['msg']?.toString();
+    } else if (data is String && data.isNotEmpty) {
+      return data;
+    }
+    return null;
+  }
+
+  void _handle400(dynamic data) {
+    final msg = _extractErrorMessageFromData(data);
+    if (msg != null) {
+      // ignore: avoid_print
+      print('[ApiClient] Radical 400 emission: $msg');
+      emitApiErrorEvent(ApiErrorEvent(msg, statusCode: 400));
+    }
   }
 
   /// GET
@@ -72,12 +109,21 @@ class ApiClient {
         options: options,
         cancelToken: cancelToken,
       );
+      if (res.statusCode == 400) {
+        _handle400(res.data);
+        return ApiResult<T>.manualFailure(
+          errorMessage: _extractErrorMessageFromData(res.data),
+        );
+      }
       final data = fromJson != null && res.data != null
           ? fromJson(res.data)
           : res.data as T?;
       return ApiResult.success(data);
     } on DioException catch (e) {
-      return ApiResult<T>.failure(e);
+      if (e.response?.statusCode == 400) {
+        _handle400(e.response?.data);
+      }
+      return ApiResult<T>.failure(e, errorMessage: _extractErrorMessage(e));
     }
   }
 
@@ -98,12 +144,21 @@ class ApiClient {
         options: options,
         cancelToken: cancelToken,
       );
+      if (res.statusCode == 400) {
+        _handle400(res.data);
+        return ApiResult<T>.manualFailure(
+          errorMessage: _extractErrorMessageFromData(res.data),
+        );
+      }
       final result = fromJson != null && res.data != null
           ? fromJson(res.data)
           : res.data as T?;
       return ApiResult.success(result);
     } on DioException catch (e) {
-      return ApiResult<T>.failure(e);
+      if (e.response?.statusCode == 400) {
+        _handle400(e.response?.data);
+      }
+      return ApiResult<T>.failure(e, errorMessage: _extractErrorMessage(e));
     }
   }
 
@@ -124,12 +179,21 @@ class ApiClient {
         options: options,
         cancelToken: cancelToken,
       );
+      if (res.statusCode == 400) {
+        _handle400(res.data);
+        return ApiResult<T>.manualFailure(
+          errorMessage: _extractErrorMessageFromData(res.data),
+        );
+      }
       final result = fromJson != null && res.data != null
           ? fromJson(res.data)
           : res.data as T?;
       return ApiResult.success(result);
     } on DioException catch (e) {
-      return ApiResult<T>.failure(e);
+      if (e.response?.statusCode == 400) {
+        _handle400(e.response?.data);
+      }
+      return ApiResult<T>.failure(e, errorMessage: _extractErrorMessage(e));
     }
   }
 
@@ -150,12 +214,21 @@ class ApiClient {
         options: options,
         cancelToken: cancelToken,
       );
+      if (res.statusCode == 400) {
+        _handle400(res.data);
+        return ApiResult<T>.manualFailure(
+          errorMessage: _extractErrorMessageFromData(res.data),
+        );
+      }
       final result = fromJson != null && res.data != null
           ? fromJson(res.data)
           : res.data as T?;
       return ApiResult.success(result);
     } on DioException catch (e) {
-      return ApiResult<T>.failure(e);
+      if (e.response?.statusCode == 400) {
+        _handle400(e.response?.data);
+      }
+      return ApiResult<T>.failure(e, errorMessage: _extractErrorMessage(e));
     }
   }
 }

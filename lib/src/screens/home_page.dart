@@ -5,9 +5,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../constent/assets.dart';
 import '../bloc/bloc.dart';
 import '../localization/app_strings.dart';
-import '../models/models.dart';
-import '../services/currencies_api_service.dart';
-import '../services/transactions_api_service.dart';
 import '../constent/styles.dart';
 import 'tabs/tabs.dart';
 
@@ -17,50 +14,19 @@ class TrydosWalletHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<LocalizationBloc, LocalizationState>(
-      builder: (context, locState) {
-        return Directionality(
-          textDirection: locState.isRtl ? TextDirection.rtl : TextDirection.ltr,
-          child: MultiBlocProvider(
-            providers: [
-              BlocProvider(
-                create: (context) => PaginatedApiBloc<Currency>(
-                  fetcher: (page, limit) =>
-                      CurrenciesApiService().getCurrencies(
-                        CurrenciesQueryParams(page: page, limit: limit),
-                      ),
-                  defaultErrorMessage: AppStrings.get(
-                    locState.languageCode,
-                    'failed_to_load',
-                  ),
-                )..add(const ApiLoadRequested()),
-              ),
-              BlocProvider(create: (context) => BalancesBloc()),
-              BlocProvider(
-                create: (context) => CursorPaginatedApiBloc<Transaction>(
-                  fetcher: (cursor, limit) => TransactionsApiService()
-                      .getTransactions(cursor: cursor, limit: limit),
-                  defaultErrorMessage: AppStrings.get(
-                    locState.languageCode,
-                    'failed_to_load',
-                  ),
-                )..add(const ApiLoadRequested()),
-              ),
-            ],
-            child: BlocListener<PaginatedApiBloc<Currency>, ApiState<Currency>>(
-              listener: (context, state) {
-                if (state is ApiLoaded<Currency>) {
-                  final balancesBloc = context.read<BalancesBloc>();
-                  for (final c in state.items) {
-                    balancesBloc.add(BalanceLoadRequested(c.id));
-                  }
-                }
-              },
-              child: const _TrydosWalletHomePageContent(),
-            ),
-          ),
-        );
-      },
+    return BlocProvider(
+      create: (context) => WalletBloc()
+        ..add(const WalletCurrenciesLoadRequested())
+        ..add(const WalletTransactionsLoadRequested()),
+      child: BlocBuilder<WalletBloc, WalletState>(
+        buildWhen: (prev, curr) => prev.languageCode != curr.languageCode,
+        builder: (context, state) {
+          return Directionality(
+            textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
+            child: const _TrydosWalletHomePageContent(),
+          );
+        },
+      ),
     );
   }
 }
@@ -79,8 +45,9 @@ class _TrydosWalletHomePageContentState
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<LocalizationBloc, LocalizationState>(
-      builder: (context, locState) {
+    return BlocBuilder<WalletBloc, WalletState>(
+      buildWhen: (prev, curr) => prev.languageCode != curr.languageCode,
+      builder: (context, state) {
         return Scaffold(
           backgroundColor: Colors.white,
           body: SafeArea(
@@ -94,18 +61,18 @@ class _TrydosWalletHomePageContentState
               ],
             ),
           ),
-          bottomNavigationBar: _buildBottomNav(context, locState),
+          bottomNavigationBar: _buildBottomNav(context, state),
         );
       },
     );
   }
 
-  Widget _buildBottomNav(BuildContext context, LocalizationState locState) {
+  Widget _buildBottomNav(BuildContext context, WalletState state) {
     final labels = [
-      AppStrings.get(locState.languageCode, 'home_title'),
-      AppStrings.get(locState.languageCode, 'my_wallet'),
-      AppStrings.get(locState.languageCode, 'addresses'),
-      AppStrings.get(locState.languageCode, 'settings'),
+      AppStrings.get(state.languageCode, 'home_title'),
+      AppStrings.get(state.languageCode, 'my_wallet'),
+      AppStrings.get(state.languageCode, 'addresses'),
+      AppStrings.get(state.languageCode, 'settings'),
     ];
 
     return BottomNavigationBar(

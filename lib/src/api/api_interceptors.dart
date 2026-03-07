@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 
 import 'dart:async';
 
@@ -14,17 +15,44 @@ class AuthEvent {
   String toString() => 'AuthEvent.$name';
 }
 
-// Broadcast stream يسمح لأي عدد من المستمعين بالتسجيل.
+/// حدث لتمثيل أخطاء API العامة (مثل 400) التي تحتاج لعرض رسالة للمستخدم.
+class ApiErrorEvent {
+  final String message;
+  final int? statusCode;
+
+  const ApiErrorEvent(this.message, {this.statusCode});
+}
+
+// Broadcast streams تسمح لأي عدد من المستمعين بالتسجيل.
 final StreamController<AuthEvent> _authEventController =
     StreamController<AuthEvent>.broadcast();
+final StreamController<ApiErrorEvent> _errorEventController =
+    StreamController<ApiErrorEvent>.broadcast();
 
 /// ستستعملها التطبيقات للاستماع لأحداث المصادقة.
 Stream<AuthEvent> get authEvents => _authEventController.stream;
 
-// دالة داخلية لإرسال حدث دون كسر الـ interceptor chain.
-void _emitAuthEvent(AuthEvent evt) {
+/// ستستعملها التطبيقات للاستماع لأخطاء API لعرض SnackBars.
+Stream<ApiErrorEvent> get errorEvents => _errorEventController.stream;
+
+/// مفتاح عالمي لـ ScaffoldMessenger لضمان إمكانية عرض SnackBars من أي مكان.
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+// دوال داخلية لإرسال الأحداث دون كسر الـ interceptor chain.
+void emitAuthEvent(AuthEvent evt) {
   try {
     _authEventController.add(evt);
+  } catch (_) {
+    // ignore stream errors
+  }
+}
+
+void emitApiErrorEvent(ApiErrorEvent evt) {
+  try {
+    _errorEventController.add(evt);
   } catch (_) {
     // ignore stream errors
   }
@@ -139,12 +167,52 @@ class ApiAuthInterceptor extends Interceptor {
 
     if (isAuthError) {
       try {
-        _emitAuthEvent(AuthEvent.unauthenticated());
+        emitAuthEvent(AuthEvent.unauthenticated());
       } catch (_) {
         // swallow errors to avoid breaking the interceptor chain
       }
     }
 
+    handler.next(err);
+  }
+}
+
+/// Interceptor للكشف عن أخطاء 400 وإرسال حدث لعرض رسالة للمستخدم.
+class ApiErrorInterceptor extends Interceptor {
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    // ignore: avoid_print
+    print(
+      '[ApiErrorInterceptor] onError called. Status: ${err.response?.statusCode}',
+    );
+
+    if (err.response?.statusCode == 400) {
+      final res = err.response;
+      String? errorMessage;
+
+      if (res?.data != null) {
+        final data = res!.data;
+        // ignore: avoid_print
+        print('[ApiErrorInterceptor] Response data type: ${data.runtimeType}');
+
+        if (data is Map) {
+          errorMessage =
+              data['message']?.toString() ??
+              data['error']?.toString() ??
+              data['msg']?.toString();
+        } else if (data is String && data.isNotEmpty) {
+          errorMessage = data;
+        }
+      }
+
+      errorMessage ??= err.message;
+
+      if (errorMessage != null) {
+        // ignore: avoid_print
+        print('[ApiErrorInterceptor] Emitting error event: $errorMessage');
+        emitApiErrorEvent(ApiErrorEvent(errorMessage, statusCode: 400));
+      }
+    }
     handler.next(err);
   }
 }

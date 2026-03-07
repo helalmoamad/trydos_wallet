@@ -12,12 +12,7 @@ class DepositRequestsTable extends StatefulWidget {
 }
 
 class _DepositRequestsTableState extends State<DepositRequestsTable> {
-  final BankDepositsApiService _apiService = BankDepositsApiService();
   static const int _limit = 10;
-
-  int _page = 0;
-  bool _isLoading = false;
-  PaginatedResponse<BankDepositRequest>? _data;
 
   @override
   void initState() {
@@ -25,33 +20,16 @@ class _DepositRequestsTableState extends State<DepositRequestsTable> {
     _fetch();
   }
 
-  Future<void> _fetch() async {
-    setState(() {
-      _isLoading = true;
-      _data = null;
-    });
-
-    final result = await _apiService.getDepositRequests(
-      page: _page,
-      limit: _limit,
+  void _fetch() {
+    context.read<WalletBloc>().add(
+      const WalletDepositRequestsRequested(page: 0, limit: _limit),
     );
-
-    if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-      if (result.isSuccess && result.data != null) {
-        _data = result.data;
-      } else {
-        _data = null;
-      }
-    });
   }
 
   void _goToPage(int page) {
-    if (page < 0) return;
-    if (_data != null && page >= _data!.totalPages) return;
-    setState(() => _page = page);
-    _fetch();
+    context.read<WalletBloc>().add(
+      WalletDepositRequestsRequested(page: page, limit: _limit),
+    );
   }
 
   String _formatDate(String isoDate) {
@@ -66,8 +44,14 @@ class _DepositRequestsTableState extends State<DepositRequestsTable> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<LocalizationBloc, LocalizationState>(
-      builder: (context, locState) {
+    return BlocBuilder<WalletBloc, WalletState>(
+      builder: (context, state) {
+        final isLoading = state.depositRequestsStatus == WalletStatus.loading;
+        final data = state.depositRequests;
+        final totalItems = state.depositRequestsTotal;
+        final totalPages = state.depositRequestsTotalPages;
+        final currentPage = state.depositRequestsPage;
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -75,14 +59,14 @@ class _DepositRequestsTableState extends State<DepositRequestsTable> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  AppStrings.get(locState.languageCode, 'deposit_requests'),
+                  AppStrings.get(state.languageCode, 'deposit_requests'),
                   style: TrydosWalletStyles.headlineMedium.copyWith(
                     color: const Color(0xff1D1D1D),
                   ),
                 ),
-                if (_data != null)
+                if (totalItems > 0)
                   Text(
-                    '${_data!.total} ${AppStrings.get(locState.languageCode, 'records')}',
+                    '$totalItems ${AppStrings.get(state.languageCode, 'records')}',
                     style: TrydosWalletStyles.bodySmall.copyWith(
                       color: const Color(0xff8D8D8D),
                     ),
@@ -90,7 +74,7 @@ class _DepositRequestsTableState extends State<DepositRequestsTable> {
               ],
             ),
             const SizedBox(height: 12),
-            if (_isLoading)
+            if (isLoading && data.isEmpty)
               Container(
                 height: 200,
                 decoration: BoxDecoration(
@@ -100,7 +84,7 @@ class _DepositRequestsTableState extends State<DepositRequestsTable> {
                 ),
                 child: const Center(child: CircularProgressIndicator()),
               )
-            else if (_data != null && _data!.items.isEmpty)
+            else if (!isLoading && data.isEmpty)
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -111,7 +95,7 @@ class _DepositRequestsTableState extends State<DepositRequestsTable> {
                 child: Center(
                   child: Text(
                     AppStrings.get(
-                      locState.languageCode,
+                      state.languageCode,
                       'no_deposit_requests_yet',
                     ),
                     style: TrydosWalletStyles.bodyMedium.copyWith(
@@ -120,7 +104,7 @@ class _DepositRequestsTableState extends State<DepositRequestsTable> {
                   ),
                 ),
               )
-            else if (_data != null)
+            else
               Directionality(
                 textDirection: TextDirection.ltr,
                 child: Container(
@@ -154,7 +138,7 @@ class _DepositRequestsTableState extends State<DepositRequestsTable> {
                           DataColumn(label: Text('Fees')),
                           DataColumn(label: Text('Tax')),
                         ],
-                        rows: _data!.items.map((r) {
+                        rows: data.map((r) {
                           final symbol = r.currency.symbol;
                           return DataRow(
                             cells: [
@@ -233,30 +217,15 @@ class _DepositRequestsTableState extends State<DepositRequestsTable> {
                     ),
                   ),
                 ),
-              )
-            else
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: const Color(0xffFAFAFA),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xffE0E0E0)),
-                ),
-                child: Center(
-                  child: TextButton(
-                    onPressed: _fetch,
-                    child: const Text('Retry'),
-                  ),
-                ),
               ),
-            if (_data != null && _data!.totalPages > 1) ...[
+            if (totalPages > 1) ...[
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    onPressed: _data!.hasPrevious
-                        ? () => _goToPage(_page - 1)
+                    onPressed: currentPage > 0
+                        ? () => _goToPage(currentPage - 1)
                         : null,
                     icon: const Icon(Icons.chevron_left),
                     style: IconButton.styleFrom(
@@ -266,15 +235,15 @@ class _DepositRequestsTableState extends State<DepositRequestsTable> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
-                      'Page ${_page + 1} of ${_data!.totalPages}',
+                      'Page ${currentPage + 1} of $totalPages',
                       style: TrydosWalletStyles.bodyMedium.copyWith(
                         color: const Color(0xff1D1D1D),
                       ),
                     ),
                   ),
                   IconButton(
-                    onPressed: _data!.hasNext
-                        ? () => _goToPage(_page + 1)
+                    onPressed: currentPage < totalPages - 1
+                        ? () => _goToPage(currentPage + 1)
                         : null,
                     icon: const Icon(Icons.chevron_right),
                     style: IconButton.styleFrom(

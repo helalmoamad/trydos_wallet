@@ -14,6 +14,8 @@ void main() {
       isKurdish: false,
       applicationVersion: '1.0.0',
       debug: kDebugMode,
+      firstName: "helal",
+      lastName: "mohamad",
       allowBadCertificate: true,
     ),
   );
@@ -26,19 +28,22 @@ class TrydosWalletExampleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<LocalizationBloc>(
-      create: (context) => LocalizationBloc(initialLanguageCode: 'ar'),
-      child: BlocBuilder<LocalizationBloc, LocalizationState>(
-        builder: (context, locState) {
+    return BlocProvider<WalletBloc>(
+      create: (context) => WalletBloc()..add(const WalletLanguageChanged('ar')),
+      child: BlocBuilder<WalletBloc, WalletState>(
+        builder: (context, state) {
           return MaterialApp(
+            navigatorKey: navigatorKey,
+            scaffoldMessengerKey: scaffoldMessengerKey,
             title: 'Wallet - Example',
             debugShowCheckedModeBanner: false,
-            locale: Locale(locState.languageCode),
+            locale: Locale(state.languageCode),
             theme: ThemeData(
               useMaterial3: true,
               colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
               fontFamily: 'packages/trydos_wallet/Quicksand',
             ),
+            builder: (context, child) => ApiErrorListener(child: child!),
             home: const TrydosWalletWelcomeScreen(),
           );
         },

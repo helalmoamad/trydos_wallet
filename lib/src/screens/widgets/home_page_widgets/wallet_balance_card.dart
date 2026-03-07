@@ -29,8 +29,8 @@ class WalletBalanceCard extends StatelessWidget {
     final labelColor = isSelected ? Colors.white : const Color(0xff6B6B6B);
     return GestureDetector(
       onTap: onTap,
-      child: BlocBuilder<LocalizationBloc, LocalizationState>(
-        builder: (context, locState) {
+      child: BlocBuilder<WalletBloc, WalletState>(
+        builder: (context, state) {
           return Container(
             width: 180,
             padding: const EdgeInsets.all(14),
@@ -75,10 +75,7 @@ class WalletBalanceCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      AppStrings.get(
-                        locState.languageCode,
-                        'available_balance',
-                      ),
+                      AppStrings.get(state.languageCode, 'available_balance'),
                       style: TrydosWalletStyles.bodySmall.copyWith(
                         color: labelColor,
                       ),

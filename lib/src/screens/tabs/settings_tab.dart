@@ -9,23 +9,23 @@ class SettingsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<LocalizationBloc, LocalizationState>(
-      builder: (context, locState) {
+    return BlocBuilder<WalletBloc, WalletState>(
+      builder: (context, state) {
         return SingleChildScrollView(
           child: Padding(
             padding: ResponsivePadding.only(
               start: 24,
               end: 24,
               top: 20,
-              isRtl: locState.isRtl,
+              isRtl: state.isRtl,
             ),
             child: Column(
-              crossAxisAlignment: locState.isRtl
+              crossAxisAlignment: state.isRtl
                   ? CrossAxisAlignment.end
                   : CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppStrings.get(locState.languageCode, 'settings'),
+                  AppStrings.get(state.languageCode, 'settings'),
                   style: TrydosWalletStyles.headlineMedium.copyWith(
                     color: const Color(0xff1D1D1D),
                   ),
@@ -41,12 +41,12 @@ class SettingsTab extends StatelessWidget {
                     border: Border.all(color: const Color(0xffE0E0E0)),
                   ),
                   child: Column(
-                    crossAxisAlignment: locState.isRtl
+                    crossAxisAlignment: state.isRtl
                         ? CrossAxisAlignment.end
                         : CrossAxisAlignment.start,
                     children: [
                       Text(
-                        AppStrings.get(locState.languageCode, 'language'),
+                        AppStrings.get(state.languageCode, 'language'),
                         style: TrydosWalletStyles.bodyMedium.copyWith(
                           fontWeight: FontWeight.bold,
                           color: const Color(0xff1D1D1D),
@@ -55,30 +55,30 @@ class SettingsTab extends StatelessWidget {
                       const SizedBox(height: 12),
                       _buildLanguageOption(
                         context,
-                        locState,
+                        state,
                         'en',
-                        AppStrings.get(locState.languageCode, 'english'),
+                        AppStrings.get(state.languageCode, 'english'),
                       ),
                       const SizedBox(height: 8),
                       _buildLanguageOption(
                         context,
-                        locState,
+                        state,
                         'ar',
-                        AppStrings.get(locState.languageCode, 'arabic'),
+                        AppStrings.get(state.languageCode, 'arabic'),
                       ),
                       const SizedBox(height: 8),
                       _buildLanguageOption(
                         context,
-                        locState,
+                        state,
                         'ku',
-                        AppStrings.get(locState.languageCode, 'kurdish'),
+                        AppStrings.get(state.languageCode, 'kurdish'),
                       ),
                       const SizedBox(height: 8),
                       _buildLanguageOption(
                         context,
-                        locState,
+                        state,
                         'tr',
-                        AppStrings.get(locState.languageCode, 'turkish'),
+                        AppStrings.get(state.languageCode, 'turkish'),
                       ),
                     ],
                   ),
@@ -95,12 +95,12 @@ class SettingsTab extends StatelessWidget {
                     border: Border.all(color: const Color(0xffE0E0E0)),
                   ),
                   child: Column(
-                    crossAxisAlignment: locState.isRtl
+                    crossAxisAlignment: state.isRtl
                         ? CrossAxisAlignment.end
                         : CrossAxisAlignment.start,
                     children: [
                       Text(
-                        AppStrings.get(locState.languageCode, 'about'),
+                        AppStrings.get(state.languageCode, 'about'),
                         style: TrydosWalletStyles.bodyMedium.copyWith(
                           fontWeight: FontWeight.bold,
                           color: const Color(0xff1D1D1D),
@@ -111,7 +111,7 @@ class SettingsTab extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            AppStrings.get(locState.languageCode, 'version'),
+                            AppStrings.get(state.languageCode, 'version'),
                             style: TrydosWalletStyles.bodySmall.copyWith(
                               color: const Color(0xff8D8D8D),
                             ),
@@ -138,17 +138,15 @@ class SettingsTab extends StatelessWidget {
 
   Widget _buildLanguageOption(
     BuildContext context,
-    LocalizationState locState,
+    WalletState state,
     String languageCode,
     String languageName,
   ) {
-    final isSelected = locState.languageCode == languageCode;
+    final isSelected = state.languageCode == languageCode;
 
     return GestureDetector(
       onTap: () {
-        context.read<LocalizationBloc>().add(
-          LocalizationLanguageChanged(languageCode),
-        );
+        context.read<WalletBloc>().add(WalletLanguageChanged(languageCode));
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
