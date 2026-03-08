@@ -37,6 +37,8 @@ class TrydosWalletAssets {
   static const String download = '$_svgPath/download.svg';
   static const String edit = '$_svgPath/edit.svg';
   static const String generate = '$_svgPath/generate.svg';
+  static const String sendDisable = '$_svgPath/send_disable.svg';
+  static const String sendSuccess = '$_svgPath/send_success.svg';
   static const String hide = '$_svgPath/hide.svg';
   static const String hideQr = '$_svgPath/hide_qr.svg';
   static const String info = '$_svgPath/info.svg';

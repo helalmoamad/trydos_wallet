@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for gal to save images (up to Android 9/API 29) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
+    
     <application
         android:label="trydos_wallet_example"
         android:name="${applicationName}"
