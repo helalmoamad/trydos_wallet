@@ -13,8 +13,7 @@ abstract class ApiPaths {
   // ─── Balances ───
   /// Wallet balance for specific currency.
   /// Query: accountSubtype (MAIN/TRADING), assetType (CURRENCY/METAL)
-  static String balance(String assetId) =>
-      '/wallets/my/balances/$assetId';
+  static String balance(String assetId) => '/wallets/my/balances/$assetId';
 
   // ─── Banks ───
   /// Banks list (GET).

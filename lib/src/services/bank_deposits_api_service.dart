@@ -59,8 +59,7 @@ class BankDepositsApiService {
     return _client.post<BankDepositResponse>(
       ApiPaths.bankDeposits,
       data: data,
-      fromJson: (d) =>
-          BankDepositResponse.fromJson(d as Map<String, dynamic>),
+      fromJson: (d) => BankDepositResponse.fromJson(d as Map<String, dynamic>),
     );
   }
 }

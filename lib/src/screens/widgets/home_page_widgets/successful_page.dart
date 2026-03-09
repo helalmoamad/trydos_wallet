@@ -26,6 +26,11 @@ class SuccessfulPage extends StatefulWidget {
   final VoidCallback onDownload;
   final VoidCallback onShare;
 
+  // Optional Unregistered Phone fields
+  final String? recipientPhoneNumber;
+  final String? recipientName;
+  final String? recipientId;
+
   const SuccessfulPage({
     super.key,
     required this.senderAccount,
@@ -40,6 +45,9 @@ class SuccessfulPage extends StatefulWidget {
     required this.onDownload,
     required this.onShare,
     this.isSuccess = true,
+    this.recipientPhoneNumber,
+    this.recipientName,
+    this.recipientId,
   });
 
   @override
@@ -151,6 +159,9 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                 type: widget.type,
                 purpose: widget.purpose,
                 isSuccess: widget.isSuccess,
+                recipientPhoneNumber: widget.recipientPhoneNumber,
+                recipientName: widget.recipientName,
+                recipientId: widget.recipientId,
               ),
             ),
           ),
@@ -210,10 +221,25 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
               const SizedBox(height: 20),
               _buildInfoRow('Sender Account Number', widget.senderAccount),
               const SizedBox(height: 15),
-              _buildInfoRow(
-                'Recipient Account Number',
-                widget.recipientAccount,
-              ),
+              if (widget.recipientPhoneNumber != null &&
+                  widget.recipientName != null &&
+                  widget.recipientId != null) ...[
+                _buildInfoRow(
+                  'Recipient Phone Number',
+                  widget.recipientPhoneNumber!,
+                ),
+                const SizedBox(height: 15),
+                _buildInfoRow(
+                  'Recipient Name & Surname Exact ID',
+                  widget.recipientName!,
+                ),
+                const SizedBox(height: 15),
+                _buildInfoRow('Recipient ID NUMBER', widget.recipientId!),
+              ] else
+                _buildInfoRow(
+                  'Recipient Account Number',
+                  widget.recipientAccount,
+                ),
               const SizedBox(height: 15),
               Row(
                 children: [
@@ -285,12 +311,20 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                 ],
               ),
               const SizedBox(height: 30),
-              SvgPicture.asset(
-                TrydosWalletAssets.trydos,
-                height: 25,
-                package: TrydosWalletStyles.packageName,
-              ),
-              const SizedBox(height: 70),
+              (widget.recipientPhoneNumber != null &&
+                      widget.recipientName != null &&
+                      widget.recipientId != null)
+                  ? SizedBox.shrink()
+                  : SvgPicture.asset(
+                      TrydosWalletAssets.trydos,
+                      height: 25,
+                      package: TrydosWalletStyles.packageName,
+                    ),
+              (widget.recipientPhoneNumber != null &&
+                      widget.recipientName != null &&
+                      widget.recipientId != null)
+                  ? SizedBox.shrink()
+                  : const SizedBox(height: 70),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [

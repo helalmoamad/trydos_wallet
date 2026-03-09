@@ -14,6 +14,11 @@ class ReceiptWidget extends StatelessWidget {
   final String purpose;
   final bool isSuccess;
 
+  // Optional Unregistered Phone Fields
+  final String? recipientPhoneNumber;
+  final String? recipientName;
+  final String? recipientId;
+
   const ReceiptWidget({
     super.key,
     required this.senderAccount,
@@ -25,6 +30,9 @@ class ReceiptWidget extends StatelessWidget {
     required this.type,
     required this.purpose,
     required this.isSuccess,
+    this.recipientPhoneNumber,
+    this.recipientName,
+    this.recipientId,
   });
 
   @override
@@ -67,8 +75,23 @@ class ReceiptWidget extends StatelessWidget {
 
           _buildFullWidthBox('Sender Account Number', senderAccount),
           const SizedBox(height: 5),
-          _buildFullWidthBox('Recipient Account Number', recipientAccount),
-          const SizedBox(height: 5),
+
+          if (recipientPhoneNumber != null &&
+              recipientName != null &&
+              recipientId != null) ...[
+            _buildFullWidthBox('Recipient Phone Number', recipientPhoneNumber!),
+            const SizedBox(height: 5),
+            _buildFullWidthBox(
+              'Recipient Name & Surname Exact ID',
+              recipientName!,
+            ),
+            const SizedBox(height: 5),
+            _buildFullWidthBox('Recipient ID NUMBER', recipientId!),
+            const SizedBox(height: 5),
+          ] else ...[
+            _buildFullWidthBox('Recipient Account Number', recipientAccount),
+            const SizedBox(height: 5),
+          ],
           Row(
             children: [
               Expanded(
@@ -113,6 +136,23 @@ class ReceiptWidget extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 5),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xffF9F9F9),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              'You Can Receive The Money Through All Our Centers, Or You Can Download Our Application, Open An Account, Use The Money, And Benefit From All The Services.',
+              style: TrydosWalletStyles.bodyMedium.copyWith(
+                color: const Color(0xff8D8D8D),
+                fontSize: 9,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
       ),

@@ -5,7 +5,7 @@ import '../models/models.dart';
 /// خدمة API للبنوك.
 class BanksApiService {
   BanksApiService({ApiClient? client})
-      : _client = client ?? TrydosWallet.apiClient;
+    : _client = client ?? TrydosWallet.apiClient;
 
   final ApiClient _client;
 

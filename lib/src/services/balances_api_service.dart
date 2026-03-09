@@ -5,7 +5,7 @@ import '../models/models.dart';
 /// خدمة API لأرصدة المحفظة حسب العملة.
 class BalancesApiService {
   BalancesApiService({ApiClient? client})
-      : _client = client ?? TrydosWallet.apiClient;
+    : _client = client ?? TrydosWallet.apiClient;
 
   final ApiClient _client;
 

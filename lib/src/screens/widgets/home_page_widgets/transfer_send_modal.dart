@@ -16,8 +16,11 @@ class TransferSendModal extends StatefulWidget {
 
 enum TransferState { input, sending, success }
 
+enum RecipientInputType { account, phone }
+
 class _TransferSendModalState extends State<TransferSendModal> {
   TransferState currentTransferState = TransferState.input;
+  RecipientInputType currentInputType = RecipientInputType.account;
   final List<String> purposes = [
     'Work/Partnership',
     'Service Fees',
@@ -26,15 +29,29 @@ class _TransferSendModalState extends State<TransferSendModal> {
   ];
   String? selectedPurpose;
   final FocusNode recipientFocus = FocusNode();
+  final FocusNode nameFocus = FocusNode();
+  final FocusNode idFocus = FocusNode();
   final FocusNode amountFocus = FocusNode();
   final FocusNode noteFocus = FocusNode();
   final TextEditingController recipientController = TextEditingController();
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController idController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
   final TextEditingController noteController = TextEditingController();
 
   bool isRecipientVerified = false;
   String? recipientErrorMessage;
   bool isEditingRecipient = true;
+  String? _phoneForEdit;
+  String? _accountForEdit;
+  bool?
+  isPhoneRegistered; // null=not checked, true=registered, false=not registered
+
+  bool isNameVerified = false;
+  bool isEditingName = true;
+
+  bool isIdVerified = false;
+  bool isEditingId = true;
 
   bool isAmountVerified = false;
   bool isEditingAmount = true;
@@ -45,6 +62,32 @@ class _TransferSendModalState extends State<TransferSendModal> {
     recipientFocus.addListener(() {
       if (!recipientFocus.hasFocus && isEditingRecipient) {
         _verifyRecipient();
+      }
+      setState(() {});
+    });
+    nameFocus.addListener(() {
+      if (!nameFocus.hasFocus &&
+          isEditingName &&
+          nameController.text.isNotEmpty) {
+        setState(() {
+          isNameVerified = true;
+          isEditingName = false;
+        });
+        Future.delayed(const Duration(milliseconds: 100), () {
+          idFocus.requestFocus();
+        });
+      }
+      setState(() {});
+    });
+    idFocus.addListener(() {
+      if (!idFocus.hasFocus && isEditingId && idController.text.isNotEmpty) {
+        setState(() {
+          isIdVerified = true;
+          isEditingId = false;
+        });
+        Future.delayed(const Duration(milliseconds: 100), () {
+          amountFocus.requestFocus();
+        });
       }
       setState(() {});
     });
@@ -61,28 +104,69 @@ class _TransferSendModalState extends State<TransferSendModal> {
     });
     noteFocus.addListener(() => setState(() {}));
     recipientController.addListener(() => setState(() {}));
+    nameController.addListener(() => setState(() {}));
+    idController.addListener(() => setState(() {}));
     amountController.addListener(() => setState(() {}));
     noteController.addListener(() => setState(() {}));
   }
 
   void _verifyRecipient() {
-    final text = recipientController.text.replaceAll('-', '');
+    final text = recipientController.text
+        .replaceAll('-', '')
+        .replaceAll(' ', '');
+    // If we're verifying an existing mocked account, don't re-verify
+    if (text == '100708') {
+      return;
+    }
     if (text.isEmpty) return;
 
     setState(() {
-      if (text.length >= 6 && text.startsWith('1')) {
-        isRecipientVerified = true;
-        recipientErrorMessage = null;
-        isEditingRecipient = false;
-        // Auto-focus amount field after verification
-        Future.delayed(const Duration(milliseconds: 100), () {
-          amountFocus.requestFocus();
-        });
+      if (currentInputType == RecipientInputType.account) {
+        if (text.length >= 6 && text.startsWith('1')) {
+          isRecipientVerified = true;
+          recipientErrorMessage = null;
+          isEditingRecipient = false;
+          _accountForEdit = recipientController.text;
+          // Auto-focus amount field after verification
+          Future.delayed(const Duration(milliseconds: 100), () {
+            amountFocus.requestFocus();
+          });
+        } else {
+          isRecipientVerified = false;
+          recipientErrorMessage =
+              'Incorrect Account Number. It Should Start With 1 And Consist Of 6 Digits';
+          isEditingRecipient = true;
+        }
       } else {
-        isRecipientVerified = false;
-        recipientErrorMessage =
-            'Incorrect Account Number. It Should Start With 1 And Consist Of 6 Digits';
-        isEditingRecipient = true;
+        // Phone Number processing
+        final phoneText = text.replaceAll('+', '');
+        if (phoneText.length >= 7) {
+          isRecipientVerified = true;
+          recipientErrorMessage = null;
+          isEditingRecipient = false;
+          _phoneForEdit = recipientController.text;
+
+          // Mock lookup: if phone starts with '90' → registered (has account)
+          final registered = phoneText.startsWith('90');
+          isPhoneRegistered = registered;
+
+          if (registered) {
+            // Show account number — same as method 2
+            recipientController.text = '100-708';
+            Future.delayed(const Duration(milliseconds: 100), () {
+              amountFocus.requestFocus();
+            });
+          } else {
+            // Unregistered → ask for name and ID
+            Future.delayed(const Duration(milliseconds: 100), () {
+              nameFocus.requestFocus();
+            });
+          }
+        } else {
+          isRecipientVerified = false;
+          recipientErrorMessage = 'Phone number must be at least 7 digits';
+          isEditingRecipient = true;
+        }
       }
     });
   }
@@ -90,9 +174,13 @@ class _TransferSendModalState extends State<TransferSendModal> {
   @override
   void dispose() {
     recipientFocus.dispose();
+    nameFocus.dispose();
+    idFocus.dispose();
     amountFocus.dispose();
     noteFocus.dispose();
     recipientController.dispose();
+    nameController.dispose();
+    idController.dispose();
     amountController.dispose();
     noteController.dispose();
     super.dispose();
@@ -139,6 +227,22 @@ class _TransferSendModalState extends State<TransferSendModal> {
         onDone: () => Navigator.pop(context),
         onDownload: () {},
         onShare: () {},
+        // Only pass phone fields when phone is unregistered
+        recipientPhoneNumber:
+            (currentInputType == RecipientInputType.phone &&
+                isPhoneRegistered == false)
+            ? '+ ${_phoneForEdit ?? recipientController.text}'
+            : null,
+        recipientName:
+            (currentInputType == RecipientInputType.phone &&
+                isPhoneRegistered == false)
+            ? nameController.text
+            : null,
+        recipientId:
+            (currentInputType == RecipientInputType.phone &&
+                isPhoneRegistered == false)
+            ? idController.text
+            : null,
       );
     }
 
@@ -310,15 +414,120 @@ class _TransferSendModalState extends State<TransferSendModal> {
           // Recipient Input
           _buildInputField(
             label: isRecipientVerified
-                ? 'Recipient Account Number'
-                : 'Enter Recipient Account Or',
-            inlineLabel: isRecipientVerified ? null : 'Phone Number',
-            hint: 'Enter Recipient Account Number',
+                ? (currentInputType == RecipientInputType.phone
+                      ? (isPhoneRegistered == true
+                            ? 'Recipient Account Number'
+                            : 'Recipient Phone Number')
+                      : 'Recipient Account Number')
+                : '',
+            customTopLabelWidget: isRecipientVerified
+                ? null
+                : Row(
+                    children: [
+                      Text(
+                        'Enter ',
+                        style: TrydosWalletStyles.bodyMedium.copyWith(
+                          color: const Color(0xff1D1D1D),
+                          fontSize: 11,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: currentTransferState == TransferState.sending
+                            ? null
+                            : () {
+                                setState(() {
+                                  currentInputType = RecipientInputType.account;
+                                  isRecipientVerified = false;
+                                  recipientErrorMessage = null;
+                                  isEditingRecipient = true;
+                                  recipientController.clear();
+                                });
+                              },
+                        child: Text(
+                          'Recipient Account',
+                          style: TrydosWalletStyles.bodyMedium.copyWith(
+                            color:
+                                currentInputType == RecipientInputType.account
+                                ? const Color(0xff1D1D1D)
+                                : const Color(0xffD3D3D3),
+                            fontSize: 10,
+                            decoration:
+                                currentInputType == RecipientInputType.account
+                                ? TextDecoration.none
+                                : TextDecoration.underline,
+                            decorationColor: const Color(0xffD3D3D3),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        ' Or    ',
+                        style: TrydosWalletStyles.bodyMedium.copyWith(
+                          color: const Color(0xff1D1D1D),
+                          fontSize: 11,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: currentTransferState == TransferState.sending
+                            ? null
+                            : () {
+                                setState(() {
+                                  currentInputType = RecipientInputType.phone;
+                                  isRecipientVerified = false;
+                                  recipientErrorMessage = null;
+                                  isEditingRecipient = true;
+                                  recipientController.clear();
+                                });
+                              },
+                        child: Text(
+                          'Phone Number',
+                          style: TrydosWalletStyles.bodyMedium.copyWith(
+                            color: currentInputType == RecipientInputType.phone
+                                ? const Color(0xff1D1D1D)
+                                : const Color(0xffD3D3D3),
+                            fontSize: 10,
+                            decoration:
+                                currentInputType == RecipientInputType.phone
+                                ? TextDecoration.none
+                                : TextDecoration.underline,
+                            decorationColor: const Color(0xffD3D3D3),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      SvgPicture.asset(
+                        TrydosWalletAssets.question,
+                        package: TrydosWalletStyles.packageName,
+                      ),
+                    ],
+                  ),
+            hint: currentInputType == RecipientInputType.account
+                ? 'Enter Recipient Account Number'
+                : 'Enter Recipient Phone Number',
+            prefixText:
+                currentInputType == RecipientInputType.phone &&
+                    !isRecipientVerified
+                ? '+ '
+                : null,
+            keyboardType:
+                currentInputType == RecipientInputType.phone &&
+                    !isRecipientVerified
+                ? TextInputType.number
+                : TextInputType.text,
+            inputFormatters:
+                currentInputType == RecipientInputType.phone &&
+                    !isRecipientVerified
+                ? [FilteringTextInputFormatter.digitsOnly]
+                : null,
             focusNode: recipientFocus,
             controller: recipientController,
             isVerified: isRecipientVerified,
             errorMessage: recipientErrorMessage,
-            showQuestionIcon: true,
+            showQuestionIcon: isRecipientVerified,
+            // Show masked name only when we have an account number displayed
+            showMaskedName:
+                isRecipientVerified &&
+                (currentInputType == RecipientInputType.account ||
+                    isPhoneRegistered == true),
             onEdit: currentTransferState == TransferState.sending
                 ? null
                 : () {
@@ -326,6 +535,11 @@ class _TransferSendModalState extends State<TransferSendModal> {
                       isEditingRecipient = true;
                       isRecipientVerified = false;
                       recipientErrorMessage = null;
+                      if (currentInputType == RecipientInputType.phone) {
+                        recipientController.text = _phoneForEdit ?? '';
+                      } else {
+                        recipientController.text = _accountForEdit ?? '';
+                      }
                       Future.delayed(const Duration(milliseconds: 100), () {
                         recipientFocus.requestFocus();
                       });
@@ -373,9 +587,70 @@ class _TransferSendModalState extends State<TransferSendModal> {
           ),
           const SizedBox(height: 10),
 
+          if (currentInputType == RecipientInputType.phone &&
+              isPhoneRegistered == false) ...[
+            // Name Input
+            AbsorbPointer(
+              absorbing: !isRecipientVerified,
+              child: _buildInputField(
+                label: isNameVerified
+                    ? 'Recipient Name & Surname Exact ID'
+                    : 'Enter Recipient Name & Surname Exact ID',
+                hint: 'Mohamad Ramzi Katmawi',
+                focusNode: nameFocus,
+                controller: nameController,
+                isVerified: isNameVerified,
+                onEdit: currentTransferState == TransferState.sending
+                    ? null
+                    : () {
+                        setState(() {
+                          isEditingName = true;
+                          isNameVerified = false;
+                          Future.delayed(const Duration(milliseconds: 100), () {
+                            nameFocus.requestFocus();
+                          });
+                        });
+                      },
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // ID Input
+            AbsorbPointer(
+              absorbing: !isNameVerified,
+              child: _buildInputField(
+                label: isIdVerified
+                    ? 'Recipient ID NUMBER'
+                    : 'Enter Recipient ID NUMBER',
+                hint: 'ID Card Or Passport Or Driving License Number',
+                focusNode: idFocus,
+                controller: idController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                isVerified: isIdVerified,
+                onEdit: currentTransferState == TransferState.sending
+                    ? null
+                    : () {
+                        setState(() {
+                          isEditingId = true;
+                          isIdVerified = false;
+                          Future.delayed(const Duration(milliseconds: 100), () {
+                            idFocus.requestFocus();
+                          });
+                        });
+                      },
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+
           // Amount Input
           AbsorbPointer(
-            absorbing: !isRecipientVerified,
+            absorbing: currentInputType == RecipientInputType.phone
+                ? (isPhoneRegistered == false
+                      ? !isIdVerified
+                      : !isRecipientVerified)
+                : !isRecipientVerified,
             child: BlocBuilder<WalletBloc, WalletState>(
               buildWhen: (previous, current) =>
                   previous.selectedAssetId != current.selectedAssetId ||
@@ -427,64 +702,73 @@ class _TransferSendModalState extends State<TransferSendModal> {
 
           // Purpose Section
           AbsorbPointer(
-            absorbing: !(isRecipientVerified && isAmountVerified),
+            absorbing: currentInputType == RecipientInputType.phone
+                ? (isPhoneRegistered == false
+                      ? !(isIdVerified && isAmountVerified)
+                      : !(isRecipientVerified && isAmountVerified))
+                : !(isRecipientVerified && isAmountVerified),
             child: _buildPurposeSection(),
           ),
 
           const SizedBox(height: 20),
 
           // Send Button
-          InkWell(
-            onTap:
-                (isRecipientVerified &&
-                    isAmountVerified &&
-                    selectedPurpose != null &&
-                    currentTransferState != TransferState.sending)
-                ? () {
-                    FocusScope.of(context).unfocus();
-                    setState(() {
-                      currentTransferState = TransferState.sending;
-                    });
-                    Future.delayed(const Duration(seconds: 3), () {
-                      if (mounted) {
+          Builder(
+            builder: (context) {
+              final isReadyToSend =
+                  selectedPurpose != null &&
+                  isAmountVerified &&
+                  (currentInputType == RecipientInputType.account
+                      ? isRecipientVerified
+                      : (isPhoneRegistered == true
+                            ? isRecipientVerified
+                            : (isNameVerified && isIdVerified)));
+              return InkWell(
+                onTap:
+                    isReadyToSend &&
+                        currentTransferState != TransferState.sending
+                    ? () {
+                        FocusScope.of(context).unfocus();
                         setState(() {
-                          currentTransferState = TransferState.success;
+                          currentTransferState = TransferState.sending;
+                        });
+                        Future.delayed(const Duration(seconds: 3), () {
+                          if (mounted) {
+                            setState(() {
+                              currentTransferState = TransferState.success;
+                            });
+                          }
                         });
                       }
-                    });
-                  }
-                : null,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SvgPicture.asset(
-                    !(isRecipientVerified &&
-                            isAmountVerified &&
-                            selectedPurpose != null)
-                        ? TrydosWalletAssets.sendDisable
-                        : TrydosWalletAssets.transferSend,
-                    height: 35,
-                    package: TrydosWalletStyles.packageName,
+                    : null,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SvgPicture.asset(
+                        !isReadyToSend
+                            ? TrydosWalletAssets.sendDisable
+                            : TrydosWalletAssets.transferSend,
+                        height: 35,
+                        package: TrydosWalletStyles.packageName,
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        currentTransferState == TransferState.sending
+                            ? 'Sending...'
+                            : 'Send',
+                        style: TrydosWalletStyles.bodyLarge.copyWith(
+                          color: isReadyToSend
+                              ? const Color(0xff388CFF)
+                              : const Color(0xff8D8D8D),
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    currentTransferState == TransferState.sending
-                        ? 'Sending...'
-                        : 'Send',
-                    style: TrydosWalletStyles.bodyLarge.copyWith(
-                      color:
-                          (isRecipientVerified &&
-                              isAmountVerified &&
-                              selectedPurpose != null)
-                          ? const Color(0xff388CFF)
-                          : const Color(0xff8D8D8D),
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 30),
         ],
@@ -574,7 +858,9 @@ class _TransferSendModalState extends State<TransferSendModal> {
   Widget _buildInputField({
     required String label,
     String? inlineLabel,
+    Widget? customTopLabelWidget,
     required String hint,
+    String? prefixText,
     Widget? trailing,
     Widget? suffix,
     bool suffixFollowsText = false,
@@ -582,6 +868,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
     String? errorMessage,
     VoidCallback? onEdit,
     bool showQuestionIcon = false,
+    bool showMaskedName = false,
     bool enabled = true,
     required FocusNode focusNode,
     TextEditingController? controller,
@@ -623,33 +910,40 @@ class _TransferSendModalState extends State<TransferSendModal> {
                   ),
                 ),
               if (isVerified && onEdit != null) const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(fontSize: 11, color: const Color(0xff1D1D1D)),
-              ),
-              if (showQuestionIcon && inlineLabel == null) ...[
-                const SizedBox(width: 4),
-                SvgPicture.asset(
-                  TrydosWalletAssets.question,
-                  package: TrydosWalletStyles.packageName,
-                ),
-              ],
-              if (inlineLabel != null) ...[
-                const SizedBox(width: 10),
+              if (customTopLabelWidget != null && !isVerified)
+                Expanded(child: customTopLabelWidget)
+              else ...[
                 Text(
-                  inlineLabel,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Color(0xffD3D3D3),
-                    color: Color(0xffD3D3D3),
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: const Color(0xff1D1D1D),
                   ),
                 ),
-                const SizedBox(width: 4),
-                SvgPicture.asset(
-                  TrydosWalletAssets.question,
-                  package: TrydosWalletStyles.packageName,
-                ),
+                if (showQuestionIcon && inlineLabel == null) ...[
+                  const SizedBox(width: 4),
+                  SvgPicture.asset(
+                    TrydosWalletAssets.question,
+                    package: TrydosWalletStyles.packageName,
+                  ),
+                ],
+                if (inlineLabel != null) ...[
+                  const SizedBox(width: 10),
+                  Text(
+                    inlineLabel,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Color(0xffD3D3D3),
+                      color: Color(0xffD3D3D3),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  SvgPicture.asset(
+                    TrydosWalletAssets.question,
+                    package: TrydosWalletStyles.packageName,
+                  ),
+                ],
               ],
             ],
           ),
@@ -705,8 +999,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
                               const SizedBox(width: 4),
                               suffix,
                             ],
-                            if (!suffixFollowsText &&
-                                label.contains('Recipient')) ...[
+                            if (!suffixFollowsText && showMaskedName) ...[
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
@@ -738,6 +1031,12 @@ class _TransferSendModalState extends State<TransferSendModal> {
                         ),
                         decoration: InputDecoration(
                           hintText: hint,
+                          prefixText: prefixText,
+                          prefixStyle: TrydosWalletStyles.bodyMedium.copyWith(
+                            color: const Color(0xff1D1D1D),
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
                           suffix: suffixFollowsText ? null : suffix,
                           hintStyle: TrydosWalletStyles.bodyMedium.copyWith(
                             color: const Color(0xffD3D3D3),

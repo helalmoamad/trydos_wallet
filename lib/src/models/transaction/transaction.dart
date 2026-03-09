@@ -54,6 +54,5 @@ class Transaction {
   final String createdAt;
   final String updatedAt;
 
-  bool get isDeposit =>
-      type.toUpperCase() == 'DEPOSIT' || amount >= 0;
+  bool get isDeposit => type.toUpperCase() == 'DEPOSIT' || amount >= 0;
 }

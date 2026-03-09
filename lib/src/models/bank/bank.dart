@@ -34,5 +34,6 @@ class Bank {
   final bool isActive;
 
   /// اسم العرض مع الرمز إن وُجد.
-  String get displayName => code != null && code!.isNotEmpty ? '$name ($code)' : name;
+  String get displayName =>
+      code != null && code!.isNotEmpty ? '$name ($code)' : name;
 }

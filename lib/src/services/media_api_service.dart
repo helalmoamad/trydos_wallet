@@ -10,7 +10,7 @@ import '../models/models.dart';
 /// خدمة API لرفع الملفات.
 class MediaApiService {
   MediaApiService({ApiClient? client})
-      : _client = client ?? TrydosWallet.apiClient;
+    : _client = client ?? TrydosWallet.apiClient;
 
   final ApiClient _client;
 
@@ -34,18 +34,14 @@ class MediaApiService {
     }
     final fileName = filePath.split(RegExp(r'[/\\]')).last;
     final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(
-        filePath,
-        filename: fileName,
-      ),
+      'file': await MultipartFile.fromFile(filePath, filename: fileName),
       'type': type,
       if (metadata != null) 'metadata': jsonEncode(metadata),
     });
     return _client.post<MediaUploadResponse>(
       ApiPaths.mediaUploadDirect,
       data: formData,
-      fromJson: (d) =>
-          MediaUploadResponse.fromJson(d as Map<String, dynamic>),
+      fromJson: (d) => MediaUploadResponse.fromJson(d as Map<String, dynamic>),
     );
   }
 }

@@ -5,7 +5,7 @@ import '../models/models.dart';
 /// خدمة API لمعاملات المحفظة (cursor pagination).
 class TransactionsApiService {
   TransactionsApiService({ApiClient? client})
-      : _client = client ?? TrydosWallet.apiClient;
+    : _client = client ?? TrydosWallet.apiClient;
 
   final ApiClient _client;
 
