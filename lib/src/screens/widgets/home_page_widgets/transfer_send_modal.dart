@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,9 +7,11 @@ import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/successful_page.dart';
+import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/qr_scanner_page.dart';
 
 class TransferSendModal extends StatefulWidget {
-  const TransferSendModal({super.key});
+  final ScrollController? scrollController;
+  const TransferSendModal({super.key, this.scrollController});
 
   @override
   State<TransferSendModal> createState() => _TransferSendModalState();
@@ -55,6 +58,19 @@ class _TransferSendModalState extends State<TransferSendModal> {
 
   bool isAmountVerified = false;
   bool isEditingAmount = true;
+
+  bool isFromQr = false;
+  bool isRequestFlow = false;
+  DateTime? expiryTime;
+  String? referenceId;
+  String? requestType;
+  String? maskedAccountName;
+  String? qrPurpose;
+
+  bool get isExpired =>
+      isRequestFlow &&
+      expiryTime != null &&
+      DateTime.now().isBefore(expiryTime!);
 
   @override
   void initState() {
@@ -186,6 +202,21 @@ class _TransferSendModalState extends State<TransferSendModal> {
     super.dispose();
   }
 
+  static const List<String> months = [
+    'Jan',
+    'Feb',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'Sept',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
   @override
   Widget build(BuildContext context) {
     if (currentTransferState == TransferState.success) {
@@ -197,20 +228,6 @@ class _TransferSendModalState extends State<TransferSendModal> {
       final senderAccount = '$subtype | $accountId | ${state.maskedName}';
 
       final now = DateTime.now();
-      final months = [
-        'Jan',
-        'Feb',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'Sept',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
       final dateAndTimeString =
           '${now.day.toString().padLeft(2, '0')}.${months[now.month - 1]} | ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
@@ -223,10 +240,11 @@ class _TransferSendModalState extends State<TransferSendModal> {
             'TSCR${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
         dateAndTimeString: dateAndTimeString,
         type: 'Transfer | Send',
-        purpose: selectedPurpose ?? '',
+        purpose: qrPurpose ?? selectedPurpose ?? 'Work/Partnership',
         onDone: () => Navigator.pop(context),
         onDownload: () {},
         onShare: () {},
+        isFromQr: isFromQr,
         // Only pass phone fields when phone is unregistered
         recipientPhoneNumber:
             (currentInputType == RecipientInputType.phone &&
@@ -246,533 +264,696 @@ class _TransferSendModalState extends State<TransferSendModal> {
       );
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 30),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 10),
-          // Handle
-          Container(
-            width: 40,
-            height: 2,
-            decoration: BoxDecoration(
-              color: const Color(0xffC4C2C2),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 15),
-          // Back Button & Icon
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Column(
-                children: [
-                  SvgPicture.asset(
-                    TrydosWalletAssets.transferSend,
-                    height: 40,
-                    package: TrydosWalletStyles.packageName,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'TRANSFER | SEND',
-                    style: TrydosWalletStyles.bodyMedium.copyWith(
-                      color: const Color(0xff1D1D1D),
-                      fontSize: 13,
-                      height: 1.3,
+    return SingleChildScrollView(
+      controller: widget.scrollController,
+      physics: const BouncingScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 30),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 15),
+            // Back Button & Icon
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Column(
+                  children: [
+                    SvgPicture.asset(
+                      TrydosWalletAssets.transferSend,
+                      height: 40,
+                      package: TrydosWalletStyles.packageName,
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Sender Account Card
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xff3C3C3C),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  // ignore: deprecated_member_use
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'TRANSFER | SEND',
+                          style: TrydosWalletStyles.bodyMedium.copyWith(
+                            color: const Color(0xff1D1D1D),
+                            fontSize: 13,
+                          ),
+                        ),
+                        isRequestFlow
+                            ? Text(
+                                ' REQUEST',
+                                style: TrydosWalletStyles.bodyMedium.copyWith(
+                                  color: const Color(0xff1D1D1D),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),
-            child: BlocBuilder<WalletBloc, WalletState>(
-              buildWhen: (previous, current) =>
-                  previous.selectedAssetId != current.selectedAssetId ||
-                  previous.balances != current.balances,
-              builder: (context, state) {
-                final balance = state.balances[state.selectedAssetId ?? ''];
-                final amountStr = balance != null
-                    ? balance.available.toStringAsFixed(
-                        balance.available.truncateToDouble() ==
-                                balance.available
-                            ? 0
-                            : 2,
-                      )
-                    : '0';
-                final symbol = balance?.assetSymbol ?? r'$';
-                final assetName = balance?.asset?.name ?? '';
-                final accountId = balance?.accountId ?? '----';
-                final subtype = balance?.accountSubtype ?? 'MAIN';
+            const SizedBox(height: 20),
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Sender Account Card
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xff3C3C3C),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    // ignore: deprecated_member_use
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: BlocBuilder<WalletBloc, WalletState>(
+                buildWhen: (previous, current) =>
+                    previous.selectedAssetId != current.selectedAssetId ||
+                    previous.balances != current.balances,
+                builder: (context, state) {
+                  final balance = state.balances[state.selectedAssetId ?? ''];
+                  final amountStr = balance != null
+                      ? balance.available.toStringAsFixed(
+                          balance.available.truncateToDouble() ==
+                                  balance.available
+                              ? 0
+                              : 2,
+                        )
+                      : '0';
+                  final symbol = balance?.assetSymbol ?? r'$';
+                  final assetName = balance?.asset?.name ?? '';
+                  final accountId = balance?.accountId ?? '----';
+                  final subtype = balance?.accountSubtype ?? 'MAIN';
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            symbol,
+                            style: TrydosWalletStyles.bodyMedium.copyWith(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SvgPicture.asset(
+                            TrydosWalletAssets.reload,
+                            colorFilter: const ColorFilter.mode(
+                              Colors.white,
+                              BlendMode.srcIn,
+                            ),
+                            height: 20,
+                            package: TrydosWalletStyles.packageName,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      const Text(
+                        'Sender Account',
+                        style: TextStyle(color: Colors.white, fontSize: 11),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        '$subtype | $accountId | ${state.maskedName}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            amountStr,
+                            style: TrydosWalletStyles.bodyMedium.copyWith(
+                              color: Colors.white,
+                              fontSize: 25,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Row(
+                            children: [
+                              Text(
+                                '$symbol | $assetName',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                ),
+                              ),
+                              const SizedBox(width: 15),
+                              SvgPicture.asset(
+                                TrydosWalletAssets.hide,
+                                colorFilter: const ColorFilter.mode(
+                                  Colors.white,
+                                  BlendMode.srcIn,
+                                ),
+                                height: 11,
+                                package: TrydosWalletStyles.packageName,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            Text(
+              'Send To',
+              style: TrydosWalletStyles.bodyMedium.copyWith(
+                color: const Color(0xff1D1D1D),
+                fontSize: 11,
+                height: 1.3,
+              ),
+            ),
+            const SizedBox(height: 15),
+
+            // Recipient Input
+            _buildInputField(
+              key: ValueKey(currentInputType),
+              label: isRecipientVerified
+                  ? (currentInputType == RecipientInputType.phone
+                        ? (isPhoneRegistered == true
+                              ? 'Recipient Account Number'
+                              : 'Recipient Phone Number')
+                        : 'Recipient Account Number')
+                  : '',
+              customTopLabelWidget: isRecipientVerified
+                  ? null
+                  : Row(
                       children: [
                         Text(
-                          symbol,
+                          'Enter ',
                           style: TrydosWalletStyles.bodyMedium.copyWith(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                            color: const Color(0xff1D1D1D),
+                            fontSize: 11,
                           ),
                         ),
-                        SvgPicture.asset(
-                          TrydosWalletAssets.reload,
-                          colorFilter: const ColorFilter.mode(
-                            Colors.white,
-                            BlendMode.srcIn,
+                        GestureDetector(
+                          onTap: currentTransferState == TransferState.sending
+                              ? null
+                              : () {
+                                  setState(() {
+                                    currentInputType =
+                                        RecipientInputType.account;
+                                    isRecipientVerified = false;
+                                    recipientErrorMessage = null;
+                                    isEditingRecipient = true;
+                                    recipientController.clear();
+                                  });
+                                },
+                          child: Text(
+                            'Recipient Account',
+                            style: TrydosWalletStyles.bodyMedium.copyWith(
+                              color:
+                                  currentInputType == RecipientInputType.account
+                                  ? const Color(0xff1D1D1D)
+                                  : const Color(0xffD3D3D3),
+                              fontSize: 10,
+                              decoration:
+                                  currentInputType == RecipientInputType.account
+                                  ? TextDecoration.none
+                                  : TextDecoration.underline,
+                              decorationColor: const Color(0xffD3D3D3),
+                            ),
                           ),
-                          height: 20,
+                        ),
+                        Text(
+                          ' Or    ',
+                          style: TrydosWalletStyles.bodyMedium.copyWith(
+                            color: const Color(0xff1D1D1D),
+                            fontSize: 11,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: currentTransferState == TransferState.sending
+                              ? null
+                              : () {
+                                  setState(() {
+                                    currentInputType = RecipientInputType.phone;
+                                    isRecipientVerified = false;
+                                    recipientErrorMessage = null;
+                                    isEditingRecipient = true;
+                                    recipientController.clear();
+                                  });
+                                },
+                          child: Text(
+                            'Phone Number',
+                            style: TrydosWalletStyles.bodyMedium.copyWith(
+                              color:
+                                  currentInputType == RecipientInputType.phone
+                                  ? const Color(0xff1D1D1D)
+                                  : const Color(0xffD3D3D3),
+                              fontSize: 10,
+                              decoration:
+                                  currentInputType == RecipientInputType.phone
+                                  ? TextDecoration.none
+                                  : TextDecoration.underline,
+                              decorationColor: const Color(0xffD3D3D3),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        SvgPicture.asset(
+                          TrydosWalletAssets.question,
                           package: TrydosWalletStyles.packageName,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 5),
-                    const Text(
-                      'Sender Account',
-                      style: TextStyle(color: Colors.white, fontSize: 11),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      '$subtype | $accountId | ${state.maskedName}',
-                      style: const TextStyle(color: Colors.white, fontSize: 11),
-                    ),
-                    const SizedBox(height: 5),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(
-                          amountStr,
-                          style: TrydosWalletStyles.bodyMedium.copyWith(
-                            color: Colors.white,
-                            fontSize: 25,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Row(
-                          children: [
-                            Text(
-                              '$symbol | $assetName',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                              ),
-                            ),
-                            const SizedBox(width: 15),
-                            SvgPicture.asset(
-                              TrydosWalletAssets.hide,
-                              colorFilter: const ColorFilter.mode(
-                                Colors.white,
-                                BlendMode.srcIn,
-                              ),
-                              height: 11,
-                              package: TrydosWalletStyles.packageName,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          Text(
-            'Send To',
-            style: TrydosWalletStyles.bodyMedium.copyWith(
-              color: const Color(0xff1D1D1D),
-              fontSize: 11,
-              height: 1.3,
-            ),
-          ),
-          const SizedBox(height: 15),
-
-          // Recipient Input
-          _buildInputField(
-            label: isRecipientVerified
-                ? (currentInputType == RecipientInputType.phone
-                      ? (isPhoneRegistered == true
-                            ? 'Recipient Account Number'
-                            : 'Recipient Phone Number')
-                      : 'Recipient Account Number')
-                : '',
-            customTopLabelWidget: isRecipientVerified
-                ? null
-                : Row(
-                    children: [
-                      Text(
-                        'Enter ',
+              hint: currentInputType == RecipientInputType.account
+                  ? 'Enter Recipient Account Number'
+                  : 'Enter Recipient Phone Number',
+              focusNode: recipientFocus,
+              controller: recipientController,
+              prefixText:
+                  currentInputType == RecipientInputType.phone &&
+                      !isRecipientVerified
+                  ? '+ '
+                  : null,
+              keyboardType:
+                  currentInputType == RecipientInputType.phone &&
+                      !isRecipientVerified
+                  ? TextInputType.number
+                  : TextInputType.text,
+              inputFormatters:
+                  currentInputType == RecipientInputType.phone &&
+                      !isRecipientVerified
+                  ? [FilteringTextInputFormatter.digitsOnly]
+                  : null,
+              isFromQr: isFromQr,
+              isVerified: isRecipientVerified,
+              enabled: !isRequestFlow,
+              onEdit:
+                  currentTransferState == TransferState.sending ||
+                      isFromQr ||
+                      isRequestFlow
+                  ? null
+                  : () {
+                      setState(() {
+                        isEditingRecipient = true;
+                        isRecipientVerified = false;
+                        recipientErrorMessage = null;
+                        if (currentInputType == RecipientInputType.phone) {
+                          recipientController.text = _phoneForEdit ?? '';
+                        } else {
+                          recipientController.text = _accountForEdit ?? '';
+                        }
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          recipientFocus.requestFocus();
+                        });
+                      });
+                    },
+              errorMessage: recipientErrorMessage,
+              showQuestionIcon: isRecipientVerified,
+              // Show masked name only when we have an account number displayed
+              showMaskedName:
+                  isRecipientVerified &&
+                  (currentInputType == RecipientInputType.account ||
+                      isPhoneRegistered == true),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (recipientController.text.isEmpty) ...[
+                    GestureDetector(
+                      onTap: () async {
+                        ClipboardData? data = await Clipboard.getData(
+                          Clipboard.kTextPlain,
+                        );
+                        if (data != null && data.text != null) {
+                          recipientController.text = data.text!;
+                        }
+                      },
+                      child: Text(
+                        'Paste',
                         style: TrydosWalletStyles.bodyMedium.copyWith(
-                          color: const Color(0xff1D1D1D),
+                          color: const Color(0xff388CFF),
                           fontSize: 11,
+                          height: 1.3,
                         ),
                       ),
-                      GestureDetector(
-                        onTap: currentTransferState == TransferState.sending
-                            ? null
-                            : () {
-                                setState(() {
-                                  currentInputType = RecipientInputType.account;
-                                  isRecipientVerified = false;
-                                  recipientErrorMessage = null;
-                                  isEditingRecipient = true;
-                                  recipientController.clear();
-                                });
-                              },
-                        child: Text(
-                          'Recipient Account',
-                          style: TrydosWalletStyles.bodyMedium.copyWith(
-                            color:
-                                currentInputType == RecipientInputType.account
-                                ? const Color(0xff1D1D1D)
-                                : const Color(0xffD3D3D3),
-                            fontSize: 10,
-                            decoration:
-                                currentInputType == RecipientInputType.account
-                                ? TextDecoration.none
-                                : TextDecoration.underline,
-                            decorationColor: const Color(0xffD3D3D3),
-                          ),
-                        ),
-                      ),
-                      Text(
-                        ' Or    ',
-                        style: TrydosWalletStyles.bodyMedium.copyWith(
-                          color: const Color(0xff1D1D1D),
-                          fontSize: 11,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: currentTransferState == TransferState.sending
-                            ? null
-                            : () {
-                                setState(() {
-                                  currentInputType = RecipientInputType.phone;
-                                  isRecipientVerified = false;
-                                  recipientErrorMessage = null;
-                                  isEditingRecipient = true;
-                                  recipientController.clear();
-                                });
-                              },
-                        child: Text(
-                          'Phone Number',
-                          style: TrydosWalletStyles.bodyMedium.copyWith(
-                            color: currentInputType == RecipientInputType.phone
-                                ? const Color(0xff1D1D1D)
-                                : const Color(0xffD3D3D3),
-                            fontSize: 10,
-                            decoration:
-                                currentInputType == RecipientInputType.phone
-                                ? TextDecoration.none
-                                : TextDecoration.underline,
-                            decorationColor: const Color(0xffD3D3D3),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      SvgPicture.asset(
-                        TrydosWalletAssets.question,
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () async {
+                        final result = await showWalletModal<String>(
+                          context: context,
+                          builder: (context, sc) => const QRScannerPage(),
+                        );
+                        if (result != null) {
+                          setState(() {
+                            isFromQr = true;
+                            try {
+                              final data = jsonDecode(result);
+                              if (data is Map<String, dynamic> &&
+                                  data.containsKey('expiry_time') &&
+                                  data.containsKey('amount')) {
+                                // It's a Request Flow
+                                isRequestFlow = true;
+                                currentInputType = RecipientInputType.account;
+                                recipientController.text =
+                                    data['account_id']?.toString() ?? '';
+                                amountController.text =
+                                    data['amount']?.toString() ?? '';
+                                referenceId = data['reference']?.toString();
+                                qrPurpose = data['purpose']?.toString();
+                                requestType = data['type']?.toString();
+                                maskedAccountName = data['account_name']
+                                    ?.toString();
+                                if (data['expiry_time'] != null) {
+                                  expiryTime = DateTime.parse(
+                                    data['expiry_time'],
+                                  );
+                                }
+                                isRecipientVerified = true;
+                                isAmountVerified = true;
+                                isEditingRecipient = false;
+                                isEditingAmount = false;
+                              } else {
+                                // Normal QR scan
+                                isRequestFlow = false;
+                                currentInputType = RecipientInputType.account;
+                                recipientController.text = result;
+                                _verifyRecipient();
+                              }
+                            } catch (e) {
+                              // Fallback for simple string results
+                              isRequestFlow = false;
+                              currentInputType = RecipientInputType.account;
+                              recipientController.text = result;
+                              _verifyRecipient();
+                            }
+                          });
+                        }
+                      },
+                      child: SvgPicture.asset(
+                        TrydosWalletAssets.qr,
+                        height: 14,
                         package: TrydosWalletStyles.packageName,
                       ),
-                    ],
-                  ),
-            hint: currentInputType == RecipientInputType.account
-                ? 'Enter Recipient Account Number'
-                : 'Enter Recipient Phone Number',
-            prefixText:
-                currentInputType == RecipientInputType.phone &&
-                    !isRecipientVerified
-                ? '+ '
-                : null,
-            keyboardType:
-                currentInputType == RecipientInputType.phone &&
-                    !isRecipientVerified
-                ? TextInputType.number
-                : TextInputType.text,
-            inputFormatters:
-                currentInputType == RecipientInputType.phone &&
-                    !isRecipientVerified
-                ? [FilteringTextInputFormatter.digitsOnly]
-                : null,
-            focusNode: recipientFocus,
-            controller: recipientController,
-            isVerified: isRecipientVerified,
-            errorMessage: recipientErrorMessage,
-            showQuestionIcon: isRecipientVerified,
-            // Show masked name only when we have an account number displayed
-            showMaskedName:
-                isRecipientVerified &&
-                (currentInputType == RecipientInputType.account ||
-                    isPhoneRegistered == true),
-            onEdit: currentTransferState == TransferState.sending
-                ? null
-                : () {
-                    setState(() {
-                      isEditingRecipient = true;
-                      isRecipientVerified = false;
-                      recipientErrorMessage = null;
-                      if (currentInputType == RecipientInputType.phone) {
-                        recipientController.text = _phoneForEdit ?? '';
-                      } else {
-                        recipientController.text = _accountForEdit ?? '';
-                      }
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        recipientFocus.requestFocus();
-                      });
-                    });
-                  },
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (recipientController.text.isEmpty) ...[
-                  GestureDetector(
-                    onTap: () async {
-                      ClipboardData? data = await Clipboard.getData(
-                        Clipboard.kTextPlain,
-                      );
-                      if (data != null && data.text != null) {
-                        recipientController.text = data.text!;
-                      }
-                    },
-                    child: Text(
-                      'Paste',
-                      style: TrydosWalletStyles.bodyMedium.copyWith(
-                        color: const Color(0xff388CFF),
-                        fontSize: 11,
-                        height: 1.3,
+                    ),
+                  ] else
+                    GestureDetector(
+                      onTap: () => recipientController.clear(),
+                      child: SvgPicture.asset(
+                        TrydosWalletAssets.close,
+                        height: 18,
+                        package: TrydosWalletStyles.packageName,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  SvgPicture.asset(
-                    TrydosWalletAssets.qr,
-                    height: 14,
-                    package: TrydosWalletStyles.packageName,
-                  ),
-                ] else
-                  GestureDetector(
-                    onTap: () => recipientController.clear(),
-                    child: SvgPicture.asset(
-                      TrydosWalletAssets.close,
-                      height: 18,
-                      package: TrydosWalletStyles.packageName,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          if (currentInputType == RecipientInputType.phone &&
-              isPhoneRegistered == false) ...[
-            // Name Input
-            AbsorbPointer(
-              absorbing: !isRecipientVerified,
-              child: _buildInputField(
-                label: isNameVerified
-                    ? 'Recipient Name & Surname Exact ID'
-                    : 'Enter Recipient Name & Surname Exact ID',
-                hint: 'Mohamad Ramzi Katmawi',
-                focusNode: nameFocus,
-                controller: nameController,
-                isVerified: isNameVerified,
-                onEdit: currentTransferState == TransferState.sending
-                    ? null
-                    : () {
-                        setState(() {
-                          isEditingName = true;
-                          isNameVerified = false;
-                          Future.delayed(const Duration(milliseconds: 100), () {
-                            nameFocus.requestFocus();
-                          });
-                        });
-                      },
+                ],
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 5),
 
-            // ID Input
-            AbsorbPointer(
-              absorbing: !isNameVerified,
-              child: _buildInputField(
-                label: isIdVerified
-                    ? 'Recipient ID NUMBER'
-                    : 'Enter Recipient ID NUMBER',
-                hint: 'ID Card Or Passport Or Driving License Number',
-                focusNode: idFocus,
-                controller: idController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                isVerified: isIdVerified,
-                onEdit: currentTransferState == TransferState.sending
-                    ? null
-                    : () {
-                        setState(() {
-                          isEditingId = true;
-                          isIdVerified = false;
-                          Future.delayed(const Duration(milliseconds: 100), () {
-                            idFocus.requestFocus();
-                          });
-                        });
-                      },
-              ),
-            ),
-            const SizedBox(height: 10),
-          ],
-
-          // Amount Input
-          AbsorbPointer(
-            absorbing: currentInputType == RecipientInputType.phone
-                ? (isPhoneRegistered == false
-                      ? !isIdVerified
-                      : !isRecipientVerified)
-                : !isRecipientVerified,
-            child: BlocBuilder<WalletBloc, WalletState>(
-              buildWhen: (previous, current) =>
-                  previous.selectedAssetId != current.selectedAssetId ||
-                  previous.balances != current.balances,
-              builder: (context, state) {
-                final balance = state.balances[state.selectedAssetId ?? ''];
-                final symbol = balance?.assetSymbol ?? 'USD';
-
-                return _buildInputField(
-                  label: 'Amount To Be Sent',
-                  hint: '000,000',
-                  focusNode: amountFocus,
-                  controller: amountController,
-                  keyboardType: TextInputType.number,
-                  suffixFollowsText: true,
-                  isVerified: isAmountVerified,
+            if (currentInputType == RecipientInputType.phone &&
+                isPhoneRegistered == false) ...[
+              // Name Input
+              AbsorbPointer(
+                absorbing: !isRecipientVerified,
+                child: _buildInputField(
+                  label: isNameVerified
+                      ? 'Recipient Name & Surname Exact ID'
+                      : 'Enter Recipient Name & Surname Exact ID',
+                  hint: 'Mohamad Ramzi Katmawi',
+                  focusNode: nameFocus,
+                  controller: nameController,
+                  isVerified: isNameVerified,
+                  enabled: !isRequestFlow,
                   onEdit: currentTransferState == TransferState.sending
                       ? null
                       : () {
                           setState(() {
-                            isEditingAmount = true;
-                            isAmountVerified = false;
+                            isEditingName = true;
+                            isNameVerified = false;
                             Future.delayed(
                               const Duration(milliseconds: 100),
                               () {
-                                amountFocus.requestFocus();
+                                nameFocus.requestFocus();
                               },
                             );
                           });
                         },
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(6),
-                    ThousandSeparatorFormatter(),
-                  ],
-                  suffix: Text(
-                    ' $symbol',
-                    style: TrydosWalletStyles.bodyMedium.copyWith(
-                      color: const Color(0xff1D1D1D),
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 10),
+                ),
+              ),
+              const SizedBox(height: 5),
 
-          // Purpose Section
-          AbsorbPointer(
-            absorbing: currentInputType == RecipientInputType.phone
-                ? (isPhoneRegistered == false
-                      ? !(isIdVerified && isAmountVerified)
-                      : !(isRecipientVerified && isAmountVerified))
-                : !(isRecipientVerified && isAmountVerified),
-            child: _buildPurposeSection(),
-          ),
+              // ID Input
+              AbsorbPointer(
+                absorbing: !isNameVerified,
+                child: _buildInputField(
+                  label: isIdVerified
+                      ? 'Recipient ID NUMBER'
+                      : 'Enter Recipient ID NUMBER',
+                  hint: 'ID Card Or Passport Or Driving License Number',
+                  focusNode: idFocus,
+                  controller: idController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  isVerified: isIdVerified,
+                  onEdit: currentTransferState == TransferState.sending
+                      ? null
+                      : () {
+                          setState(() {
+                            isEditingId = true;
+                            isIdVerified = false;
+                            Future.delayed(
+                              const Duration(milliseconds: 100),
+                              () {
+                                idFocus.requestFocus();
+                              },
+                            );
+                          });
+                        },
+                ),
+              ),
+              const SizedBox(height: 5),
+            ],
 
-          const SizedBox(height: 20),
+            // Amount Input
+            AbsorbPointer(
+              absorbing: currentInputType == RecipientInputType.phone
+                  ? (isPhoneRegistered == false
+                        ? !isIdVerified
+                        : !isRecipientVerified)
+                  : !isRecipientVerified,
+              child: BlocBuilder<WalletBloc, WalletState>(
+                buildWhen: (previous, current) =>
+                    previous.selectedAssetId != current.selectedAssetId ||
+                    previous.balances != current.balances,
+                builder: (context, state) {
+                  final balance = state.balances[state.selectedAssetId ?? ''];
+                  final symbol = balance?.assetSymbol ?? 'USD';
 
-          // Send Button
-          Builder(
-            builder: (context) {
-              final isReadyToSend =
-                  selectedPurpose != null &&
-                  isAmountVerified &&
-                  (currentInputType == RecipientInputType.account
-                      ? isRecipientVerified
-                      : (isPhoneRegistered == true
-                            ? isRecipientVerified
-                            : (isNameVerified && isIdVerified)));
-              return InkWell(
-                onTap:
-                    isReadyToSend &&
-                        currentTransferState != TransferState.sending
-                    ? () {
-                        FocusScope.of(context).unfocus();
-                        setState(() {
-                          currentTransferState = TransferState.sending;
-                        });
-                        Future.delayed(const Duration(seconds: 3), () {
-                          if (mounted) {
+                  return _buildInputField(
+                    label: 'Amount To Be Sent',
+                    hint: '0',
+                    focusNode: amountFocus,
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    suffixFollowsText: true,
+                    isVerified: isAmountVerified,
+                    enabled: !isRequestFlow,
+                    onEdit:
+                        currentTransferState == TransferState.sending ||
+                            isRequestFlow
+                        ? null
+                        : () {
                             setState(() {
-                              currentTransferState = TransferState.success;
+                              isEditingAmount = true;
+                              isAmountVerified = false;
+                              Future.delayed(
+                                const Duration(milliseconds: 100),
+                                () {
+                                  amountFocus.requestFocus();
+                                },
+                              );
                             });
-                          }
-                        });
-                      }
-                    : null,
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SvgPicture.asset(
-                        !isReadyToSend
-                            ? TrydosWalletAssets.sendDisable
-                            : TrydosWalletAssets.transferSend,
-                        height: 35,
-                        package: TrydosWalletStyles.packageName,
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        currentTransferState == TransferState.sending
-                            ? 'Sending...'
-                            : 'Send',
-                        style: TrydosWalletStyles.bodyLarge.copyWith(
-                          color: isReadyToSend
-                              ? const Color(0xff388CFF)
-                              : const Color(0xff8D8D8D),
-                          fontSize: 15,
-                        ),
-                      ),
+                          },
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                      ThousandSeparatorFormatter(),
                     ],
+                    suffix: Text(
+                      ' $symbol',
+                      style: TrydosWalletStyles.bodyMedium.copyWith(
+                        color: const Color(0xff1D1D1D),
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 5),
+
+            // Purpose Section
+            if (!isRequestFlow) ...[
+              AbsorbPointer(
+                absorbing: currentInputType == RecipientInputType.phone
+                    ? (isPhoneRegistered == false
+                          ? !(isIdVerified && isAmountVerified)
+                          : !(isRecipientVerified && isAmountVerified))
+                    : !(isRecipientVerified && isAmountVerified),
+                child: _buildPurposeSection(),
+              ),
+            ],
+
+            if (isRequestFlow) ...[
+              _buildInputField(
+                label: 'Reference | ID',
+                controller: TextEditingController(text: referenceId),
+                hint: '',
+                focusNode: FocusNode(),
+                isVerified: true,
+                showMaskedName: false,
+                enabled: false,
+              ),
+              const SizedBox(height: 5),
+              _buildInputField(
+                label: 'Purpose Of Money Request',
+                controller: TextEditingController(
+                  text: qrPurpose ?? 'Work/Partnership',
+                ),
+                hint: '',
+                focusNode: FocusNode(),
+                isVerified: true,
+                showMaskedName: false,
+                enabled: false,
+              ),
+              const SizedBox(height: 5),
+              _buildInputField(
+                label: 'Type',
+                controller: TextEditingController(text: requestType),
+                hint: '',
+                focusNode: FocusNode(),
+                isVerified: true,
+                showMaskedName: false,
+                enabled: false,
+              ),
+              const SizedBox(height: 5),
+              _buildInputField(
+                label: 'Valid Until',
+                controller: TextEditingController(
+                  text: expiryTime == null
+                      ? '-'
+                      : '${expiryTime!.difference(DateTime.now()).inMinutes < 0 ? 0 : expiryTime!.difference(DateTime.now()).inMinutes} Minutes Until ${expiryTime!.hour.toString().padLeft(2, '0')}:${expiryTime!.minute.toString().padLeft(2, '0')} | ${expiryTime!.day} ${months[expiryTime!.month - 1]} ${expiryTime!.year}',
+                ),
+                hint: '',
+                focusNode: FocusNode(),
+                isVerified: true,
+                showMaskedName: false,
+                enabled: false,
+                showTimeNote: true,
+              ),
+            ],
+
+            isRequestFlow
+                ? const SizedBox(height: 10)
+                : const SizedBox(height: 25),
+
+            if (isRequestFlow && isExpired)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xffFF5F60),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Expired Code ( Time Expired )',
+                  style: TrydosWalletStyles.bodyMedium.copyWith(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              );
-            },
-          ),
-          const SizedBox(height: 30),
-        ],
+              )
+            else
+              _buildSendButton(),
+
+            isRequestFlow
+                ? const SizedBox(height: 15)
+                : const SizedBox(height: 30),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildSendButton() {
+    return Builder(
+      builder: (context) {
+        final isReadyToSend =
+            (isRequestFlow || selectedPurpose != null) &&
+            isAmountVerified &&
+            (currentInputType == RecipientInputType.account
+                ? isRecipientVerified
+                : (isPhoneRegistered == true
+                      ? isRecipientVerified
+                      : (isNameVerified && isIdVerified)));
+
+        return InkWell(
+          onTap: isReadyToSend && currentTransferState != TransferState.sending
+              ? () {
+                  FocusScope.of(context).unfocus();
+                  setState(() {
+                    currentTransferState = TransferState.sending;
+                  });
+                  Future.delayed(const Duration(seconds: 3), () {
+                    if (mounted) {
+                      setState(() {
+                        currentTransferState = TransferState.success;
+                      });
+                    }
+                  });
+                }
+              : null,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SvgPicture.asset(
+                  isRequestFlow
+                      ? (!isReadyToSend
+                            ? TrydosWalletAssets.sendDisable
+                            : TrydosWalletAssets.transferSend)
+                      : (!isReadyToSend
+                            ? TrydosWalletAssets.sendDisable
+                            : TrydosWalletAssets.transferSend),
+                  height: 25,
+                  package: TrydosWalletStyles.packageName,
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  currentTransferState == TransferState.sending
+                      ? 'Sending...'
+                      : (isRequestFlow ? 'Send Deposits' : 'Send'),
+                  style: TrydosWalletStyles.bodyLarge.copyWith(
+                    color: isReadyToSend
+                        ? const Color(0xff388CFF)
+                        : const Color(0xff8D8D8D),
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -856,6 +1037,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
   }
 
   Widget _buildInputField({
+    Key? key,
     required String label,
     String? inlineLabel,
     Widget? customTopLabelWidget,
@@ -865,6 +1047,9 @@ class _TransferSendModalState extends State<TransferSendModal> {
     Widget? suffix,
     bool suffixFollowsText = false,
     bool isVerified = false,
+    bool isFromQr = false,
+    bool isExpired = false,
+    bool showTimeNote = false,
     String? errorMessage,
     VoidCallback? onEdit,
     bool showQuestionIcon = false,
@@ -885,9 +1070,16 @@ class _TransferSendModalState extends State<TransferSendModal> {
     }
 
     return Container(
+      key: key,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: isVerified ? const Color(0xffF7F7F7) : Colors.white,
+        color: isVerified
+            ? isRequestFlow
+                  ? isExpired
+                        ? const Color(0xffFCFCFC)
+                        : const Color(0xffFCFCFC)
+                  : const Color(0xffF7F7F7)
+            : Colors.white,
         border: isVerified ? null : Border.all(color: borderColor),
         borderRadius: BorderRadius.circular(15),
       ),
@@ -917,7 +1109,9 @@ class _TransferSendModalState extends State<TransferSendModal> {
                   label,
                   style: TextStyle(
                     fontSize: 11,
-                    color: const Color(0xff1D1D1D),
+                    color: isRequestFlow
+                        ? const Color(0xff8D8D8D)
+                        : const Color(0xff1D1D1D),
                   ),
                 ),
                 if (showQuestionIcon && inlineLabel == null) ...[
@@ -929,9 +1123,9 @@ class _TransferSendModalState extends State<TransferSendModal> {
                 ],
                 if (inlineLabel != null) ...[
                   const SizedBox(width: 10),
-                  Text(
-                    inlineLabel,
-                    style: const TextStyle(
+                  const Text(
+                    'inline label',
+                    style: TextStyle(
                       fontSize: 10,
                       decoration: TextDecoration.underline,
                       decorationColor: Color(0xffD3D3D3),
@@ -987,12 +1181,31 @@ class _TransferSendModalState extends State<TransferSendModal> {
                         padding: const EdgeInsets.only(top: 4.0),
                         child: Row(
                           children: [
+                            if (isFromQr) ...[
+                              SvgPicture.asset(
+                                TrydosWalletAssets.realQr,
+                                height: 16,
+                                width: 16,
+                                package: TrydosWalletStyles.packageName,
+                              ),
+                              const SizedBox(width: 10),
+                            ],
                             Text(
                               controller?.text ?? '',
                               style: TrydosWalletStyles.bodyMedium.copyWith(
                                 color: const Color(0xff1D1D1D),
                                 fontSize: 14,
-                                fontWeight: FontWeight.bold,
+                                fontWeight:
+                                    ((int.tryParse(
+                                              controller!.text.replaceAll(
+                                                ',',
+                                                '',
+                                              ),
+                                            ) ??
+                                            0) >
+                                        0)
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                             if (suffixFollowsText && suffix != null) ...[
@@ -1000,15 +1213,18 @@ class _TransferSendModalState extends State<TransferSendModal> {
                               suffix,
                             ],
                             if (!suffixFollowsText && showMaskedName) ...[
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'R***** B***** T*********** Y***** L******** S*****',
+                                  isRequestFlow
+                                      ? (maskedAccountName ?? '')
+                                      : 'R***** B***** T*********** Y***** L******** S*****',
                                   style: TrydosWalletStyles.bodyMedium.copyWith(
-                                    color: const Color(0xff1D1D1D),
+                                    color: const Color(0xff8D8D8D),
                                     fontSize: 11,
+                                    height: 1.3,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
+                                  overflow: TextOverflow.visible,
                                 ),
                               ),
                             ],
@@ -1066,6 +1282,18 @@ class _TransferSendModalState extends State<TransferSendModal> {
               child: Text(
                 errorMessage,
                 textAlign: TextAlign.center,
+                style: TrydosWalletStyles.bodyMedium.copyWith(
+                  color: const Color(0xff1D1D1D),
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          if (isRequestFlow && !isExpired && showTimeNote)
+            const SizedBox(height: 5),
+          if (isRequestFlow && !isExpired && showTimeNote)
+            Center(
+              child: Text(
+                'Will Not Be Able To Use The Code After Its Expiry Time',
                 style: TrydosWalletStyles.bodyMedium.copyWith(
                   color: const Color(0xff1D1D1D),
                   fontSize: 11,

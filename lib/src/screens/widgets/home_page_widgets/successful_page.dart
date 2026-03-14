@@ -25,6 +25,7 @@ class SuccessfulPage extends StatefulWidget {
   final VoidCallback onDone;
   final VoidCallback onDownload;
   final VoidCallback onShare;
+  final bool isFromQr;
 
   // Optional Unregistered Phone fields
   final String? recipientPhoneNumber;
@@ -45,6 +46,7 @@ class SuccessfulPage extends StatefulWidget {
     required this.onDownload,
     required this.onShare,
     this.isSuccess = true,
+    this.isFromQr = false,
     this.recipientPhoneNumber,
     this.recipientName,
     this.recipientId,
@@ -97,11 +99,18 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
 
         showMessage(
           'Receipt saved to gallery successfully!',
+          // ignore: use_build_context_synchronously
+          context: context,
           type: MessageType.success,
         );
       }
     } catch (e) {
-      showMessage('Failed to save receipt.', type: MessageType.error);
+      showMessage(
+        'Failed to save receipt.',
+        // ignore: use_build_context_synchronously
+        context: context,
+        type: MessageType.error,
+      );
     }
 
     if (mounted) {
@@ -159,6 +168,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                 type: widget.type,
                 purpose: widget.purpose,
                 isSuccess: widget.isSuccess,
+                isFromQr: widget.isFromQr,
                 recipientPhoneNumber: widget.recipientPhoneNumber,
                 recipientName: widget.recipientName,
                 recipientId: widget.recipientId,
@@ -239,6 +249,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                 _buildInfoRow(
                   'Recipient Account Number',
                   widget.recipientAccount,
+                  isFromQr: widget.isFromQr,
                 ),
               const SizedBox(height: 15),
               Row(
@@ -355,7 +366,12 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, {bool isBold = false}) {
+  Widget _buildInfoRow(
+    String label,
+    String value, {
+    bool isBold = false,
+    bool isFromQr = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -371,14 +387,29 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
           ],
         ),
         const SizedBox(height: 5),
-        Text(
-          value,
-          style: TrydosWalletStyles.bodyMedium.copyWith(
-            color: const Color(0xff1D1D1D),
-            fontSize: 13,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-          ),
-          overflow: TextOverflow.ellipsis,
+        Row(
+          children: [
+            if (isFromQr) ...[
+              SvgPicture.asset(
+                TrydosWalletAssets.realQr,
+                height: 16,
+                width: 16,
+                package: TrydosWalletStyles.packageName,
+              ),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: Text(
+                value,
+                style: TrydosWalletStyles.bodyMedium.copyWith(
+                  color: const Color(0xff1D1D1D),
+                  fontSize: 13,
+                  fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ],
     );

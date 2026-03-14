@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/receive_modal.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/send_modal.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
@@ -28,22 +29,30 @@ class WalletHeader extends StatelessWidget {
               ),
               const Spacer(),
               state.balanceCardIsSelected
-                  ? Column(
-                      children: [
-                        SvgPicture.asset(
-                          TrydosWalletAssets.receive,
-                          height: 20,
-                          package: TrydosWalletStyles.packageName,
-                        ),
-                        Text(
-                          "Receive",
-                          style: TrydosWalletStyles.bodySmall.copyWith(
-                            color: const Color(0xff404040),
-                            fontSize: 11,
-                            height: 1.3,
+                  ? InkWell(
+                      onTap: () {
+                        showWalletModal(
+                          context: context,
+                          builder: (context, sc) => ReceiveModal(scrollController: sc),
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          SvgPicture.asset(
+                            TrydosWalletAssets.receive,
+                            height: 20,
+                            package: TrydosWalletStyles.packageName,
                           ),
-                        ),
-                      ],
+                          Text(
+                            "Receive",
+                            style: TrydosWalletStyles.bodySmall.copyWith(
+                              color: const Color(0xff404040),
+                              fontSize: 11,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
                     )
                   : const SizedBox.shrink(),
               const SizedBox(width: 20),
@@ -51,13 +60,11 @@ class WalletHeader extends StatelessWidget {
                   ? InkWell(
                       onTap: () {
                         final walletBloc = context.read<WalletBloc>();
-                        showModalBottomSheet(
+                        showWalletModal(
                           context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (_) => BlocProvider.value(
+                          builder: (context, sc) => BlocProvider.value(
                             value: walletBloc,
-                            child: const SendModal(),
+                            child: SendModal(scrollController: sc),
                           ),
                         );
                       },
@@ -81,10 +88,22 @@ class WalletHeader extends StatelessWidget {
                     )
                   : const SizedBox.shrink(),
               const SizedBox(width: 20),
-              SvgPicture.asset(
-                TrydosWalletAssets.qr,
-                package: TrydosWalletStyles.packageName,
-                height: 25,
+              InkWell(
+                onTap: () {
+                  final walletBloc = context.read<WalletBloc>();
+                  showWalletModal(
+                    context: context,
+                    builder: (context, sc) => BlocProvider.value(
+                      value: walletBloc,
+                      child: ReceiveModal(scrollController: sc),
+                    ),
+                  );
+                },
+                child: SvgPicture.asset(
+                  TrydosWalletAssets.qr,
+                  package: TrydosWalletStyles.packageName,
+                  height: 25,
+                ),
               ),
             ],
           ),

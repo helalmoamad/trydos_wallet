@@ -48,12 +48,14 @@ class _WalletTabState extends State<WalletTab> {
     Currency currency,
     WalletState state,
   ) async {
-    final result = await showModalBottomSheet<bool>(
+    final result = await showWalletModal<bool>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DepositModal(currency: currency),
+      builder: (context, sc) => DepositModal(
+        currency: currency,
+        scrollController: sc,
+      ),
     );
+
     if (result == true && mounted) {
       // ignore: use_build_context_synchronously
       context.read<WalletBloc>().add(

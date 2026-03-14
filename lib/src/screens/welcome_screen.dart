@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:trydos_wallet/src/config/trydos_wallet_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -26,7 +27,11 @@ class _TrydosWalletWelcomeScreenState extends State<TrydosWalletWelcomeScreen>
   @override
   void initState() {
     super.initState();
-    _startSteppedProgress();
+    if (TrydosWallet.config.skipSplash) {
+      _showSplash = false;
+    } else {
+      _startSteppedProgress();
+    }
   }
 
   /// Stepped progress over 5 seconds while data loads in background
@@ -50,12 +55,18 @@ class _TrydosWalletWelcomeScreenState extends State<TrydosWalletWelcomeScreen>
 
   @override
   void dispose() {
-    _timer.cancel();
+    if (!TrydosWallet.config.skipSplash) {
+      _timer.cancel();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (TrydosWallet.config.skipSplash) {
+      return const TrydosWalletHomePage();
+    }
+
     return Stack(
       children: [
         const TrydosWalletHomePage(),

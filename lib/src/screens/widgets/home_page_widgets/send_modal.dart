@@ -8,7 +8,8 @@ enum SendModalView { main, transfer }
 
 /// ويدجت يعرض الـ Bottom Sheet الخاص بعمليات الإرسال والدفع.
 class SendModal extends StatefulWidget {
-  const SendModal({super.key});
+  final ScrollController? scrollController;
+  const SendModal({super.key, this.scrollController});
 
   @override
   State<SendModal> createState() => _SendModalState();
@@ -19,106 +20,99 @@ class _SendModalState extends State<SendModal> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(30),
-            topRight: Radius.circular(30),
-          ),
-        ),
-        child: SingleChildScrollView(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 500),
-            switchInCurve: Curves.easeOutQuart,
-            switchOutCurve: Curves.easeInQuart,
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              final isTransfer = child is TransferSendModal;
-              final offset = isTransfer
-                  ? Tween<Offset>(
-                      begin: const Offset(1, 0),
-                      end: Offset.zero,
-                    ).animate(animation)
-                  : Tween<Offset>(
-                      begin: const Offset(-1, 0),
-                      end: Offset.zero,
-                    ).animate(animation);
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      switchInCurve: Curves.easeOutQuart,
+      switchOutCurve: Curves.easeInQuart,
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        final isTransfer = child is TransferSendModal;
+        final offset = isTransfer
+            ? Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation)
+            : Tween<Offset>(
+                begin: const Offset(-1, 0),
+                end: Offset.zero,
+              ).animate(animation);
 
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(position: offset, child: child),
-              );
-            },
-            child: _currentView == SendModalView.main
-                ? _buildMainMenuView(key: const ValueKey('main'))
-                : const TransferSendModal(key: ValueKey('transfer')),
-          ),
-        ),
-      ),
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(position: offset, child: child),
+        );
+      },
+      child: _currentView == SendModalView.main
+          ? _buildMainMenuView(key: const ValueKey('main'))
+          : TransferSendModal(
+              key: const ValueKey('transfer'),
+              scrollController: widget.scrollController,
+            ),
     );
   }
 
   Widget _buildMainMenuView({Key? key}) {
-    return Column(
-      key: key,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(height: 10),
-        // Handle
-        Container(
-          width: 40,
-          height: 2,
-          decoration: BoxDecoration(
-            color: const Color(0xffC4C2C2),
-            borderRadius: BorderRadius.circular(2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          controller: widget.scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                key: key,
+                children: [
+                  const SizedBox(height: 10),
+                  // Top Icon
+                  SvgPicture.asset(
+                    TrydosWalletAssets.send,
+                    height: 40,
+                    package: TrydosWalletStyles.packageName,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'SEND | PAY | CASH WITHDRAWAL',
+                    style: TrydosWalletStyles.bodyMedium.copyWith(
+                      color: const Color(0xff1D1D1D),
+                      fontSize: 13,
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // First Card: Transfer | send
+                  _buildActionCard(
+                    icon: TrydosWalletAssets.transferSend,
+                    title: 'Transfer | send',
+                    subtitle: 'Send | Transfer Money To rdb | cash | bank',
+                    onTap: () =>
+                        setState(() => _currentView = SendModalView.transfer),
+                    actions2: [_buildTextAction('History', 11, onTap: () {})],
+                    actions1: [],
+                  ),
+
+                  // Second Card: Cash Withdrawal
+                  _buildActionCard(
+                    icon: TrydosWalletAssets.cashWithdrawal,
+                    title: 'Cash Withdrawal',
+                    subtitle: 'Withdrawal Via Our Centers Or Agents',
+                    onTap: () {},
+                    actions1: [
+                      _buildTextAction('Nearby Centers', 13, onTap: () {})
+                    ],
+                    actions2: [_buildTextAction('History', 11, onTap: () {})],
+                  ),
+
+                  const Spacer(),
+                  // Third Section: Bill Payments
+                  _buildBillPaymentsSection(),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-        // Top Icon
-        SvgPicture.asset(
-          TrydosWalletAssets.send,
-          height: 40,
-          package: TrydosWalletStyles.packageName,
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'SEND | PAY | CASH WITHDRAWAL',
-          style: TrydosWalletStyles.bodyMedium.copyWith(
-            color: const Color(0xff1D1D1D),
-            fontSize: 13,
-            height: 1.3,
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // First Card: Transfer | send
-        _buildActionCard(
-          icon: TrydosWalletAssets.transferSend,
-          title: 'Transfer | send',
-          subtitle: 'Send | Transfer Money To rdb | cash | bank',
-          onTap: () => setState(() => _currentView = SendModalView.transfer),
-          actions2: [_buildTextAction('History', 11, onTap: () {})],
-          actions1: [],
-        ),
-
-        // Second Card: Cash Withdrawal
-        _buildActionCard(
-          icon: TrydosWalletAssets.cashWithdrawal,
-          title: 'Cash Withdrawal',
-          subtitle: 'Withdrawal Via Our Centers Or Agents',
-          onTap: () {},
-          actions1: [_buildTextAction('Nearby Centers', 13, onTap: () {})],
-          actions2: [_buildTextAction('History', 11, onTap: () {})],
-        ),
-
-        // Third Section: Bill Payments
-        _buildBillPaymentsSection(),
-        const SizedBox(height: 30),
-      ],
+        );
+      },
     );
   }
 

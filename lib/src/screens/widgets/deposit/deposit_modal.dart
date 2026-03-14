@@ -11,8 +11,13 @@ import 'package:uuid/uuid.dart';
 /// Currency deposit modal.
 class DepositModal extends StatefulWidget {
   final Currency currency;
+  final ScrollController? scrollController;
 
-  const DepositModal({super.key, required this.currency});
+  const DepositModal({
+    super.key,
+    required this.currency,
+    this.scrollController,
+  });
 
   @override
   State<DepositModal> createState() => _DepositModalState();
@@ -186,63 +191,261 @@ class _DepositModalState extends State<DepositModal> {
             textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
             child: Material(
               color: Colors.transparent,
-              child: Container(
-                margin: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
-                ),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
+              child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Theme(
                   data: Theme.of(context).copyWith(
                     iconTheme: const IconThemeData(size: 24, opacity: 1.0),
                   ),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${AppStrings.get(state.languageCode, 'deposit_symbol')} $currencySymbol',
-                                  style: TrydosWalletStyles.headlineMedium
-                                      .copyWith(color: const Color(0xff1D1D1D)),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  AppStrings.get(
-                                    state.languageCode,
-                                    'complete_form_deposit',
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: SingleChildScrollView(
+                      controller: widget.scrollController,
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${AppStrings.get(state.languageCode, 'deposit_symbol')} $currencySymbol',
+                                    style: TrydosWalletStyles.headlineMedium
+                                        .copyWith(
+                                          color: const Color(0xff1D1D1D),
+                                        ),
                                   ),
-                                  style: TrydosWalletStyles.bodySmall.copyWith(
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    AppStrings.get(
+                                      state.languageCode,
+                                      'complete_form_deposit',
+                                    ),
+                                    style: TrydosWalletStyles.bodySmall
+                                        .copyWith(
+                                          color: const Color(0xff8D8D8D),
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            AppStrings.get(state.languageCode, 'source_bank'),
+                            style: TrydosWalletStyles.bodySmall.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xff1D1D1D),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: () =>
+                                setState(() => _showBankList = !_showBankList),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 14,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xffF5F5F5),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xffE0E0E0),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _selectedBank?.displayName ??
+                                          AppStrings.get(
+                                            state.languageCode,
+                                            'select_bank',
+                                          ),
+                                      style: TrydosWalletStyles.bodyMedium
+                                          .copyWith(
+                                            color: _selectedBank != null
+                                                ? const Color(0xff1D1D1D)
+                                                : const Color(0xff8D8D8D),
+                                          ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    _showBankList
+                                        ? Icons.expand_less
+                                        : Icons.expand_more,
+                                    size: 24,
                                     color: const Color(0xff8D8D8D),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (_showBankList) ...[
+                            const SizedBox(height: 8),
+                            Builder(
+                              builder: (context) {
+                                if (state.banksStatus == WalletStatus.loading &&
+                                    state.banks.isEmpty) {
+                                  return Container(
+                                    height: 120,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xffFAFAFA),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: const Color(0xffE0E0E0),
+                                      ),
+                                    ),
+                                    child: const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
+                                }
+                                if (state.banksStatus == WalletStatus.failure &&
+                                    state.banks.isEmpty) {
+                                  return Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xffFAFAFA),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: const Color(0xffE0E0E0),
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: TextButton(
+                                        onPressed: () =>
+                                            context.read<WalletBloc>().add(
+                                              const WalletBanksLoadRequested(),
+                                            ),
+                                        child: Text(
+                                          AppStrings.get(
+                                            state.languageCode,
+                                            'retry',
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+                                final banks = state.banks;
+                                final hasNext = state.banksHasNext;
+                                final isLoadingMore =
+                                    state.banksStatus == WalletStatus.loading &&
+                                    banks.isNotEmpty;
+                                return Container(
+                                  constraints: const BoxConstraints(
+                                    maxHeight: 200,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xffFAFAFA),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: const Color(0xffE0E0E0),
+                                    ),
+                                  ),
+                                  child: ListView.builder(
+                                    controller: _bankListScrollController,
+                                    shrinkWrap: true,
+                                    itemCount: banks.length + (hasNext ? 1 : 0),
+                                    itemBuilder: (context, index) {
+                                      if (index == banks.length) {
+                                        return Padding(
+                                          padding: const EdgeInsets.all(12),
+                                          child: Center(
+                                            child: isLoadingMore
+                                                ? const SizedBox(
+                                                    width: 24,
+                                                    height: 24,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                        ),
+                                                  )
+                                                : TextButton(
+                                                    onPressed: () => context
+                                                        .read<WalletBloc>()
+                                                        .add(
+                                                          const WalletBanksLoadMoreRequested(),
+                                                        ),
+                                                    child: Text(
+                                                      AppStrings.get(
+                                                        state.languageCode,
+                                                        'load_more',
+                                                      ),
+                                                      style: TrydosWalletStyles
+                                                          .bodyMedium
+                                                          .copyWith(
+                                                            color: const Color(
+                                                              0xFF388CFF,
+                                                            ),
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                    ),
+                                                  ),
+                                          ),
+                                        );
+                                      }
+                                      final bank = banks[index];
+                                      final isSelected =
+                                          _selectedBank?.id == bank.id;
+                                      return InkWell(
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedBank = bank;
+                                            _showBankList = false;
+                                          });
+                                          _onAmountChanged();
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? const Color(0xffE8F0FE)
+                                                : null,
+                                          ),
+                                          child: Text(
+                                            bank.displayName,
+                                            style: TrydosWalletStyles.bodyMedium
+                                                .copyWith(
+                                                  color: const Color(
+                                                    0xff1D1D1D,
+                                                  ),
+                                                  fontWeight: isSelected
+                                                      ? FontWeight.bold
+                                                      : null,
+                                                ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          AppStrings.get(state.languageCode, 'source_bank'),
-                          style: TrydosWalletStyles.bodySmall.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xff1D1D1D),
+                          const SizedBox(height: 20),
+                          Text(
+                            AppStrings.get(state.languageCode, 'amount_label'),
+                            style: TrydosWalletStyles.bodySmall.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xff1D1D1D),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        GestureDetector(
-                          onTap: () =>
-                              setState(() => _showBankList = !_showBankList),
-                          child: Container(
-                            width: double.infinity,
+                          const SizedBox(height: 8),
+                          Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
                               vertical: 14,
@@ -255,536 +458,354 @@ class _DepositModalState extends State<DepositModal> {
                               ),
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Expanded(
-                                  child: Text(
-                                    _selectedBank?.displayName ??
-                                        AppStrings.get(
-                                          state.languageCode,
-                                          'select_bank',
+                                  child: TextField(
+                                    controller: _amountController,
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
                                         ),
-                                    style: TrydosWalletStyles.bodyMedium
-                                        .copyWith(
-                                          color: _selectedBank != null
-                                              ? const Color(0xff1D1D1D)
-                                              : const Color(0xff8D8D8D),
-                                        ),
-                                  ),
-                                ),
-                                Icon(
-                                  _showBankList
-                                      ? Icons.expand_less
-                                      : Icons.expand_more,
-                                  size: 24,
-                                  color: const Color(0xff8D8D8D),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        if (_showBankList) ...[
-                          const SizedBox(height: 8),
-                          Builder(
-                            builder: (context) {
-                              if (state.banksStatus == WalletStatus.loading &&
-                                  state.banks.isEmpty) {
-                                return Container(
-                                  height: 120,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xffFAFAFA),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: const Color(0xffE0E0E0),
-                                    ),
-                                  ),
-                                  child: const Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                );
-                              }
-                              if (state.banksStatus == WalletStatus.failure &&
-                                  state.banks.isEmpty) {
-                                return Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xffFAFAFA),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: const Color(0xffE0E0E0),
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: TextButton(
-                                      onPressed: () =>
-                                          context.read<WalletBloc>().add(
-                                            const WalletBanksLoadRequested(),
-                                          ),
-                                      child: Text(
-                                        AppStrings.get(
-                                          state.languageCode,
-                                          'retry',
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }
-                              final banks = state.banks;
-                              final hasNext = state.banksHasNext;
-                              final isLoadingMore =
-                                  state.banksStatus == WalletStatus.loading &&
-                                  banks.isNotEmpty;
-                              return Container(
-                                constraints: const BoxConstraints(
-                                  maxHeight: 200,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xffFAFAFA),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: const Color(0xffE0E0E0),
-                                  ),
-                                ),
-                                child: ListView.builder(
-                                  controller: _bankListScrollController,
-                                  shrinkWrap: true,
-                                  itemCount: banks.length + (hasNext ? 1 : 0),
-                                  itemBuilder: (context, index) {
-                                    if (index == banks.length) {
-                                      return Padding(
-                                        padding: const EdgeInsets.all(12),
-                                        child: Center(
-                                          child: isLoadingMore
-                                              ? const SizedBox(
-                                                  width: 24,
-                                                  height: 24,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                      ),
-                                                )
-                                              : TextButton(
-                                                  onPressed: () => context
-                                                      .read<WalletBloc>()
-                                                      .add(
-                                                        const WalletBanksLoadMoreRequested(),
-                                                      ),
-                                                  child: Text(
-                                                    AppStrings.get(
-                                                      state.languageCode,
-                                                      'load_more',
-                                                    ),
-                                                    style: TrydosWalletStyles
-                                                        .bodyMedium
-                                                        .copyWith(
-                                                          color: const Color(
-                                                            0xFF388CFF,
-                                                          ),
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                        ),
-                                                  ),
-                                                ),
-                                        ),
-                                      );
-                                    }
-                                    final bank = banks[index];
-                                    final isSelected =
-                                        _selectedBank?.id == bank.id;
-                                    return InkWell(
-                                      onTap: () {
-                                        setState(() {
-                                          _selectedBank = bank;
-                                          _showBankList = false;
-                                        });
-                                        _onAmountChanged();
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 14,
-                                          vertical: 12,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: isSelected
-                                              ? const Color(0xffE8F0FE)
-                                              : null,
-                                        ),
-                                        child: Text(
-                                          bank.displayName,
-                                          style: TrydosWalletStyles.bodyMedium
-                                              .copyWith(
-                                                color: const Color(0xff1D1D1D),
-                                                fontWeight: isSelected
-                                                    ? FontWeight.bold
-                                                    : null,
-                                              ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                        const SizedBox(height: 20),
-                        Text(
-                          AppStrings.get(state.languageCode, 'amount_label'),
-                          style: TrydosWalletStyles.bodySmall.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xff1D1D1D),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 14,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xffF5F5F5),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xffE0E0E0)),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _amountController,
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
-                                      ),
-                                  decoration: InputDecoration(
-                                    hintText: '0.00',
-                                    hintStyle: TrydosWalletStyles.bodyMedium
-                                        .copyWith(
-                                          color: const Color(0xff8D8D8D),
-                                        ),
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
-                                    isDense: true,
-                                  ),
-                                  onChanged: (_) => _onAmountChanged(),
-                                ),
-                              ),
-                              if (isLoadingFees)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: const CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Color(0xFF388CFF),
-                                    ),
-                                  ),
-                                ),
-                              Text(
-                                currencySymbol,
-                                style: TrydosWalletStyles.bodyMedium.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xff1D1D1D),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (feesResult != null) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xffE8F4FD),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: const Color(0xffD0E3F8),
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      AppStrings.get(
-                                        state.languageCode,
-                                        'fee_label',
-                                      ),
-                                      style: TrydosWalletStyles.bodySmall
-                                          .copyWith(
-                                            color: const Color(0xff1D1D1D),
-                                          ),
-                                    ),
-                                    Text(
-                                      '${feesResult.feeAmount.toStringAsFixed(0)} ${feesResult.currencySymbol}',
-                                      style: TrydosWalletStyles.bodySmall
-                                          .copyWith(
-                                            color: const Color(0xff1D1D1D),
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      AppStrings.get(
-                                        state.languageCode,
-                                        'tax_label',
-                                      ),
-                                      style: TrydosWalletStyles.bodySmall
-                                          .copyWith(
-                                            color: const Color(0xff1D1D1D),
-                                          ),
-                                    ),
-                                    Text(
-                                      '${feesResult.taxAmount.toStringAsFixed(0)} ${feesResult.currencySymbol}',
-                                      style: TrydosWalletStyles.bodySmall
-                                          .copyWith(
-                                            color: const Color(0xff1D1D1D),
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      AppStrings.get(
-                                        state.languageCode,
-                                        'you_receive',
-                                      ),
-                                      style: TrydosWalletStyles.bodyMedium
-                                          .copyWith(
-                                            color: const Color(0xFF388CFF),
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
-                                    Text(
-                                      '${feesResult.netAmount.toStringAsFixed(0)} ${feesResult.currencySymbol}',
-                                      style: TrydosWalletStyles.bodyMedium
-                                          .copyWith(
-                                            color: const Color(0xFF388CFF),
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 20),
-                        Text(
-                          AppStrings.get(
-                            state.languageCode,
-                            'proof_of_transfer',
-                          ),
-                          style: TrydosWalletStyles.bodySmall.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xff1D1D1D),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        GestureDetector(
-                          onTap: uploadSuccess ? null : _pickImage,
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 24),
-                            decoration: BoxDecoration(
-                              color: const Color(0xffFAFAFA),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: const Color(0xffE0E0E0),
-                                style: BorderStyle.solid,
-                              ),
-                            ),
-                            child: _pickedImageFile == null && !uploadSuccess
-                                ? Center(
-                                    child: Text(
-                                      AppStrings.get(
-                                        state.languageCode,
-                                        'click_to_upload',
-                                      ),
-                                      style: TrydosWalletStyles.bodyMedium
+                                    decoration: InputDecoration(
+                                      hintText: '0.00',
+                                      hintStyle: TrydosWalletStyles.bodyMedium
                                           .copyWith(
                                             color: const Color(0xff8D8D8D),
                                           ),
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.zero,
+                                      isDense: true,
                                     ),
-                                  )
-                                : uploadSuccess
-                                ? Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            const SizedBox(width: 8),
-                                            Text(
+                                    onChanged: (_) => _onAmountChanged(),
+                                  ),
+                                ),
+                                if (isLoadingFees)
+                                  const Padding(
+                                    padding: EdgeInsets.only(right: 8),
+                                    child: SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Color(0xFF388CFF),
+                                      ),
+                                    ),
+                                  ),
+                                Text(
+                                  currencySymbol,
+                                  style: TrydosWalletStyles.bodyMedium.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xff1D1D1D),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (feesResult != null) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xffE8F4FD),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xffD0E3F8),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        AppStrings.get(
+                                          state.languageCode,
+                                          'fee_label',
+                                        ),
+                                        style: TrydosWalletStyles.bodySmall
+                                            .copyWith(
+                                              color: const Color(0xff1D1D1D),
+                                            ),
+                                      ),
+                                      Text(
+                                        '${feesResult.feeAmount.toStringAsFixed(0)} ${feesResult.currencySymbol}',
+                                        style: TrydosWalletStyles.bodySmall
+                                            .copyWith(
+                                              color: const Color(0xff1D1D1D),
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        AppStrings.get(
+                                          state.languageCode,
+                                          'tax_label',
+                                        ),
+                                        style: TrydosWalletStyles.bodySmall
+                                            .copyWith(
+                                              color: const Color(0xff1D1D1D),
+                                            ),
+                                      ),
+                                      Text(
+                                        '${feesResult.taxAmount.toStringAsFixed(0)} ${feesResult.currencySymbol}',
+                                        style: TrydosWalletStyles.bodySmall
+                                            .copyWith(
+                                              color: const Color(0xff1D1D1D),
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        AppStrings.get(
+                                          state.languageCode,
+                                          'you_receive',
+                                        ),
+                                        style: TrydosWalletStyles.bodyMedium
+                                            .copyWith(
+                                              color: const Color(0xFF388CFF),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                      Text(
+                                        '${feesResult.netAmount.toStringAsFixed(0)} ${feesResult.currencySymbol}',
+                                        style: TrydosWalletStyles.bodyMedium
+                                            .copyWith(
+                                              color: const Color(0xFF388CFF),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 20),
+                          Text(
+                            AppStrings.get(
+                              state.languageCode,
+                              'proof_of_transfer',
+                            ),
+                            style: TrydosWalletStyles.bodySmall.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xff1D1D1D),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: uploadSuccess ? null : _pickImage,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 24),
+                              decoration: BoxDecoration(
+                                color: const Color(0xffFAFAFA),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xffE0E0E0),
+                                  style: BorderStyle.solid,
+                                ),
+                              ),
+                              child: _pickedImageFile == null && !uploadSuccess
+                                  ? Center(
+                                      child: Text(
+                                        AppStrings.get(
+                                          state.languageCode,
+                                          'click_to_upload',
+                                        ),
+                                        style: TrydosWalletStyles.bodyMedium
+                                            .copyWith(
+                                              color: const Color(0xff8D8D8D),
+                                            ),
+                                      ),
+                                    )
+                                  : uploadSuccess
+                                  ? Center(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                AppStrings.get(
+                                                  state.languageCode,
+                                                  'upload_success_msg',
+                                                ),
+                                                style: TrydosWalletStyles
+                                                    .bodyMedium
+                                                    .copyWith(
+                                                      color: const Color(
+                                                        0xFF4CAF50,
+                                                      ),
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          TextButton(
+                                            onPressed: () => setState(() {
+                                              _pickedImageFile = null;
+                                              context.read<WalletBloc>().add(
+                                                const WalletImageResetRequested(),
+                                              );
+                                            }),
+                                            child: Text(
                                               AppStrings.get(
                                                 state.languageCode,
-                                                'upload_success_msg',
+                                                'change_image',
                                               ),
+                                              style: TrydosWalletStyles
+                                                  .bodySmall
+                                                  .copyWith(
+                                                    color: const Color(
+                                                      0xFF388CFF,
+                                                    ),
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (_pickedImageFile != null)
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 12,
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Image.file(
+                                                File(_pickedImageFile!.path),
+                                                height: 80,
+                                                width: 80,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
+                                          ),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: ElevatedButton.icon(
+                                            onPressed: isUploading
+                                                ? null
+                                                : _uploadProof,
+                                            icon: isUploading
+                                                ? const SizedBox(
+                                                    width: 18,
+                                                    height: 18,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          color: Colors.white,
+                                                        ),
+                                                  )
+                                                : const Icon(
+                                                    Icons.cloud_upload,
+                                                  ),
+                                            label: Text(
+                                              isUploading
+                                                  ? AppStrings.get(
+                                                      state.languageCode,
+                                                      'uploading_msg',
+                                                    )
+                                                  : AppStrings.get(
+                                                      state.languageCode,
+                                                      'confirm_upload',
+                                                    ),
                                               style: TrydosWalletStyles
                                                   .bodyMedium
                                                   .copyWith(
-                                                    color: const Color(
-                                                      0xFF4CAF50,
-                                                    ),
                                                     fontWeight: FontWeight.bold,
+                                                    color: Colors.white,
                                                   ),
                                             ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        TextButton(
-                                          onPressed: () => setState(() {
-                                            _pickedImageFile = null;
-                                            context.read<WalletBloc>().add(
-                                              const WalletImageResetRequested(),
-                                            );
-                                          }),
-                                          child: Text(
-                                            AppStrings.get(
-                                              state.languageCode,
-                                              'change_image',
-                                            ),
-                                            style: TrydosWalletStyles.bodySmall
-                                                .copyWith(
-                                                  color: const Color(
-                                                    0xFF388CFF,
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(
+                                                0xFF388CFF,
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 12,
                                                   ),
-                                                  fontWeight: FontWeight.w500,
-                                                ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ],
                                     ),
-                                  )
-                                : Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (_pickedImageFile != null)
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            bottom: 12,
-                                          ),
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            child: Image.file(
-                                              File(_pickedImageFile!.path),
-                                              height: 80,
-                                              width: 80,
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                        ),
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton.icon(
-                                          onPressed: isUploading
-                                              ? null
-                                              : _uploadProof,
-                                          icon: isUploading
-                                              ? const SizedBox(
-                                                  width: 18,
-                                                  height: 18,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                        color: Colors.white,
-                                                      ),
-                                                )
-                                              : const Icon(Icons.cloud_upload),
-                                          label: Text(
-                                            isUploading
-                                                ? AppStrings.get(
-                                                    state.languageCode,
-                                                    'uploading_msg',
-                                                  )
-                                                : AppStrings.get(
-                                                    state.languageCode,
-                                                    'confirm_upload',
-                                                  ),
-                                            style: TrydosWalletStyles.bodyMedium
-                                                .copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.white,
-                                                ),
-                                          ),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(
-                                              0xFF388CFF,
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 12,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _canConfirm(state)
-                                ? () => _confirmDeposit(state.uploadUrl!)
-                                : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF388CFF),
-                              disabledBackgroundColor: const Color(0xffC0C0C0),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
                             ),
-                            child: isSubmitting
-                                ? const SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    ),
-                                  )
-                                : Text(
-                                    AppStrings.get(
-                                      state.languageCode,
-                                      'confirm_deposit_label',
-                                    ),
-                                    style: TrydosWalletStyles.bodyMedium
-                                        .copyWith(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _canConfirm(state)
+                                  ? () => _confirmDeposit(state.uploadUrl!)
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF388CFF),
+                                disabledBackgroundColor: const Color(
+                                  0xffC0C0C0,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: isSubmitting
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                      ),
+                                    )
+                                  : Text(
+                                      AppStrings.get(
+                                        state.languageCode,
+                                        'confirm_deposit_label',
+                                      ),
+                                      style: TrydosWalletStyles.bodyMedium
+                                          .copyWith(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

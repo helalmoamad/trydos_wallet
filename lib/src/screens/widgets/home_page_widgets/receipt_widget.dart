@@ -13,6 +13,7 @@ class ReceiptWidget extends StatelessWidget {
   final String type;
   final String purpose;
   final bool isSuccess;
+  final bool isFromQr;
 
   // Optional Unregistered Phone Fields
   final String? recipientPhoneNumber;
@@ -30,6 +31,7 @@ class ReceiptWidget extends StatelessWidget {
     required this.type,
     required this.purpose,
     required this.isSuccess,
+    this.isFromQr = false,
     this.recipientPhoneNumber,
     this.recipientName,
     this.recipientId,
@@ -89,7 +91,11 @@ class ReceiptWidget extends StatelessWidget {
             _buildFullWidthBox('Recipient ID NUMBER', recipientId!),
             const SizedBox(height: 5),
           ] else ...[
-            _buildFullWidthBox('Recipient Account Number', recipientAccount),
+            _buildFullWidthBox(
+              'Recipient Account Number',
+              recipientAccount,
+              isFromQr: isFromQr,
+            ),
             const SizedBox(height: 5),
           ],
           Row(
@@ -159,7 +165,11 @@ class ReceiptWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildFullWidthBox(String label, String value) {
+  Widget _buildFullWidthBox(
+    String label,
+    String value, {
+    bool isFromQr = false,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -178,12 +188,25 @@ class ReceiptWidget extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 5),
-          Text(
-            value,
-            style: TrydosWalletStyles.bodyMedium.copyWith(
-              color: const Color(0xff1D1D1D),
-              fontSize: 11,
-            ),
+          Row(
+            children: [
+              if (isFromQr) ...[
+                SvgPicture.asset(
+                  TrydosWalletAssets.realQr,
+                  height: 16,
+                  width: 16,
+                  package: TrydosWalletStyles.packageName,
+                ),
+                const SizedBox(width: 8),
+              ],
+              Text(
+                value,
+                style: TrydosWalletStyles.bodyMedium.copyWith(
+                  color: const Color(0xff1D1D1D),
+                  fontSize: 11,
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -7,7 +7,7 @@ void main() {
   // Library init - required before any API call
   TrydosWallet.init(
     TrydosWalletConfig(
-      baseUrl: 'https://trydos_wallet_develop.ramaaz.dev///',
+      baseUrl: 'https://trydos_wallet_develop.ramaaz.dev/',
       token:
           "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Nzg3OTBiODVjNGVlZWEyYWUxMzhkNSIsImVtYWlsIjoicGhvbmVfOTYzOTM0MzMwODg5QHRyeWRvcy1vdHAubG9jYWwiLCJ0eXBlIjoidXNlciIsImxhbmciOiJlbiIsImt5Y1N0YXR1cyI6Im5vdF9zdWJtaXR0ZWQiLCJpYXQiOjE3NzA4MDMwNDAsImV4cCI6MTc3MzM5NTA0MH0.svpbwuEeXlGa3G-MltoFaUw6FoXgxY5jDJ_AjZVTysE",
       languageCode: 'en',

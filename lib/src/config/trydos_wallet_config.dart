@@ -17,6 +17,7 @@ class TrydosWalletConfig {
     this.firstName = 'M*****',
     this.lastName = 'A*****',
     this.allowBadCertificate = false,
+    this.skipSplash = false,
   });
 
   final String baseUrl;
@@ -28,6 +29,7 @@ class TrydosWalletConfig {
   final String firstName;
   final String lastName;
   final bool allowBadCertificate;
+  final bool skipSplash;
 
   ApiHeadersConfig get headersConfig => ApiHeadersConfig(
     languageCode: languageCode,
@@ -87,6 +89,7 @@ class TrydosWallet {
       firstName: _config!.firstName,
       lastName: _config!.lastName,
       allowBadCertificate: _config!.allowBadCertificate,
+      skipSplash: _config!.skipSplash,
     );
     _apiClient?.updateHeaders(_config!.headersConfig);
   }
@@ -104,6 +107,7 @@ class TrydosWallet {
       firstName: _config!.firstName,
       lastName: _config!.lastName,
       allowBadCertificate: _config!.allowBadCertificate,
+      skipSplash: _config!.skipSplash,
     );
     _apiClient?.updateHeaders(_config!.headersConfig);
   }
@@ -121,6 +125,7 @@ class TrydosWallet {
       firstName: firstName ?? _config!.firstName,
       lastName: lastName ?? _config!.lastName,
       allowBadCertificate: _config!.allowBadCertificate,
+      skipSplash: _config!.skipSplash,
     );
   }
 }

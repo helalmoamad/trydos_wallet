@@ -33,7 +33,7 @@ class _ApiErrorListenerState extends State<ApiErrorListener> {
   }
 
   void _showErrorSnackBar(BuildContext context, String message) {
-    showMessage(message, type: MessageType.error);
+    showMessage(message, context: context, type: MessageType.error);
   }
 
   @override

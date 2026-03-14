@@ -8,13 +8,19 @@ enum MessageType { success, error, info }
 /// يتم استخدام [navigatorKey] للوصول للـ Overlay المتاح في التطبيق.
 void showMessage(
   String message, {
+  BuildContext? context,
   MessageType type = MessageType.info,
   Duration duration = const Duration(seconds: 5),
 }) {
-  final overlay = navigatorKey.currentState?.overlay;
+  final overlay = context != null
+      ? Navigator.of(context).overlay
+      : navigatorKey.currentState?.overlay;
+
   if (overlay == null) {
     // Fallback to SnackBar if Navigator/Overlay is not ready
-    final state = scaffoldMessengerKey.currentState;
+    final state = context != null
+        ? ScaffoldMessenger.of(context)
+        : scaffoldMessengerKey.currentState;
     if (state != null) {
       state.showSnackBar(SnackBar(content: Text(message)));
     }
@@ -56,6 +62,227 @@ void showMessage(
   );
 
   overlay.insert(entry);
+}
+
+/// Custom curve for wallet modals: fast opening below 50%, slow above 50%.
+class PiecewiseCurve extends Curve {
+  const PiecewiseCurve();
+
+  @override
+  double transformInternal(double t) {
+    // Opening: Extremely fast to 70% of transition (in 10% time), then crawls.
+    if (t < 0.1) return (t / 0.1) * 0.7;
+    return 0.7 + ((t - 0.1) / 0.9) * 0.3;
+  }
+}
+
+/// Custom curve for closing: slow for top half, very fast for bottom half.
+class ReversePiecewiseCurve extends Curve {
+  const ReversePiecewiseCurve();
+
+  @override
+  double transformInternal(double t) {
+    // We want "slow then fast" during closing (progress 1.0 down to 0.0).
+    // Reach 0.5 height slowly (first 70% of time), then snap 0.5 to 0.0 (final 30%).
+    if (t > 0.3) {
+      // Top 70% of closing time: Moves from height 1.0 down to 0.5
+      return 0.5 + ((t - 0.3) / 0.7) * 0.5;
+    } else {
+      // Final 30% of closing time: Moves from height 0.5 down to 0.0 (Rapid)
+      return (t / 0.3) * 0.5;
+    }
+  }
+}
+
+/// Helper to show consistent wallet modals with 90% height and custom animation.
+typedef WalletModalBuilder = Widget Function(
+  BuildContext context,
+  ScrollController scrollController,
+);
+
+Future<T?> showWalletModal<T>({
+  required BuildContext context,
+  required WalletModalBuilder builder,
+  bool isDismissible = true,
+  bool enableDrag = true,
+  Color backgroundColor = Colors.white,
+}) {
+  bool isPopping = false;
+
+  return showGeneralDialog<T>(
+    context: context,
+    barrierDismissible: isDismissible,
+    barrierLabel: 'Wallet Modal',
+    barrierColor: Colors.black54,
+    transitionDuration: const Duration(milliseconds: 600),
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return _WalletModalContainer(
+        builder: builder,
+        backgroundColor: backgroundColor,
+        enableDrag: enableDrag,
+        onDismiss: () {
+          if (!isPopping && context.mounted) {
+            isPopping = true;
+            Navigator.of(context).pop();
+          }
+        },
+      );
+    },
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      // Use Separate Curves for Forward and Reverse
+      final curve = animation.status == AnimationStatus.reverse
+          ? const ReversePiecewiseCurve()
+          : const PiecewiseCurve();
+
+      return SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 1),
+          end: Offset.zero,
+        ).animate(CurvedAnimation(parent: animation, curve: curve)),
+        child: child,
+      );
+    },
+  );
+}
+
+class _WalletModalContainer extends StatefulWidget {
+  final WalletModalBuilder builder;
+  final Color backgroundColor;
+  final VoidCallback onDismiss;
+  final bool enableDrag;
+
+  const _WalletModalContainer({
+    required this.builder,
+    required this.backgroundColor,
+    required this.onDismiss,
+    required this.enableDrag,
+  });
+
+  @override
+  State<_WalletModalContainer> createState() => _WalletModalContainerState();
+}
+
+class _WalletModalContainerState extends State<_WalletModalContainer> {
+  late DraggableScrollableController _dragController;
+
+  @override
+  void initState() {
+    super.initState();
+    _dragController = DraggableScrollableController();
+  }
+
+  @override
+  void dispose() {
+    _dragController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NotificationListener<DraggableScrollableNotification>(
+      onNotification: (notification) {
+        // Automatically pop when dragged below 10% height
+        if (notification.extent < 0.1) {
+          widget.onDismiss();
+        }
+        return false;
+      },
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: DraggableScrollableSheet(
+          controller: _dragController,
+          initialChildSize: 0.9,
+          minChildSize: 0.0,
+          maxChildSize: 0.9,
+          expand: false,
+          snap: true,
+          snapSizes: const [0.0, 0.9],
+          builder: (context, scrollController) {
+            return Material(
+              color: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: widget.backgroundColor,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(30),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: 0,
+                      maxHeight: MediaQuery.of(context).size.height * 0.95,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Handle and Drag Area (Header)
+                        // We wrap this in a GestureDetector to make it draggable.
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onVerticalDragUpdate: (details) {
+                            if (widget.enableDrag) {
+                              final currentSize = _dragController.size;
+                              final delta = details.primaryDelta! /
+                                  MediaQuery.of(context).size.height;
+                              _dragController.jumpTo(currentSize - delta);
+                            }
+                          },
+                          onVerticalDragEnd: (details) {
+                            if (widget.enableDrag) {
+                              final currentSize = _dragController.size;
+                              if (currentSize < 0.45) {
+                                _dragController.animateTo(
+                                  0,
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeOut,
+                                );
+                              } else {
+                                _dragController.animateTo(
+                                  0.9,
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeOut,
+                                );
+                              }
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            width: double.infinity,
+                            child: Center(
+                              child: Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xffC4C2C2),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Wrap the builder in a Flexible instead of Expanded to avoid overflow issues
+                        // during sheet compression (closing).
+                        Flexible(
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(30),
+                            ),
+                            child: widget.builder(context, scrollController),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 
 class _TopNotificationWidget extends StatefulWidget {
