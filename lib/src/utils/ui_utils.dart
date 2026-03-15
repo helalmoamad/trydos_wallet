@@ -95,10 +95,8 @@ class ReversePiecewiseCurve extends Curve {
 }
 
 /// Helper to show consistent wallet modals with 90% height and custom animation.
-typedef WalletModalBuilder = Widget Function(
-  BuildContext context,
-  ScrollController scrollController,
-);
+typedef WalletModalBuilder =
+    Widget Function(BuildContext context, ScrollController scrollController);
 
 Future<T?> showWalletModal<T>({
   required BuildContext context,
@@ -212,7 +210,7 @@ class _WalletModalContainerState extends State<_WalletModalContainer> {
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       minHeight: 0,
-                      maxHeight: MediaQuery.of(context).size.height * 0.95,
+                      maxHeight: MediaQuery.of(context).size.height,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -224,7 +222,8 @@ class _WalletModalContainerState extends State<_WalletModalContainer> {
                           onVerticalDragUpdate: (details) {
                             if (widget.enableDrag) {
                               final currentSize = _dragController.size;
-                              final delta = details.primaryDelta! /
+                              final delta =
+                                  details.primaryDelta! /
                                   MediaQuery.of(context).size.height;
                               _dragController.jumpTo(currentSize - delta);
                             }
@@ -248,12 +247,12 @@ class _WalletModalContainerState extends State<_WalletModalContainer> {
                             }
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            padding: const EdgeInsets.symmetric(vertical: 0),
                             width: double.infinity,
                             child: Center(
                               child: Container(
                                 width: 40,
-                                height: 4,
+                                height: 0,
                                 decoration: BoxDecoration(
                                   color: const Color(0xffC4C2C2),
                                   borderRadius: BorderRadius.circular(2),

@@ -37,7 +37,7 @@ class BalanceCard extends StatelessWidget {
       child: isSelected
           ? Container(
               width: MediaQuery.of(context).size.width,
-              padding: const EdgeInsets.only(top: 10, left: 15, right: 15),
+              padding: const EdgeInsets.only(top: 12, left: 15, right: 15),
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(15),
@@ -57,19 +57,16 @@ class BalanceCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (symbolImageUrl != null && symbolImageUrl!.isNotEmpty)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            symbolImageUrl!,
-                            width: 40,
-                            height: 40,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildFallbackIcon(),
-                          ),
+                        Image.network(
+                          symbolImageUrl!,
+
+                          height: 20,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _buildFallbackIcon(),
                         )
                       else
                         _buildFallbackIcon(),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 10),
                       Text(
                         currencyName,
                         style: TrydosWalletStyles.bodySmall.copyWith(
@@ -181,7 +178,7 @@ class BalanceCard extends StatelessWidget {
             )
           : Container(
               width: 200,
-              padding: const EdgeInsets.only(top: 10, left: 15, right: 15),
+              padding: const EdgeInsets.only(top: 12, left: 15, right: 15),
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(15),
@@ -201,19 +198,16 @@ class BalanceCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (symbolImageUrl != null && symbolImageUrl!.isNotEmpty)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            symbolImageUrl!,
-                            width: 40,
-                            height: 40,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildFallbackIcon(),
-                          ),
+                        Image.network(
+                          symbolImageUrl!,
+
+                          height: 20,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _buildFallbackIcon(),
                         )
                       else
                         _buildFallbackIcon(),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 10),
                       Text(
                         currencyName,
                         style: TrydosWalletStyles.bodySmall.copyWith(

@@ -185,7 +185,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
             borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: MainAxisSize.max,
             children: [
               const SizedBox(height: 10),
               // Handle

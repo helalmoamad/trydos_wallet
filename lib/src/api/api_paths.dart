@@ -8,7 +8,7 @@ abstract class ApiPaths {
 
   // ─── Transactions ───
   /// Wallet transactions (cursor pagination).
-  static const String myTransactions = '/wallets/my/transactions';
+  static const String myTransactions = '/financial-ledger';
 
   // ─── Balances ───
   /// Wallet balance for specific currency.

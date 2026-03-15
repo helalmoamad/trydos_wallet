@@ -20,33 +20,15 @@ class _SendModalState extends State<SendModal> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 500),
-      switchInCurve: Curves.easeOutQuart,
-      switchOutCurve: Curves.easeInQuart,
-      transitionBuilder: (Widget child, Animation<double> animation) {
-        final isTransfer = child is TransferSendModal;
-        final offset = isTransfer
-            ? Tween<Offset>(
-                begin: const Offset(1, 0),
-                end: Offset.zero,
-              ).animate(animation)
-            : Tween<Offset>(
-                begin: const Offset(-1, 0),
-                end: Offset.zero,
-              ).animate(animation);
-
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(position: offset, child: child),
-        );
-      },
-      child: _currentView == SendModalView.main
-          ? _buildMainMenuView(key: const ValueKey('main'))
-          : TransferSendModal(
-              key: const ValueKey('transfer'),
-              scrollController: widget.scrollController,
-            ),
+    return IndexedStack(
+      index: _currentView == SendModalView.main ? 0 : 1,
+      children: [
+        _buildMainMenuView(key: const ValueKey('main')),
+        TransferSendModal(
+          key: const ValueKey('transfer'),
+          scrollController: widget.scrollController,
+        ),
+      ],
     );
   }
 
@@ -62,6 +44,20 @@ class _SendModalState extends State<SendModal> {
               child: Column(
                 key: key,
                 children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    width: double.infinity,
+                    child: Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: const Color(0xffC4C2C2),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   // Top Icon
                   SvgPicture.asset(
@@ -98,12 +94,11 @@ class _SendModalState extends State<SendModal> {
                     subtitle: 'Withdrawal Via Our Centers Or Agents',
                     onTap: () {},
                     actions1: [
-                      _buildTextAction('Nearby Centers', 13, onTap: () {})
+                      _buildTextAction('Nearby Centers', 13, onTap: () {}),
                     ],
                     actions2: [_buildTextAction('History', 11, onTap: () {})],
                   ),
 
-                  const Spacer(),
                   // Third Section: Bill Payments
                   _buildBillPaymentsSection(),
                   const SizedBox(height: 20),

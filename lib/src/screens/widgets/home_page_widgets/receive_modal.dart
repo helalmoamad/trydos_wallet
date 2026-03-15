@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +11,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/request_qr_modal.dart';
+import 'package:trydos_wallet/src/utils/ui_utils.dart';
+
+enum ReceiveModalView { main, request }
 
 class ReceiveModal extends StatefulWidget {
   final ScrollController? scrollController;
@@ -26,6 +28,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
   bool _isMasked = false;
   bool _isDownloading = false;
   bool _isSharing = false;
+  ReceiveModalView _currentView = ReceiveModalView.main;
 
   final String _accountName =
       'Ramaaz Bilişim Teknolojileri Yazılım Limited Sirketi';
@@ -145,133 +148,143 @@ class _ReceiveModalState extends State<ReceiveModal> {
             return SingleChildScrollView(
               controller: widget.scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 10),
-                        // Trydos Logo
-                        SvgPicture.asset(
-                          TrydosWalletAssets.trydos,
-                          height: 30,
-                          package: TrydosWalletStyles.packageName,
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height * 0.9,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: _currentView == ReceiveModalView.main
+                      ? _buildReceiveView(context)
+                      : RequestQRModal(
+                          scrollController: widget.scrollController,
+                          onBack: () {
+                            setState(() {
+                              _currentView = ReceiveModalView.main;
+                            });
+                          },
                         ),
-                        const SizedBox(height: 16),
-                        // QR Code Area
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.02),
-                                blurRadius: 10,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              SvgPicture.asset(
-                                TrydosWalletAssets.realQr,
-                                height: 250,
-                                package: TrydosWalletStyles.packageName,
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                _accountNumber,
-                                style: TrydosWalletStyles.bodyMedium.copyWith(
-                                  color: const Color(0xff1D1D1D),
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        // Account Details
-                        _buildInfoSection(
-                          'Account Name',
-                          _isMasked ? _maskedName : _accountName,
-                          trailing: GestureDetector(
-                            onTap: () => setState(() => _isMasked = !_isMasked),
-                            child: SvgPicture.asset(
-                              TrydosWalletAssets.hide,
-                              package: TrydosWalletStyles.packageName,
-                              colorFilter: ColorFilter.mode(
-                                _isMasked
-                                    ? const Color(0xff1D1D1D)
-                                    : const Color(0xff8D8D8D),
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        _buildInfoSection(
-                          'Account Number',
-                          '$_accountNumber  American Dollars',
-                        ),
-                        const Spacer(),
-                        const SizedBox(height: 20),
-                        // Action Buttons
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _buildActionButton(
-                              asset: TrydosWalletAssets.generate,
-                              label: 'Request',
-                              onTap: () async {
-                                final navigatorContext =
-                                    Navigator.of(context).context;
-                                final walletBloc = context.read<WalletBloc>();
-                                Navigator.pop(context);
-                                WidgetsBinding.instance
-                                    .addPostFrameCallback((_) async {
-                                  await showWalletModal<String>(
-                                    context: navigatorContext,
-                                    builder: (context, sc) =>
-                                        BlocProvider.value(
-                                      value: walletBloc,
-                                      child:
-                                          RequestQRModal(scrollController: sc),
-                                    ),
-                                  );
-                                });
-                              },
-                            ),
-                            _buildActionButton(
-                              asset: TrydosWalletAssets.copy,
-                              label: 'Copy',
-                              onTap: _handleCopy,
-                            ),
-                            _buildActionButton(
-                              asset: TrydosWalletAssets.download,
-                              label: 'Download',
-                              onTap: _handleDownload,
-                              isLoading: _isDownloading,
-                            ),
-                            _buildActionButton(
-                              asset: TrydosWalletAssets.share,
-                              label: 'Share',
-                              onTap: _handleShare,
-                              isLoading: _isSharing,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 40),
-                      ],
-                    ),
-                  ),
                 ),
               ),
             );
           },
         ),
+      ],
+    );
+  }
+
+  Widget _buildReceiveView(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          width: double.infinity,
+          child: Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xffC4C2C2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        // Trydos Logo
+        SvgPicture.asset(
+          TrydosWalletAssets.trydos,
+          height: 30,
+          package: TrydosWalletStyles.packageName,
+        ),
+        const SizedBox(height: 16),
+        // QR Code Area
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 10,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              SvgPicture.asset(
+                TrydosWalletAssets.realQr,
+                height: 250,
+                package: TrydosWalletStyles.packageName,
+              ),
+              const SizedBox(height: 5),
+              Text(
+                _accountNumber,
+                style: TrydosWalletStyles.bodyMedium.copyWith(
+                  color: const Color(0xff1D1D1D),
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Account Details
+        _buildInfoSection(
+          'Account Name',
+          _isMasked ? _maskedName : _accountName,
+          trailing: GestureDetector(
+            onTap: () => setState(() => _isMasked = !_isMasked),
+            child: SvgPicture.asset(
+              TrydosWalletAssets.hide,
+              package: TrydosWalletStyles.packageName,
+              colorFilter: ColorFilter.mode(
+                _isMasked ? const Color(0xff1D1D1D) : const Color(0xff8D8D8D),
+                BlendMode.srcIn,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 5),
+        _buildInfoSection(
+          'Account Number',
+          '$_accountNumber  American Dollars',
+        ),
+
+        const Spacer(),
+        // Action Buttons
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildActionButton(
+              asset: TrydosWalletAssets.generate,
+              label: 'Request',
+              onTap: () {
+                setState(() {
+                  _currentView = ReceiveModalView.request;
+                });
+              },
+            ),
+            _buildActionButton(
+              asset: TrydosWalletAssets.copy,
+              label: 'Copy',
+              onTap: _handleCopy,
+            ),
+            _buildActionButton(
+              asset: TrydosWalletAssets.download,
+              label: 'Download',
+              onTap: _handleDownload,
+              isLoading: _isDownloading,
+            ),
+            _buildActionButton(
+              asset: TrydosWalletAssets.share,
+              label: 'Share',
+              onTap: _handleShare,
+              isLoading: _isSharing,
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
       ],
     );
   }

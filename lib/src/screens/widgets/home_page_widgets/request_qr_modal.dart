@@ -16,7 +16,8 @@ enum RequestQRState { filling, generating, finalQR }
 
 class RequestQRModal extends StatefulWidget {
   final ScrollController? scrollController;
-  const RequestQRModal({super.key, this.scrollController});
+  final VoidCallback? onBack;
+  const RequestQRModal({super.key, this.scrollController, this.onBack});
 
   @override
   State<RequestQRModal> createState() => _RequestQRModalState();
@@ -173,87 +174,70 @@ class _RequestQRModalState extends State<RequestQRModal> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Hidden card for screen capture
-        Positioned(
-          left: -4000,
-          top: -4000,
-          child: RepaintBoundary(
-            key: _cardKey,
-            child: _CleanRequestQRCard(
-              accountName: _accountName,
-              accountNumber: _accountNumber,
-              amount: _amountController.text,
-              reference: _referenceController.text,
-              purpose: _selectedPurpose,
-              expiry: _selectedExpiry,
-              note: _noteController.text,
-            ),
-          ),
-        ),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              controller: widget.scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 10),
-                        // Trydos Logo
-                        SvgPicture.asset(
-                          TrydosWalletAssets.trydos,
-                          height: 30,
-                          package: TrydosWalletStyles.packageName,
-                        ),
-                        const SizedBox(height: 20),
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.9,
 
-                        if (_state == RequestQRState.generating) ...[
-                          const SizedBox(height: 100),
-                          Center(
-                            child: Column(
-                              children: [
-                                const SizedBox(
-                                  height: 40,
-                                  width: 40,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 3,
-                                    color: Color(0xff4880FF),
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
-                                Text(
-                                  'Generating Request...',
-                                  style: TrydosWalletStyles.bodyMedium.copyWith(
-                                    color: const Color(0xff4880FF),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 150),
-                        ] else if (_state == RequestQRState.finalQR) ...[
-                          // Final QR View
-                          _buildFinalQRView(),
-                        ] else ...[
-                          // Filling Form
-                          _buildFormView(),
-                        ],
-                      ],
-                    ),
+      child: SingleChildScrollView(
+        controller: widget.scrollController,
+        child: Stack(
+          children: [
+            // Hidden card for screen capture
+            Positioned(
+              left: -4000,
+              top: -4000,
+              child: RepaintBoundary(
+                key: _cardKey,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: _CleanRequestQRCard(
+                    accountName: _accountName,
+                    accountNumber: _accountNumber,
+                    amount: _amountController.text,
+                    reference: _referenceController.text,
+                    purpose: _selectedPurpose,
+                    expiry: _selectedExpiry,
+                    note: _noteController.text,
                   ),
                 ),
               ),
-            );
-          },
+            ),
+            Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  width: double.infinity,
+                  child: Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xffC4C2C2),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Trydos Logo
+                SvgPicture.asset(
+                  TrydosWalletAssets.trydos,
+                  height: 30,
+                  package: TrydosWalletStyles.packageName,
+                ),
+                const SizedBox(height: 20),
+
+                if (_state == RequestQRState.finalQR) ...[
+                  // Final QR View
+                  _buildFinalQRView(),
+                ] else ...[
+                  // Filling Form (including generating state)
+                  _buildFormView(),
+                ],
+              ],
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -321,12 +305,15 @@ class _RequestQRModalState extends State<RequestQRModal> {
           onSelected: (val) => setState(() => _selectedExpiry = val),
         ),
 
-        const Spacer(),
         const SizedBox(height: 25),
         // Action Buttons
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [_buildGenerateButton(), _buildCancelButton()],
+          children: [
+            SizedBox(width: 20),
+            _buildGenerateButton(),
+            _buildCancelButton(),
+          ],
         ),
         const SizedBox(height: 30),
       ],
@@ -344,7 +331,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 10,
                 spreadRadius: 2,
               ),
@@ -369,12 +356,12 @@ class _RequestQRModalState extends State<RequestQRModal> {
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 15),
         // Account Details
         _buildSummaryBox('Account Name', _accountName),
         const SizedBox(height: 5),
         _buildSummaryBox('Account Number', '$_accountNumber  American Dollars'),
-        const SizedBox(height: 12),
+        const SizedBox(height: 5),
         // Transaction Details
         Row(
           children: [
@@ -406,16 +393,12 @@ class _RequestQRModalState extends State<RequestQRModal> {
             Expanded(child: _buildSummaryBox('Type', 'Deposit Request')),
           ],
         ),
-        const SizedBox(height: 5),
+
         // Expiry and Note Summary
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xffF9F9F9),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xffF0F0F0)),
-          ),
+
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -429,7 +412,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                         'Valid Until',
                         style: TrydosWalletStyles.bodySmall.copyWith(
                           color: const Color(0xff8D8D8D),
-                          fontSize: 10,
+                          fontSize: 11,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -439,7 +422,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                             : '$_selectedExpiry Until 13:59 | 3 March 2026',
                         style: TrydosWalletStyles.bodyMedium.copyWith(
                           color: const Color(0xff1D1D1D),
-                          fontSize: 12,
+                          fontSize: 13,
                         ),
                       ),
                     ],
@@ -475,17 +458,19 @@ class _RequestQRModalState extends State<RequestQRModal> {
             ],
           ),
         ),
-        const SizedBox(height: 15),
-        Center(
-          child: Text(
-            'Will Not Be Able To Use The Code After Its Expiry Time',
-            style: TrydosWalletStyles.bodySmall.copyWith(
-              color: const Color(0xff8D8D8D),
-              fontSize: 10,
-            ),
-          ),
-        ),
-        const Spacer(),
+        const SizedBox(height: 5),
+        (_selectedExpiry == 'Always')
+            ? SizedBox.shrink()
+            : Center(
+                child: Text(
+                  'Will Not Be Able To Use The Code After Its Expiry Time',
+                  style: TrydosWalletStyles.bodySmall.copyWith(
+                    color: const Color(0xff1D1D1D),
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+
         const SizedBox(height: 40),
         // Action Buttons
         _buildActionRow(),
@@ -713,7 +698,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xffF9F9F9),
+        color: const Color(0xffFCFCFC),
 
         borderRadius: BorderRadius.circular(12),
       ),
@@ -724,7 +709,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
             label,
             style: TrydosWalletStyles.bodySmall.copyWith(
               color: const Color(0xff8D8D8D),
-              fontSize: 9,
+              fontSize: 11,
             ),
           ),
           const SizedBox(height: 6),
@@ -732,7 +717,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
             value,
             style: TrydosWalletStyles.bodyMedium.copyWith(
               color: const Color(0xff1D1D1D),
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -795,10 +780,8 @@ class _RequestQRModalState extends State<RequestQRModal> {
                     child: Text(
                       option,
                       style: TrydosWalletStyles.bodySmall.copyWith(
-                        color: isSelected
-                            ? const Color(0xff4880FF)
-                            : const Color(0xff1D1D1D),
-                        fontSize: 11,
+                        color: const Color(0xff1D1D1D),
+                        fontSize: isSelected ? 12 : 11,
                       ),
                     ),
                   ),
@@ -807,9 +790,9 @@ class _RequestQRModalState extends State<RequestQRModal> {
             ),
           ),
           if (_selectedExpiry != 'Always') ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 5),
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 5),
               width: double.infinity,
               decoration: BoxDecoration(
                 color: const Color(0xffFFFEFA),
@@ -844,14 +827,16 @@ class _RequestQRModalState extends State<RequestQRModal> {
               TrydosWalletAssets.generate,
               package: TrydosWalletStyles.packageName,
               colorFilter: ColorFilter.mode(
-                isValid ? const Color(0xff5D5C5D) : const Color(0xff388CFF),
+                isValid ? const Color(0xff388CFF) : const Color(0xff5D5C5D),
                 BlendMode.srcIn,
               ),
             ),
           ),
-          const SizedBox(height: 8),
+
           Text(
-            'Generate Request',
+            _state == RequestQRState.generating
+                ? 'Requesting...'
+                : 'Generate Request',
             style: TrydosWalletStyles.bodySmall.copyWith(
               color: isValid
                   ? const Color(0xff388CFF)
@@ -865,23 +850,26 @@ class _RequestQRModalState extends State<RequestQRModal> {
   }
 
   Widget _buildCancelButton() {
+    if (_state == RequestQRState.generating) return const SizedBox.shrink();
     return GestureDetector(
-      onTap: () => Navigator.pop(context),
+      onTap: () {
+        if (widget.onBack != null) {
+          widget.onBack!();
+        } else {
+          Navigator.pop(context);
+        }
+      },
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
 
             child: SvgPicture.asset(
-              TrydosWalletAssets.close,
+              TrydosWalletAssets.cancel,
               package: TrydosWalletStyles.packageName,
-              colorFilter: const ColorFilter.mode(
-                Color(0xff5D5C5D),
-                BlendMode.srcIn,
-              ),
             ),
           ),
-          const SizedBox(height: 8),
+
           Text(
             'Cancel',
             style: TrydosWalletStyles.bodySmall.copyWith(
@@ -982,12 +970,12 @@ class _CleanRequestQRCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 800,
       width: 400,
-      padding: const EdgeInsets.all(30),
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
       decoration: const BoxDecoration(color: Colors.white),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           SvgPicture.asset(
             TrydosWalletAssets.trydos,
@@ -1042,7 +1030,7 @@ class _CleanRequestQRCard extends StatelessWidget {
             const SizedBox(height: 5),
             _buildInfoBox('Note', note),
           ],
-          const SizedBox(height: 20),
+          const SizedBox(height: 5),
           Text(
             'Will Not Be Able To Use The Code After Its Expiry Time',
             style: TrydosWalletStyles.bodySmall.copyWith(

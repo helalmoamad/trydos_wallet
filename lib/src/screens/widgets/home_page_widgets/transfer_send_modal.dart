@@ -231,42 +231,46 @@ class _TransferSendModalState extends State<TransferSendModal> {
       final dateAndTimeString =
           '${now.day.toString().padLeft(2, '0')}.${months[now.month - 1]} | ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
-      return SuccessfulPage(
-        senderAccount: senderAccount,
-        recipientAccount: recipientController.text,
-        amount: amountController.text,
-        currencySymbol: symbol,
-        reference:
-            'TSCR${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
-        dateAndTimeString: dateAndTimeString,
-        type: 'Transfer | Send',
-        purpose: qrPurpose ?? selectedPurpose ?? 'Work/Partnership',
-        onDone: () => Navigator.pop(context),
-        onDownload: () {},
-        onShare: () {},
-        isFromQr: isFromQr,
-        // Only pass phone fields when phone is unregistered
-        recipientPhoneNumber:
-            (currentInputType == RecipientInputType.phone &&
-                isPhoneRegistered == false)
-            ? '+ ${_phoneForEdit ?? recipientController.text}'
-            : null,
-        recipientName:
-            (currentInputType == RecipientInputType.phone &&
-                isPhoneRegistered == false)
-            ? nameController.text
-            : null,
-        recipientId:
-            (currentInputType == RecipientInputType.phone &&
-                isPhoneRegistered == false)
-            ? idController.text
-            : null,
+      return SingleChildScrollView(
+        controller: widget.scrollController,
+        physics: const BouncingScrollPhysics(),
+        child: SuccessfulPage(
+          senderAccount: senderAccount,
+          recipientAccount: recipientController.text,
+          amount: amountController.text,
+          currencySymbol: symbol,
+          reference:
+              'TSCR${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
+          dateAndTimeString: dateAndTimeString,
+          type: 'Transfer | Send',
+          purpose: qrPurpose ?? selectedPurpose ?? 'Work/Partnership',
+          onDone: () => Navigator.pop(context),
+          onDownload: () {},
+          onShare: () {},
+          isFromQr: isFromQr,
+          // Only pass phone fields when phone is unregistered
+          recipientPhoneNumber:
+              (currentInputType == RecipientInputType.phone &&
+                  isPhoneRegistered == false)
+              ? '+ ${_phoneForEdit ?? recipientController.text}'
+              : null,
+          recipientName:
+              (currentInputType == RecipientInputType.phone &&
+                  isPhoneRegistered == false)
+              ? nameController.text
+              : null,
+          recipientId:
+              (currentInputType == RecipientInputType.phone &&
+                  isPhoneRegistered == false)
+              ? idController.text
+              : null,
+        ),
       );
     }
 
     return SingleChildScrollView(
       controller: widget.scrollController,
-      physics: const BouncingScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30),
         child: Column(
@@ -279,6 +283,21 @@ class _TransferSendModalState extends State<TransferSendModal> {
               children: [
                 Column(
                   children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      width: double.infinity,
+                      child: Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: const Color(0xffC4C2C2),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     SvgPicture.asset(
                       TrydosWalletAssets.transferSend,
                       height: 40,
@@ -862,7 +881,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
 
             isRequestFlow
                 ? const SizedBox(height: 10)
-                : const SizedBox(height: 25),
+                : const SizedBox(height: 30),
 
             if (isRequestFlow && isExpired)
               Container(
@@ -885,9 +904,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
             else
               _buildSendButton(),
 
-            isRequestFlow
-                ? const SizedBox(height: 15)
-                : const SizedBox(height: 30),
+            const SizedBox(height: 125),
           ],
         ),
       ),

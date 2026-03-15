@@ -18,6 +18,7 @@ class HomeTab extends StatefulWidget {
 class _HomeTabState extends State<HomeTab> {
   int _selectedTransactionIndex = 0;
   final List<String> _selectedCurrencies = [];
+  bool _hideBalance = false;
   final ScrollController _currenciesScrollController = ScrollController();
   final ScrollController _transactionsScrollController = ScrollController();
 
@@ -116,42 +117,130 @@ class _HomeTabState extends State<HomeTab> {
               padding: EdgeInsets.only(top: 5, left: 24, right: 24),
               child: Divider(color: Color(0xffD3D3D3)),
             ),
-            Padding(
-              padding: state.isRtl
-                  ? const EdgeInsets.only(left: 0, right: 24)
-                  : const EdgeInsets.only(left: 24, right: 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    AppStrings.get(state.languageCode, 'your_total_balance'),
-                    style: TrydosWalletStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xff1D1D1D),
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: state.currenciesStatus == WalletStatus.loading
-                        ? null
-                        : () => context.read<WalletBloc>().add(
-                            const WalletCurrenciesRefreshRequested(),
+            (_selectedCurrencies.isNotEmpty)
+                ? Padding(
+                    padding: state.isRtl
+                        ? const EdgeInsets.only(left: 0, right: 24)
+                        : const EdgeInsets.only(left: 24, right: 0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              "Your Total ${_selectedCurrencies[0]} Balance",
+                              style: TrydosWalletStyles.bodyMedium.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xff1D1D1D),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _hideBalance = !_hideBalance;
+                                });
+                              },
+                              child: SvgPicture.asset(
+                                TrydosWalletAssets.hide,
+                                package: TrydosWalletStyles.packageName,
+                                colorFilter: ColorFilter.mode(
+                                  _hideBalance
+                                      ? const Color(0xff1D1D1D)
+                                      : const Color(0xff8D8D8D),
+                                  BlendMode.srcIn,
+                                ),
+                                height: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                        TextButton.icon(
+                          onPressed:
+                              state.currenciesStatus == WalletStatus.loading
+                              ? null
+                              : () => context.read<WalletBloc>().add(
+                                  const WalletCurrenciesRefreshRequested(),
+                                ),
+                          icon: SvgPicture.asset(
+                            TrydosWalletAssets.addAccount,
+                            package: TrydosWalletStyles.packageName,
                           ),
-                    icon: SvgPicture.asset(
-                      TrydosWalletAssets.addCurrency,
-                      package: TrydosWalletStyles.packageName,
+                          label: Text(
+                            "Add ${_selectedCurrencies[0]} Account",
+                            style: TrydosWalletStyles.bodySmall.copyWith(
+                              color: const Color(0xFF388CFF),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    label: Text(
-                      AppStrings.get(state.languageCode, 'add_currency'),
-                      style: TrydosWalletStyles.bodySmall.copyWith(
-                        color: const Color(0xFF388CFF),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
+                  )
+                : Padding(
+                    padding: state.isRtl
+                        ? const EdgeInsets.only(left: 0, right: 24)
+                        : const EdgeInsets.only(left: 24, right: 0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              AppStrings.get(
+                                state.languageCode,
+                                'your_total_balance',
+                              ),
+                              style: TrydosWalletStyles.bodyMedium.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xff1D1D1D),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _hideBalance = !_hideBalance;
+                                });
+                              },
+                              child: SvgPicture.asset(
+                                TrydosWalletAssets.hide,
+                                package: TrydosWalletStyles.packageName,
+                                colorFilter: ColorFilter.mode(
+                                  _hideBalance
+                                      ? Colors.black
+                                      : const Color(0xff8D8D8D),
+                                  BlendMode.srcIn,
+                                ),
+                                height: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                        TextButton.icon(
+                          onPressed:
+                              state.currenciesStatus == WalletStatus.loading
+                              ? null
+                              : () => context.read<WalletBloc>().add(
+                                  const WalletCurrenciesRefreshRequested(),
+                                ),
+                          icon: SvgPicture.asset(
+                            TrydosWalletAssets.addCurrency,
+                            package: TrydosWalletStyles.packageName,
+                          ),
+                          label: Text(
+                            AppStrings.get(state.languageCode, 'add_currency'),
+                            style: TrydosWalletStyles.bodySmall.copyWith(
+                              color: const Color(0xFF388CFF),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
             SizedBox(
               height: 120,
               child: Builder(
@@ -189,14 +278,16 @@ class _HomeTabState extends State<HomeTab> {
                     final isLoadingBalance = state.loadingBalanceIds.contains(
                       currency.id,
                     );
-                    final amountStr = balance != null
-                        ? balance.available.toStringAsFixed(
-                            balance.available.truncateToDouble() ==
-                                    balance.available
-                                ? 0
-                                : 2,
-                          )
-                        : '0';
+                    final amountStr = _hideBalance
+                        ? '*****'
+                        : (balance != null
+                              ? balance.available.toStringAsFixed(
+                                  balance.available.truncateToDouble() ==
+                                          balance.available
+                                      ? 0
+                                      : 2,
+                                )
+                              : '0');
 
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -263,14 +354,16 @@ class _HomeTabState extends State<HomeTab> {
                       final isLoadingBalance = state.loadingBalanceIds.contains(
                         currency.id,
                       );
-                      final amountStr = balance != null
-                          ? balance.available.toStringAsFixed(
-                              balance.available.truncateToDouble() ==
-                                      balance.available
-                                  ? 0
-                                  : 2,
-                            )
-                          : '0';
+                      final amountStr = _hideBalance
+                          ? '*****'
+                          : (balance != null
+                                ? balance.available.toStringAsFixed(
+                                    balance.available.truncateToDouble() ==
+                                            balance.available
+                                        ? 0
+                                        : 2,
+                                  )
+                                : '0');
 
                       return Padding(
                         padding: state.isRtl

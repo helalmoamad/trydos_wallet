@@ -128,6 +128,37 @@ class SettingsTab extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(height: 24),
+
+                // Logout Button
+                GestureDetector(
+                  onTap: () => TrydosWallet.logout(),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xffFFF5F5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xffFFD6D6)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          AppStrings.get(state.languageCode, 'logout'),
+                          style: TrydosWalletStyles.bodyMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xffFF3B3B),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.logout,
+                          color: Color(0xffFF3B3B),
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

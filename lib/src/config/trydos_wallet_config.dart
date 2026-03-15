@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:io' show Platform;
 
 import '../api/api_client.dart';
@@ -18,6 +19,8 @@ class TrydosWalletConfig {
     this.lastName = 'A*****',
     this.allowBadCertificate = false,
     this.skipSplash = false,
+    this.onLogout,
+    this.onLanguageChanged,
   });
 
   final String baseUrl;
@@ -30,6 +33,8 @@ class TrydosWalletConfig {
   final String lastName;
   final bool allowBadCertificate;
   final bool skipSplash;
+  final VoidCallback? onLogout;
+  final void Function(String languageCode, bool isKurdish)? onLanguageChanged;
 
   ApiHeadersConfig get headersConfig => ApiHeadersConfig(
     languageCode: languageCode,
@@ -76,6 +81,11 @@ class TrydosWallet {
     _apiClient = config.createApiClient();
   }
 
+  /// Trigger logout event for the host app.
+  static void logout() {
+    _config?.onLogout?.call();
+  }
+
   /// Update the token later (e.g. after login).
   static void updateToken(String? token) {
     if (_config == null) return;
@@ -90,6 +100,8 @@ class TrydosWallet {
       lastName: _config!.lastName,
       allowBadCertificate: _config!.allowBadCertificate,
       skipSplash: _config!.skipSplash,
+      onLogout: _config!.onLogout,
+      onLanguageChanged: _config!.onLanguageChanged,
     );
     _apiClient?.updateHeaders(_config!.headersConfig);
   }
@@ -97,19 +109,23 @@ class TrydosWallet {
   /// Update the language later.
   static void updateLanguage(String languageCode, {bool? isKurdish}) {
     if (_config == null) return;
+    final kurdish = isKurdish ?? (languageCode == 'ku');
     _config = TrydosWalletConfig(
       baseUrl: _config!.baseUrl,
       token: _config!.token,
       languageCode: languageCode,
-      isKurdish: isKurdish ?? (languageCode == 'ku'),
+      isKurdish: kurdish,
       applicationVersion: _config!.applicationVersion,
       debug: _config!.debug,
       firstName: _config!.firstName,
       lastName: _config!.lastName,
       allowBadCertificate: _config!.allowBadCertificate,
       skipSplash: _config!.skipSplash,
+      onLogout: _config!.onLogout,
+      onLanguageChanged: _config!.onLanguageChanged,
     );
     _apiClient?.updateHeaders(_config!.headersConfig);
+    _config!.onLanguageChanged?.call(languageCode, kurdish);
   }
 
   /// Update user info later.
@@ -126,6 +142,8 @@ class TrydosWallet {
       lastName: lastName ?? _config!.lastName,
       allowBadCertificate: _config!.allowBadCertificate,
       skipSplash: _config!.skipSplash,
+      onLogout: _config!.onLogout,
+      onLanguageChanged: _config!.onLanguageChanged,
     );
   }
 }
