@@ -35,7 +35,7 @@ class TrydosWalletExampleApp extends StatelessWidget {
           return MaterialApp(
             navigatorKey: navigatorKey,
             scaffoldMessengerKey: scaffoldMessengerKey,
-            title: 'Wallet - Example',
+            title: 'Wallet - Example 1.0.0',
             debugShowCheckedModeBanner: false,
             locale: Locale(state.languageCode),
             theme: ThemeData(
