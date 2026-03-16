@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
+import 'package:trydos_wallet/src/bloc/wallet_state.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/localization/app_strings.dart';
 
 /// ويدجت لعرض بطاقة الرصيد (للمستخدم في الصفحة الرئيسية).
 class BalanceCard extends StatelessWidget {
@@ -32,228 +36,223 @@ class BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: isSelected
-          ? Container(
-              width: MediaQuery.of(context).size.width,
-              padding: const EdgeInsets.only(top: 12, left: 15, right: 15),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (symbolImageUrl != null && symbolImageUrl!.isNotEmpty)
-                        Image.network(
-                          symbolImageUrl!,
-
-                          height: 20,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildFallbackIcon(),
-                        )
-                      else
-                        _buildFallbackIcon(),
-                      const SizedBox(height: 10),
-                      Text(
-                        currencyName,
-                        style: TrydosWalletStyles.bodySmall.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                        ),
+    return BlocBuilder<WalletBloc, WalletState>(
+      builder: (context, state) {
+        return GestureDetector(
+          onTap: onTap,
+          child: isSelected
+              ? Container(
+                  width: MediaQuery.of(context).size.width,
+                  padding: const EdgeInsets.only(top: 12, left: 15, right: 15),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 5),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        if (isLoadingBalance)
-                          const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        else
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (symbolImageUrl != null && symbolImageUrl!.isNotEmpty)
+                            Image.network(
+                              symbolImageUrl!,
+                              height: 20,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _buildFallbackIcon(),
+                            )
+                          else
+                            _buildFallbackIcon(),
+                          const SizedBox(height: 10),
                           Text(
-                            amount,
-                            style: TrydosWalletStyles.amountText.copyWith(
+                            currencyName,
+                            style: TrydosWalletStyles.bodySmall.copyWith(
                               color: Colors.white,
-                              fontSize: 25,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                        const SizedBox(width: 6),
-                        Text(
-                          currencyCode,
-                          style: TrydosWalletStyles.bodySmall.copyWith(
-                            color: Colors.white,
-                            fontSize: 10,
-                            height: 1.3,
-                          ),
-                        ),
-                        const Spacer(),
-
-                        Column(
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 5),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          textBaseline: TextBaseline.alphabetic,
                           children: [
-                            SvgPicture.asset(
-                              TrydosWalletAssets.statistic,
-                              package: TrydosWalletStyles.packageName,
-                            ),
-                            SizedBox(height: 5),
+                            if (isLoadingBalance)
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            else
+                              Text(
+                                amount,
+                                style: TrydosWalletStyles.amountText.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 25,
+                                ),
+                              ),
+                            const SizedBox(width: 6),
                             Text(
-                              "statistic",
+                              currencyCode,
                               style: TrydosWalletStyles.bodySmall.copyWith(
-                                color: Color(0xffFCFCFC),
-                                fontSize: 9,
+                                color: Colors.white,
+                                fontSize: 10,
                                 height: 1.3,
                               ),
                             ),
-                          ],
-                        ),
-                        SizedBox(width: 25),
-                        Column(
-                          children: [
-                            Stack(
-                              alignment: Alignment.center,
+                            const Spacer(),
+                            Column(
                               children: [
                                 SvgPicture.asset(
-                                  TrydosWalletAssets.chart1,
-
+                                  TrydosWalletAssets.statistic,
                                   package: TrydosWalletStyles.packageName,
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  AppStrings.get(state.languageCode, 'statistic'),
+                                  style: TrydosWalletStyles.bodySmall.copyWith(
+                                    color: const Color(0xffFCFCFC),
+                                    fontSize: 9,
+                                    height: 1.3,
+                                  ),
                                 ),
                               ],
                             ),
-                            SizedBox(height: 5),
-                            Text(
-                              "Info",
-                              style: TrydosWalletStyles.bodySmall.copyWith(
-                                color: Color(0xffFCFCFC),
-                                fontSize: 9,
-                                height: 1.3,
-                              ),
+                            const SizedBox(width: 25),
+                            Column(
+                              children: [
+                                SvgPicture.asset(
+                                  TrydosWalletAssets.chart1,
+                                  package: TrydosWalletStyles.packageName,
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  AppStrings.get(state.languageCode, 'info'),
+                                  style: TrydosWalletStyles.bodySmall.copyWith(
+                                    color: const Color(0xffFCFCFC),
+                                    fontSize: 9,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
                             ),
+                            const SizedBox(width: 25),
+                            Column(
+                              children: [
+                                SvgPicture.asset(
+                                  TrydosWalletAssets.info,
+                                  package: TrydosWalletStyles.packageName,
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  AppStrings.get(state.languageCode, 'info'),
+                                  style: TrydosWalletStyles.bodySmall.copyWith(
+                                    color: const Color(0xffFCFCFC),
+                                    fontSize: 9,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 10),
                           ],
-                        ),
-                        SizedBox(width: 25),
-                        Column(
-                          children: [
-                            SvgPicture.asset(
-                              TrydosWalletAssets.info,
-                              package: TrydosWalletStyles.packageName,
-                            ),
-                            SizedBox(height: 5),
-                            Text(
-                              "Info",
-                              style: TrydosWalletStyles.bodySmall.copyWith(
-                                color: Color(0xffFCFCFC),
-                                fontSize: 9,
-                                height: 1.3,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(width: 10),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : Container(
-              width: 200,
-              padding: const EdgeInsets.only(top: 12, left: 15, right: 15),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (symbolImageUrl != null && symbolImageUrl!.isNotEmpty)
-                        Image.network(
-                          symbolImageUrl!,
-
-                          height: 20,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildFallbackIcon(),
-                        )
-                      else
-                        _buildFallbackIcon(),
-                      const SizedBox(height: 10),
-                      Text(
-                        currencyName,
-                        style: TrydosWalletStyles.bodySmall.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 5),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        if (isLoadingBalance)
-                          const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        else
-                          Text(
-                            amount,
-                            style: TrydosWalletStyles.amountText.copyWith(
-                              color: Colors.white,
-                              fontSize: 25,
-                            ),
-                          ),
-                        const SizedBox(width: 6),
-                        Text(
-                          currencyCode,
-                          style: TrydosWalletStyles.bodySmall.copyWith(
-                            color: Colors.white,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
+                )
+              : Container(
+                  width: 200,
+                  padding: const EdgeInsets.only(top: 12, left: 15, right: 15),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (symbolImageUrl != null && symbolImageUrl!.isNotEmpty)
+                            Image.network(
+                              symbolImageUrl!,
+                              height: 20,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _buildFallbackIcon(),
+                            )
+                          else
+                            _buildFallbackIcon(),
+                          const SizedBox(height: 10),
+                          Text(
+                            currencyName,
+                            style: TrydosWalletStyles.bodySmall.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 5),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            if (isLoadingBalance)
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            else
+                              Text(
+                                amount,
+                                style: TrydosWalletStyles.amountText.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 25,
+                                ),
+                              ),
+                            const SizedBox(width: 6),
+                            Text(
+                              currencyCode,
+                              style: TrydosWalletStyles.bodySmall.copyWith(
+                                color: Colors.white,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+        );
+      },
     );
   }
 

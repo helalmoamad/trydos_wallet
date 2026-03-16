@@ -7,10 +7,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
-import 'package:trydos_wallet/src/utils/ui_utils.dart';
 
 enum RequestQRState { filling, generating, finalQR }
 
@@ -31,8 +31,8 @@ class _RequestQRModalState extends State<RequestQRModal> {
   final TextEditingController _referenceController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
 
-  String _selectedPurpose = '';
-  String _selectedExpiry = 'Always';
+  String _selectedPurpose = 'work_partnership';
+  String _selectedExpiry = 'always';
 
   bool _isDownloading = false;
   bool _isSharing = false;
@@ -44,18 +44,18 @@ class _RequestQRModalState extends State<RequestQRModal> {
   bool _isNameMasked = false;
 
   final List<String> _purposes = [
-    'Work/Partnership',
-    'Service Fees',
-    'Home Rent',
-    'Office / Shop Rent',
+    'work_partnership',
+    'service_fees',
+    'home_rent',
+    'office_shop_rent',
   ];
 
   final List<String> _expiryOptions = [
-    'Always',
-    '3 Minute',
-    '15 Minute',
-    '1 Hour',
-    '24 Hour',
+    'always',
+    'minutes_3',
+    'minutes_15',
+    'hour_1',
+    'hours_24',
   ];
 
   @override
@@ -102,7 +102,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
     }
   }
 
-  Future<void> _handleDownload() async {
+  Future<void> _handleDownload(WalletState state) async {
     if (_isDownloading || _isSharing) return;
     setState(() => _isDownloading = true);
 
@@ -124,7 +124,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
 
         // ignore: use_build_context_synchronously
         showMessage(
-          'QR Card saved to gallery successfully!',
+          AppStrings.get(state.languageCode, 'saved_successfully'),
           // ignore: use_build_context_synchronously
           context: context,
           type: MessageType.success,
@@ -133,7 +133,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
     } catch (e) {
       // ignore: use_build_context_synchronously
       showMessage(
-        'Failed to save QR Card.',
+        AppStrings.get(state.languageCode, 'failed_to_save'),
         // ignore: use_build_context_synchronously
         context: context,
         type: MessageType.error,
@@ -145,7 +145,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
     }
   }
 
-  Future<void> _handleShare() async {
+  Future<void> _handleShare(WalletState state) async {
     if (_isDownloading || _isSharing) return;
     setState(() => _isSharing = true);
 
@@ -161,7 +161,9 @@ class _RequestQRModalState extends State<RequestQRModal> {
         // ignore: deprecated_member_use
         await Share.shareXFiles([
           XFile(imagePath),
-        ], text: 'Payment Request for ${_amountController.text} USD');
+        ], text: AppStrings.get(state.languageCode, 'payment_request_for')
+            .replaceAll('{amount}', _amountController.text)
+            .replaceAll('{currency}', 'USD'));
       }
     } catch (e) {
       debugPrint('Error sharing QR card: $e');
@@ -174,74 +176,78 @@ class _RequestQRModalState extends State<RequestQRModal> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.9,
-
-      child: SingleChildScrollView(
-        controller: widget.scrollController,
-        child: Stack(
-          children: [
-            // Hidden card for screen capture
-            Positioned(
-              left: -4000,
-              top: -4000,
-              child: RepaintBoundary(
-                key: _cardKey,
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: _CleanRequestQRCard(
-                    accountName: _accountName,
-                    accountNumber: _accountNumber,
-                    amount: _amountController.text,
-                    reference: _referenceController.text,
-                    purpose: _selectedPurpose,
-                    expiry: _selectedExpiry,
-                    note: _noteController.text,
-                  ),
-                ),
-              ),
-            ),
-            Column(
+    return BlocBuilder<WalletBloc, WalletState>(
+      builder: (context, state) {
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.9,
+          child: SingleChildScrollView(
+            controller: widget.scrollController,
+            child: Stack(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  width: double.infinity,
-                  child: Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: const Color(0xffC4C2C2),
-                        borderRadius: BorderRadius.circular(2),
+                // Hidden card for screen capture
+                Positioned(
+                  left: -4000,
+                  top: -4000,
+                  child: RepaintBoundary(
+                    key: _cardKey,
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: _CleanRequestQRCard(
+                        accountName: _accountName,
+                        accountNumber: _accountNumber,
+                        amount: _amountController.text,
+                        reference: _referenceController.text,
+                        purpose: _selectedPurpose,
+                        expiry: _selectedExpiry,
+                        note: _noteController.text,
+                        languageCode: state.languageCode,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                // Trydos Logo
-                SvgPicture.asset(
-                  TrydosWalletAssets.trydos,
-                  height: 30,
-                  package: TrydosWalletStyles.packageName,
-                ),
-                const SizedBox(height: 20),
+                Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      width: double.infinity,
+                      child: Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: const Color(0xffC4C2C2),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // Trydos Logo
+                    SvgPicture.asset(
+                      TrydosWalletAssets.trydos,
+                      height: 30,
+                      package: TrydosWalletStyles.packageName,
+                    ),
+                    const SizedBox(height: 20),
 
-                if (_state == RequestQRState.finalQR) ...[
-                  // Final QR View
-                  _buildFinalQRView(),
-                ] else ...[
-                  // Filling Form (including generating state)
-                  _buildFormView(),
-                ],
+                    if (_state == RequestQRState.finalQR) ...[
+                      // Final QR View
+                      _buildFinalQRView(state),
+                    ] else ...[
+                      // Filling Form (including generating state)
+                      _buildFormView(state),
+                    ],
+                  ],
+                ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildFormView() {
+  Widget _buildFormView(WalletState state) {
     return Column(
       children: [
         // Faded QR Placeholder
@@ -264,30 +270,32 @@ class _RequestQRModalState extends State<RequestQRModal> {
         const SizedBox(height: 20),
         // Account Details (Masked)
         _buildInfoBox(
-          'Account Name',
+          AppStrings.get(state.languageCode, 'account_name'),
           _isNameMasked ? _maskedName : _accountName,
           isMasked: true,
           onMaskToggle: () => setState(() => _isNameMasked = !_isNameMasked),
           isMaskedNow: _isNameMasked,
         ),
         const SizedBox(height: 5),
-        _buildInfoBox('Account Number', '$_accountNumber  American Dollars'),
+        _buildInfoBox(
+          AppStrings.get(state.languageCode, 'account_number'),
+          '$_accountNumber  ${AppStrings.get(state.languageCode, 'american_dollars')}',
+        ),
         const SizedBox(height: 5),
         // Amount and Reference
         Row(
           children: [
             Expanded(
               child: _buildTextField(
-                label: 'Enter Amount',
+                label: AppStrings.get(state.languageCode, 'enter_amount'),
                 controller: _amountController,
-
                 keyboardType: TextInputType.number,
               ),
             ),
             const SizedBox(width: 5),
             Expanded(
               child: _buildTextField(
-                label: 'Enter Reference | ID',
+                label: AppStrings.get(state.languageCode, 'enter_reference'),
                 controller: _referenceController,
               ),
             ),
@@ -295,14 +303,15 @@ class _RequestQRModalState extends State<RequestQRModal> {
         ),
         const SizedBox(height: 5),
         // Combined Purpose and Note
-        _buildPurposeAndNoteSection(),
+        _buildPurposeAndNoteSection(state),
         const SizedBox(height: 5),
         // Expiry Selection
         _buildChipSelection(
-          label: 'Valid Until (Optional)',
+          label: AppStrings.get(state.languageCode, 'valid_until'),
           options: _expiryOptions,
           selectedItem: _selectedExpiry,
           onSelected: (val) => setState(() => _selectedExpiry = val),
+          state: state,
         ),
 
         const SizedBox(height: 25),
@@ -310,9 +319,9 @@ class _RequestQRModalState extends State<RequestQRModal> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            SizedBox(width: 20),
-            _buildGenerateButton(),
-            _buildCancelButton(),
+            const SizedBox(width: 20),
+            _buildGenerateButton(state),
+            _buildCancelButton(state),
           ],
         ),
         const SizedBox(height: 30),
@@ -320,7 +329,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
     );
   }
 
-  Widget _buildFinalQRView() {
+  Widget _buildFinalQRView(WalletState state) {
     return Column(
       children: [
         // Vibrant QR Code
@@ -358,23 +367,29 @@ class _RequestQRModalState extends State<RequestQRModal> {
         ),
         const SizedBox(height: 15),
         // Account Details
-        _buildSummaryBox('Account Name', _accountName),
+        _buildSummaryBox(
+          AppStrings.get(state.languageCode, 'account_name'),
+          _accountName,
+        ),
         const SizedBox(height: 5),
-        _buildSummaryBox('Account Number', '$_accountNumber  American Dollars'),
+        _buildSummaryBox(
+          AppStrings.get(state.languageCode, 'account_number'),
+          '$_accountNumber  ${AppStrings.get(state.languageCode, 'american_dollars')}',
+        ),
         const SizedBox(height: 5),
         // Transaction Details
         Row(
           children: [
             Expanded(
               child: _buildSummaryBox(
-                'Amount',
+                AppStrings.get(state.languageCode, 'amount'),
                 '${_amountController.text} USD',
               ),
             ),
             const SizedBox(width: 5),
             Expanded(
               child: _buildSummaryBox(
-                'Reference | ID',
+                AppStrings.get(state.languageCode, 'id'),
                 _referenceController.text,
               ),
             ),
@@ -385,12 +400,17 @@ class _RequestQRModalState extends State<RequestQRModal> {
           children: [
             Expanded(
               child: _buildSummaryBox(
-                'Purpose Of Money Request',
-                _selectedPurpose,
+                AppStrings.get(state.languageCode, 'purpose_of_request'),
+                AppStrings.get(state.languageCode, _selectedPurpose),
               ),
             ),
             const SizedBox(width: 5),
-            Expanded(child: _buildSummaryBox('Type', 'Deposit Request')),
+            Expanded(
+              child: _buildSummaryBox(
+                AppStrings.get(state.languageCode, 'type'),
+                AppStrings.get(state.languageCode, 'deposit_request'),
+              ),
+            ),
           ],
         ),
 
@@ -398,7 +418,6 @@ class _RequestQRModalState extends State<RequestQRModal> {
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -409,7 +428,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Valid Until',
+                        AppStrings.get(state.languageCode, 'valid_until'),
                         style: TrydosWalletStyles.bodySmall.copyWith(
                           color: const Color(0xff8D8D8D),
                           fontSize: 11,
@@ -417,9 +436,9 @@ class _RequestQRModalState extends State<RequestQRModal> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        _selectedExpiry == 'Always'
-                            ? 'Always'
-                            : '$_selectedExpiry Until 13:59 | 3 March 2026',
+                        _selectedExpiry == 'always'
+                            ? AppStrings.get(state.languageCode, 'always')
+                            : '${AppStrings.get(state.languageCode, _selectedExpiry)} ${AppStrings.get(state.languageCode, 'until')} 13:59 | 3 ${AppStrings.get(state.languageCode, 'mar')} 2026',
                         style: TrydosWalletStyles.bodyMedium.copyWith(
                           color: const Color(0xff1D1D1D),
                           fontSize: 13,
@@ -433,7 +452,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            'Note',
+                            AppStrings.get(state.languageCode, 'note'),
                             style: TrydosWalletStyles.bodySmall.copyWith(
                               color: const Color(0xff8D8D8D),
                               fontSize: 10,
@@ -459,11 +478,11 @@ class _RequestQRModalState extends State<RequestQRModal> {
           ),
         ),
         const SizedBox(height: 5),
-        (_selectedExpiry == 'Always')
-            ? SizedBox.shrink()
+        (_selectedExpiry == 'always')
+            ? const SizedBox.shrink()
             : Center(
                 child: Text(
-                  'Will Not Be Able To Use The Code After Its Expiry Time',
+                  AppStrings.get(state.languageCode, 'cannot_use_after_expiry'),
                   style: TrydosWalletStyles.bodySmall.copyWith(
                     color: const Color(0xff1D1D1D),
                     fontSize: 11,
@@ -473,7 +492,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
 
         const SizedBox(height: 40),
         // Action Buttons
-        _buildActionRow(),
+        _buildActionRow(state),
         const SizedBox(height: 40),
       ],
     );
@@ -600,7 +619,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
     );
   }
 
-  Widget _buildPurposeAndNoteSection() {
+  Widget _buildPurposeAndNoteSection(WalletState state) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -613,7 +632,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Select Purpose Of Money Request',
+            AppStrings.get(state.languageCode, 'select_purpose_request'),
             style: TrydosWalletStyles.bodySmall.copyWith(
               color: const Color(0xff8D8D8D),
               fontSize: 11,
@@ -647,7 +666,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                       ),
                     ),
                     child: Text(
-                      option,
+                      AppStrings.get(state.languageCode, option),
                       style: TrydosWalletStyles.bodySmall.copyWith(
                         color: const Color(0xff1D1D1D),
                         fontSize: isSelected ? 12 : 11,
@@ -675,7 +694,10 @@ class _RequestQRModalState extends State<RequestQRModal> {
                     fontSize: 12,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Enter Your Note To See On Receiver Account',
+                    hintText: AppStrings.get(
+                      state.languageCode,
+                      'enter_note_receiver',
+                    ),
                     hintStyle: TrydosWalletStyles.bodySmall.copyWith(
                       color: const Color(0xffD3D3D3),
                       fontSize: 12,
@@ -731,6 +753,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
     required List<String> options,
     required String selectedItem,
     required Function(String) onSelected,
+    required WalletState state,
   }) {
     return Container(
       width: double.infinity,
@@ -778,7 +801,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                       ),
                     ),
                     child: Text(
-                      option,
+                      AppStrings.get(state.languageCode, option),
                       style: TrydosWalletStyles.bodySmall.copyWith(
                         color: const Color(0xff1D1D1D),
                         fontSize: isSelected ? 12 : 11,
@@ -789,7 +812,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
               }).toList(),
             ),
           ),
-          if (_selectedExpiry != 'Always') ...[
+          if (_selectedExpiry != 'always') ...[
             const SizedBox(height: 5),
             Container(
               padding: const EdgeInsets.symmetric(vertical: 5),
@@ -800,7 +823,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
               ),
               child: Center(
                 child: Text(
-                  'Will Not Be Able To Use The Code After Its Expiry Time',
+                  AppStrings.get(state.languageCode, 'cannot_use_after_expiry'),
                   style: TrydosWalletStyles.bodySmall.copyWith(
                     color: const Color(0xff1D1D1D),
                     fontSize: 10,
@@ -814,7 +837,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
     );
   }
 
-  Widget _buildGenerateButton() {
+  Widget _buildGenerateButton(WalletState state) {
     final isValid = _isFormValid;
     return GestureDetector(
       onTap: isValid ? _generateRequest : null,
@@ -822,7 +845,6 @@ class _RequestQRModalState extends State<RequestQRModal> {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-
             child: SvgPicture.asset(
               TrydosWalletAssets.generate,
               package: TrydosWalletStyles.packageName,
@@ -832,11 +854,10 @@ class _RequestQRModalState extends State<RequestQRModal> {
               ),
             ),
           ),
-
           Text(
             _state == RequestQRState.generating
-                ? 'Requesting...'
-                : 'Generate Request',
+                ? AppStrings.get(state.languageCode, 'requesting')
+                : AppStrings.get(state.languageCode, 'generate_request'),
             style: TrydosWalletStyles.bodySmall.copyWith(
               color: isValid
                   ? const Color(0xff388CFF)
@@ -849,7 +870,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
     );
   }
 
-  Widget _buildCancelButton() {
+  Widget _buildCancelButton(WalletState state) {
     if (_state == RequestQRState.generating) return const SizedBox.shrink();
     return GestureDetector(
       onTap: () {
@@ -863,15 +884,13 @@ class _RequestQRModalState extends State<RequestQRModal> {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-
             child: SvgPicture.asset(
               TrydosWalletAssets.cancel,
               package: TrydosWalletStyles.packageName,
             ),
           ),
-
           Text(
-            'Cancel',
+            AppStrings.get(state.languageCode, 'cancel'),
             style: TrydosWalletStyles.bodySmall.copyWith(
               color: const Color(0xff5D5C5D),
               fontSize: 11,
@@ -882,28 +901,32 @@ class _RequestQRModalState extends State<RequestQRModal> {
     );
   }
 
-  Widget _buildActionRow() {
+  Widget _buildActionRow(WalletState state) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _buildActionIcon(TrydosWalletAssets.copy, 'Copy', () {
-          Clipboard.setData(ClipboardData(text: _accountNumber));
-          showMessage(
-            'Copied to clipboard',
-            context: context,
-            type: MessageType.success,
-          );
-        }),
+        _buildActionIcon(
+          TrydosWalletAssets.copy,
+          AppStrings.get(state.languageCode, 'copy'),
+          () {
+            Clipboard.setData(ClipboardData(text: _accountNumber));
+            showMessage(
+              AppStrings.get(state.languageCode, 'copy_clipboard'),
+              context: context,
+              type: MessageType.success,
+            );
+          },
+        ),
         _buildActionIcon(
           TrydosWalletAssets.download,
-          'Download',
-          _handleDownload,
+          AppStrings.get(state.languageCode, 'download'),
+          () => _handleDownload(state),
           isLoading: _isDownloading,
         ),
         _buildActionIcon(
           TrydosWalletAssets.share,
-          'Share',
-          _handleShare,
+          AppStrings.get(state.languageCode, 'share'),
+          () => _handleShare(state),
           isLoading: _isSharing,
         ),
       ],
@@ -956,6 +979,7 @@ class _CleanRequestQRCard extends StatelessWidget {
   final String purpose;
   final String expiry;
   final String note;
+  final String languageCode;
 
   const _CleanRequestQRCard({
     required this.accountName,
@@ -965,6 +989,7 @@ class _CleanRequestQRCard extends StatelessWidget {
     required this.purpose,
     required this.expiry,
     required this.note,
+    required this.languageCode,
   });
 
   @override
@@ -998,41 +1023,65 @@ class _CleanRequestQRCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          _buildInfoBox('Account Name', accountName),
+          _buildInfoBox(
+            AppStrings.get(languageCode, 'account_name'),
+            accountName,
+          ),
           const SizedBox(height: 5),
-          _buildInfoBox('Account Number', '$accountNumber  American Dollars'),
+          _buildInfoBox(
+            AppStrings.get(languageCode, 'account_number'),
+            '$accountNumber  ${AppStrings.get(languageCode, 'american_dollars')}',
+          ),
           const SizedBox(height: 5),
           Row(
             children: [
-              Expanded(child: _buildInfoBox('Amount', '$amount USD')),
+              Expanded(
+                child: _buildInfoBox(
+                  AppStrings.get(languageCode, 'amount'),
+                  '$amount USD',
+                ),
+              ),
               const SizedBox(width: 5),
-              Expanded(child: _buildInfoBox('Reference | ID', reference)),
+              Expanded(
+                child: _buildInfoBox(
+                  AppStrings.get(languageCode, 'id'),
+                  reference,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 5),
           Row(
             children: [
               Expanded(
-                child: _buildInfoBox('Purpose Of Money Request', purpose),
+                child: _buildInfoBox(
+                  AppStrings.get(languageCode, 'purpose_of_request'),
+                  AppStrings.get(languageCode, purpose),
+                ),
               ),
               const SizedBox(width: 5),
-              Expanded(child: _buildInfoBox('Type', 'Deposit Request')),
+              Expanded(
+                child: _buildInfoBox(
+                  AppStrings.get(languageCode, 'type'),
+                  AppStrings.get(languageCode, 'deposit_request'),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 5),
           _buildInfoBox(
-            'Valid Until',
-            expiry == 'Always'
-                ? 'Always'
-                : '$expiry Until 13:59 | 3 March 2026',
+            AppStrings.get(languageCode, 'valid_until'),
+            expiry == 'always'
+                ? AppStrings.get(languageCode, 'always')
+                : '${AppStrings.get(languageCode, expiry)} ${AppStrings.get(languageCode, 'until')} 13:59 | 3 ${AppStrings.get(languageCode, 'mar')} 2026',
           ),
           if (note.isNotEmpty) ...[
             const SizedBox(height: 5),
-            _buildInfoBox('Note', note),
+            _buildInfoBox(AppStrings.get(languageCode, 'note'), note),
           ],
           const SizedBox(height: 5),
           Text(
-            'Will Not Be Able To Use The Code After Its Expiry Time',
+            AppStrings.get(languageCode, 'cannot_use_after_expiry'),
             style: TrydosWalletStyles.bodySmall.copyWith(
               color: const Color(0xff8D8D8D),
               fontSize: 10,

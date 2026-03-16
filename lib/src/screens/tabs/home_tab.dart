@@ -119,16 +119,20 @@ class _HomeTabState extends State<HomeTab> {
             ),
             (_selectedCurrencies.isNotEmpty)
                 ? Padding(
-                    padding: state.isRtl
-                        ? const EdgeInsets.only(left: 0, right: 24)
-                        : const EdgeInsets.only(left: 24, right: 0),
+                    padding: const EdgeInsets.only(left: 24, right: 0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
                           children: [
                             Text(
-                              "Your Total ${_selectedCurrencies[0]} Balance",
+                              AppStrings.get(
+                                state.languageCode,
+                                'your_total_balance_of',
+                              ).replaceAll(
+                                '{currency}',
+                                _selectedCurrencies[0],
+                              ),
                               style: TrydosWalletStyles.bodyMedium.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: const Color(0xff1D1D1D),
@@ -167,7 +171,10 @@ class _HomeTabState extends State<HomeTab> {
                             package: TrydosWalletStyles.packageName,
                           ),
                           label: Text(
-                            "Add ${_selectedCurrencies[0]} Account",
+                            AppStrings.get(
+                              state.languageCode,
+                              'add_account_of',
+                            ).replaceAll('{currency}', _selectedCurrencies[0]),
                             style: TrydosWalletStyles.bodySmall.copyWith(
                               color: const Color(0xFF388CFF),
                               fontWeight: FontWeight.bold,
@@ -179,9 +186,7 @@ class _HomeTabState extends State<HomeTab> {
                     ),
                   )
                 : Padding(
-                    padding: state.isRtl
-                        ? const EdgeInsets.only(left: 0, right: 24)
-                        : const EdgeInsets.only(left: 24, right: 0),
+                    padding: const EdgeInsets.only(left: 24, right: 0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -330,9 +335,7 @@ class _HomeTabState extends State<HomeTab> {
                     itemBuilder: (context, index) {
                       if (index == currencies.length) {
                         return Padding(
-                          padding: state.isRtl
-                              ? const EdgeInsets.only(right: 8)
-                              : const EdgeInsets.only(left: 8),
+                          padding: const EdgeInsets.only(left: 8),
                           child: SizedBox(
                             width: 40,
                             child: isLoadingMore
@@ -366,9 +369,7 @@ class _HomeTabState extends State<HomeTab> {
                                 : '0');
 
                       return Padding(
-                        padding: state.isRtl
-                            ? EdgeInsets.only(right: index > 0 ? 5 : 0)
-                            : EdgeInsets.only(left: index > 0 ? 5 : 0),
+                        padding: EdgeInsets.only(left: index > 0 ? 5 : 0),
                         child: BalanceCard(
                           symbolImageUrl: currency.symbolImageUrl,
                           symbol: currency.symbol,

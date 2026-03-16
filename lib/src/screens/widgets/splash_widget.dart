@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
+import 'package:trydos_wallet/src/bloc/wallet_state.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/localization/app_strings.dart';
 
 /// Wallet splash screen. Preloads home page data during 5 seconds.
 class SplashWidget extends StatefulWidget {
@@ -48,26 +52,33 @@ class _SplashWidgetState extends State<SplashWidget>
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        AnimatedOpacity(
-          opacity: _showSplash ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 300),
-          onEnd: () {},
-          child: IgnorePointer(
-            ignoring: !_showSplash,
-            child: _SplashOverlay(progress: _controller.value),
-          ),
-        ),
-      ],
+    return BlocBuilder<WalletBloc, WalletState>(
+      builder: (context, state) {
+        return Stack(
+          children: [
+            AnimatedOpacity(
+              opacity: _showSplash ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: IgnorePointer(
+                ignoring: !_showSplash,
+                child: _SplashOverlay(
+                  progress: _controller.value,
+                  languageCode: state.languageCode,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
 class _SplashOverlay extends StatelessWidget {
   final double progress;
+  final String languageCode;
 
-  const _SplashOverlay({required this.progress});
+  const _SplashOverlay({required this.progress, required this.languageCode});
 
   @override
   Widget build(BuildContext context) {
@@ -138,8 +149,8 @@ class _SplashOverlay extends StatelessWidget {
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     child: Text(
-                      _getWord(progress),
-                      key: ValueKey<String>(_getWord(progress)),
+                      _getWord(progress, languageCode),
+                      key: ValueKey<String>(_getWord(progress, languageCode)),
                       textAlign: TextAlign.center,
                       style: TrydosWalletStyles.bodySmall.copyWith(
                         fontSize: 16,
@@ -155,51 +166,48 @@ class _SplashOverlay extends StatelessWidget {
             const Spacer(flex: 2),
 
             // Powered By section
-            Directionality(
-              textDirection: TextDirection.ltr,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 40),
-                child: Center(
-                  child: IntrinsicWidth(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Powered By",
-                          style: TextStyle(
-                            fontSize: 8,
-                            color: const Color(0xff404040),
-                          ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 40),
+              child: Center(
+                child: IntrinsicWidth(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppStrings.get(languageCode, 'powered_by'),
+                        style: const TextStyle(
+                          fontSize: 8,
+                          color: Color(0xff404040),
                         ),
-                        const SizedBox(height: 10),
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            SvgPicture.asset(
-                              TrydosWalletAssets.rammaz,
+                      ),
+                      const SizedBox(height: 10),
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          SvgPicture.asset(
+                            TrydosWalletAssets.rammaz,
+                            package: TrydosWalletStyles.packageName,
+                          ),
+                          Positioned(
+                            top: -5,
+                            left: 44,
+                            child: SvgPicture.asset(
+                              TrydosWalletAssets.bracket,
                               package: TrydosWalletStyles.packageName,
                             ),
-                            Positioned(
-                              top: -5,
-                              left: 44,
-                              child: SvgPicture.asset(
-                                TrydosWalletAssets.bracket,
-                                package: TrydosWalletStyles.packageName,
-                              ),
+                          ),
+                          Positioned(
+                            top: -5,
+                            right: -5,
+                            child: SvgPicture.asset(
+                              TrydosWalletAssets.rLetter,
+                              package: TrydosWalletStyles.packageName,
                             ),
-                            Positioned(
-                              top: -5,
-                              right: -5,
-                              child: SvgPicture.asset(
-                                TrydosWalletAssets.rLetter,
-                                package: TrydosWalletStyles.packageName,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -210,10 +218,16 @@ class _SplashOverlay extends StatelessWidget {
     );
   }
 
-  String _getWord(double progress) {
-    if (progress < 0.30) return 'safe...';
-    if (progress < 0.55) return 'easy...';
-    if (progress < 0.80) return 'transaction...';
-    return 'payment...';
+  String _getWord(double progress, String lang) {
+    if (progress < 0.30) {
+      return AppStrings.get(lang, 'splash_safe');
+    }
+    if (progress < 0.55) {
+      return AppStrings.get(lang, 'splash_easy');
+    }
+    if (progress < 0.80) {
+      return AppStrings.get(lang, 'splash_transaction');
+    }
+    return AppStrings.get(lang, 'splash_payment');
   }
 }

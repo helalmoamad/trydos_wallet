@@ -21,10 +21,7 @@ class TrydosWalletHomePage extends StatelessWidget {
       child: BlocBuilder<WalletBloc, WalletState>(
         buildWhen: (prev, curr) => prev.languageCode != curr.languageCode,
         builder: (context, state) {
-          return Directionality(
-            textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
-            child: const _TrydosWalletHomePageContent(),
-          );
+          return const _TrydosWalletHomePageContent();
         },
       ),
     );

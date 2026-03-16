@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
+import 'package:trydos_wallet/src/bloc/wallet_state.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/transfer_send_modal.dart';
+import 'package:trydos_wallet/src/localization/app_strings.dart';
 
 enum SendModalView { main, transfer }
 
@@ -20,19 +24,23 @@ class _SendModalState extends State<SendModal> {
 
   @override
   Widget build(BuildContext context) {
-    return IndexedStack(
-      index: _currentView == SendModalView.main ? 0 : 1,
-      children: [
-        _buildMainMenuView(key: const ValueKey('main')),
-        TransferSendModal(
-          key: const ValueKey('transfer'),
-          scrollController: widget.scrollController,
-        ),
-      ],
+    return BlocBuilder<WalletBloc, WalletState>(
+      builder: (context, state) {
+        return IndexedStack(
+          index: _currentView == SendModalView.main ? 0 : 1,
+          children: [
+            _buildMainMenuView(state, key: const ValueKey('main')),
+            TransferSendModal(
+              key: const ValueKey('transfer'),
+              scrollController: widget.scrollController,
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildMainMenuView({Key? key}) {
+  Widget _buildMainMenuView(WalletState state, {Key? key}) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
@@ -67,7 +75,7 @@ class _SendModalState extends State<SendModal> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'SEND | PAY | CASH WITHDRAWAL',
+                    AppStrings.get(state.languageCode, 'send_pay_cash_upper'),
                     style: TrydosWalletStyles.bodyMedium.copyWith(
                       color: const Color(0xff1D1D1D),
                       fontSize: 13,
@@ -79,28 +87,44 @@ class _SendModalState extends State<SendModal> {
                   // First Card: Transfer | send
                   _buildActionCard(
                     icon: TrydosWalletAssets.transferSend,
-                    title: 'Transfer | send',
-                    subtitle: 'Send | Transfer Money To rdb | cash | bank',
+                    title: AppStrings.get(state.languageCode, 'transfer_send'),
+                    subtitle: AppStrings.get(state.languageCode, 'transfer_send_msg'),
                     onTap: () =>
                         setState(() => _currentView = SendModalView.transfer),
-                    actions2: [_buildTextAction('History', 11, onTap: () {})],
+                    actions2: [
+                      _buildTextAction(
+                        AppStrings.get(state.languageCode, 'history'),
+                        11,
+                        onTap: () {},
+                      ),
+                    ],
                     actions1: [],
                   ),
 
                   // Second Card: Cash Withdrawal
                   _buildActionCard(
                     icon: TrydosWalletAssets.cashWithdrawal,
-                    title: 'Cash Withdrawal',
-                    subtitle: 'Withdrawal Via Our Centers Or Agents',
+                    title: AppStrings.get(state.languageCode, 'cash_withdrawal'),
+                    subtitle: AppStrings.get(state.languageCode, 'withdrawal_msg'),
                     onTap: () {},
                     actions1: [
-                      _buildTextAction('Nearby Centers', 13, onTap: () {}),
+                      _buildTextAction(
+                        AppStrings.get(state.languageCode, 'nearby_centers'),
+                        13,
+                        onTap: () {},
+                      ),
                     ],
-                    actions2: [_buildTextAction('History', 11, onTap: () {})],
+                    actions2: [
+                      _buildTextAction(
+                        AppStrings.get(state.languageCode, 'history'),
+                        11,
+                        onTap: () {},
+                      ),
+                    ],
                   ),
 
                   // Third Section: Bill Payments
-                  _buildBillPaymentsSection(),
+                  _buildBillPaymentsSection(state),
                   const SizedBox(height: 20),
                 ],
               ),
@@ -179,7 +203,7 @@ class _SendModalState extends State<SendModal> {
     );
   }
 
-  Widget _buildBillPaymentsSection() {
+  Widget _buildBillPaymentsSection(WalletState state) {
     final List<Map<String, String>> brands = [
       {'name': 'Shein', 'asset': TrydosWalletAssets.shein},
       {'name': 'Amazon', 'asset': TrydosWalletAssets.amazon},
@@ -217,7 +241,7 @@ class _SendModalState extends State<SendModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Bill Payments',
+                          AppStrings.get(state.languageCode, 'bill_payments'),
                           style: TrydosWalletStyles.bodyMedium.copyWith(
                             color: const Color(0xff1D1D1D),
                             fontSize: 13,
@@ -226,7 +250,7 @@ class _SendModalState extends State<SendModal> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Pay Invoice | Bill |',
+                          AppStrings.get(state.languageCode, 'pay_invoice_msg'),
                           style: TrydosWalletStyles.bodyMedium.copyWith(
                             color: const Color(0xff8D8D8D),
                             fontSize: 11,
@@ -235,7 +259,11 @@ class _SendModalState extends State<SendModal> {
                         ),
                       ],
                     ),
-                    _buildTextAction('History', 11, onTap: () {}),
+                    _buildTextAction(
+                      AppStrings.get(state.languageCode, 'history'),
+                      11,
+                      onTap: () {},
+                    ),
                   ],
                 ),
               ),

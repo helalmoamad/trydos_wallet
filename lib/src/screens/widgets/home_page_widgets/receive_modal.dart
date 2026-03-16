@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -11,7 +12,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/request_qr_modal.dart';
-import 'package:trydos_wallet/src/utils/ui_utils.dart';
 
 enum ReceiveModalView { main, request }
 
@@ -36,9 +36,10 @@ class _ReceiveModalState extends State<ReceiveModal> {
   final String _accountNumber = '100-708';
 
   void _handleCopy() {
+    final state = context.read<WalletBloc>().state;
     Clipboard.setData(ClipboardData(text: _accountNumber));
     showMessage(
-      'Account number copied to clipboard',
+      AppStrings.get(state.languageCode, 'acc_copied_msg'),
       context: context,
       type: MessageType.success,
     );
@@ -62,6 +63,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
   Future<void> _handleDownload() async {
     if (_isDownloading || _isSharing) return;
     setState(() => _isDownloading = true);
+    final state = context.read<WalletBloc>().state;
 
     try {
       final hasAccess = await Gal.hasAccess();
@@ -80,7 +82,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
 
         // ignore: use_build_context_synchronously
         showMessage(
-          'QR Card saved to gallery successfully!',
+          AppStrings.get(state.languageCode, 'saved_successfully'),
           // ignore: use_build_context_synchronously
           context: context,
           type: MessageType.success,
@@ -89,7 +91,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
     } catch (e) {
       // ignore: use_build_context_synchronously
       showMessage(
-        'Failed to save QR Card.',
+        AppStrings.get(state.languageCode, 'failed_to_save'),
         // ignore: use_build_context_synchronously
         context: context,
         type: MessageType.error,
@@ -104,6 +106,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
   Future<void> _handleShare() async {
     if (_isDownloading || _isSharing) return;
     setState(() => _isSharing = true);
+    final state = context.read<WalletBloc>().state;
 
     try {
       final imageBytes = await _captureCard();
@@ -114,9 +117,11 @@ class _ReceiveModalState extends State<ReceiveModal> {
         await file.writeAsBytes(imageBytes);
 
         // ignore: deprecated_member_use
-        await Share.shareXFiles([
-          XFile(imagePath),
-        ], text: 'My Receipt Account QR $_accountNumber');
+        await Share.shareXFiles(
+          [XFile(imagePath)],
+          text:
+              '${AppStrings.get(state.languageCode, 'my_receipt_qr')} $_accountNumber',
+        );
       }
     } catch (e) {
       debugPrint('Error sharing QR card: $e');
@@ -129,49 +134,54 @@ class _ReceiveModalState extends State<ReceiveModal> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Hidden card for screen capture
-        Positioned(
-          left: -4000,
-          top: -4000,
-          child: RepaintBoundary(
-            key: _cardKey,
-            child: _CleanQRCard(
-              accountName: _isMasked ? _maskedName : _accountName,
-              accountNumber: _accountNumber,
-            ),
-          ),
-        ),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              controller: widget.scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.9,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: _currentView == ReceiveModalView.main
-                      ? _buildReceiveView(context)
-                      : RequestQRModal(
-                          scrollController: widget.scrollController,
-                          onBack: () {
-                            setState(() {
-                              _currentView = ReceiveModalView.main;
-                            });
-                          },
-                        ),
+    return BlocBuilder<WalletBloc, WalletState>(
+      builder: (context, state) {
+        return Stack(
+          children: [
+            // Hidden card for screen capture
+            Positioned(
+              left: -4000,
+              top: -4000,
+              child: RepaintBoundary(
+                key: _cardKey,
+                child: _CleanQRCard(
+                  accountName: _isMasked ? _maskedName : _accountName,
+                  accountNumber: _accountNumber,
+                  languageCode: state.languageCode,
                 ),
               ),
-            );
-          },
-        ),
-      ],
+            ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  controller: widget.scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.9,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: _currentView == ReceiveModalView.main
+                          ? _buildReceiveView(context, state)
+                          : RequestQRModal(
+                              scrollController: widget.scrollController,
+                              onBack: () {
+                                setState(() {
+                                  _currentView = ReceiveModalView.main;
+                                });
+                              },
+                            ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildReceiveView(BuildContext context) {
+  Widget _buildReceiveView(BuildContext context, WalletState state) {
     return Column(
       children: [
         Container(
@@ -231,7 +241,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
         const SizedBox(height: 24),
         // Account Details
         _buildInfoSection(
-          'Account Name',
+          AppStrings.get(state.languageCode, 'account_name'),
           _isMasked ? _maskedName : _accountName,
           trailing: GestureDetector(
             onTap: () => setState(() => _isMasked = !_isMasked),
@@ -247,8 +257,8 @@ class _ReceiveModalState extends State<ReceiveModal> {
         ),
         const SizedBox(height: 5),
         _buildInfoSection(
-          'Account Number',
-          '$_accountNumber  American Dollars',
+          AppStrings.get(state.languageCode, 'account_number'),
+          '$_accountNumber  ${AppStrings.get(state.languageCode, 'american_dollars')}',
         ),
 
         const Spacer(),
@@ -258,7 +268,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
           children: [
             _buildActionButton(
               asset: TrydosWalletAssets.generate,
-              label: 'Request',
+              label: AppStrings.get(state.languageCode, 'request'),
               onTap: () {
                 setState(() {
                   _currentView = ReceiveModalView.request;
@@ -267,18 +277,18 @@ class _ReceiveModalState extends State<ReceiveModal> {
             ),
             _buildActionButton(
               asset: TrydosWalletAssets.copy,
-              label: 'Copy',
+              label: AppStrings.get(state.languageCode, 'copy'),
               onTap: _handleCopy,
             ),
             _buildActionButton(
               asset: TrydosWalletAssets.download,
-              label: 'Download',
+              label: AppStrings.get(state.languageCode, 'download'),
               onTap: _handleDownload,
               isLoading: _isDownloading,
             ),
             _buildActionButton(
               asset: TrydosWalletAssets.share,
-              label: 'Share',
+              label: AppStrings.get(state.languageCode, 'share'),
               onTap: _handleShare,
               isLoading: _isSharing,
             ),
@@ -298,6 +308,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -375,8 +386,13 @@ class _ReceiveModalState extends State<ReceiveModal> {
 class _CleanQRCard extends StatelessWidget {
   final String accountName;
   final String accountNumber;
+  final String languageCode;
 
-  const _CleanQRCard({required this.accountName, required this.accountNumber});
+  const _CleanQRCard({
+    required this.accountName,
+    required this.accountNumber,
+    required this.languageCode,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -410,9 +426,15 @@ class _CleanQRCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          _buildInfoBox('Account Name', accountName),
+          _buildInfoBox(
+            AppStrings.get(languageCode, 'account_name'),
+            accountName,
+          ),
           const SizedBox(height: 5),
-          _buildInfoBox('Account Number', '$accountNumber  American Dollars'),
+          _buildInfoBox(
+            AppStrings.get(languageCode, 'account_number'),
+            '$accountNumber  ${AppStrings.get(languageCode, 'american_dollars')}',
+          ),
         ],
       ),
     );

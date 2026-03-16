@@ -33,7 +33,8 @@ class WalletHeader extends StatelessWidget {
                       onTap: () {
                         showWalletModal(
                           context: context,
-                          builder: (context, sc) => ReceiveModal(scrollController: sc),
+                          builder: (context, sc) =>
+                              ReceiveModal(scrollController: sc),
                         );
                       },
                       child: Column(
@@ -44,7 +45,7 @@ class WalletHeader extends StatelessWidget {
                             package: TrydosWalletStyles.packageName,
                           ),
                           Text(
-                            "Receive",
+                            AppStrings.get(state.languageCode, 'receive_label'),
                             style: TrydosWalletStyles.bodySmall.copyWith(
                               color: const Color(0xff404040),
                               fontSize: 11,
@@ -76,7 +77,7 @@ class WalletHeader extends StatelessWidget {
                             package: TrydosWalletStyles.packageName,
                           ),
                           Text(
-                            "Send",
+                            AppStrings.get(state.languageCode, 'send_label'),
                             style: TrydosWalletStyles.bodySmall.copyWith(
                               color: const Color(0xff404040),
                               fontSize: 11,

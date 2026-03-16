@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/localization/app_strings.dart';
 
 class ReceiptWidget extends StatelessWidget {
   final String senderAccount;
@@ -14,6 +15,7 @@ class ReceiptWidget extends StatelessWidget {
   final String purpose;
   final bool isSuccess;
   final bool isFromQr;
+  final String languageCode;
 
   // Optional Unregistered Phone Fields
   final String? recipientPhoneNumber;
@@ -31,6 +33,7 @@ class ReceiptWidget extends StatelessWidget {
     required this.type,
     required this.purpose,
     required this.isSuccess,
+    required this.languageCode,
     this.isFromQr = false,
     this.recipientPhoneNumber,
     this.recipientName,
@@ -53,7 +56,7 @@ class ReceiptWidget extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Receipt',
+            AppStrings.get(languageCode, 'receipt'),
             style: TrydosWalletStyles.bodyLarge.copyWith(
               color: const Color(0xff1D1D1D),
               fontSize: 40,
@@ -67,7 +70,7 @@ class ReceiptWidget extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Verification Code Number $reference',
+            '${AppStrings.get(languageCode, 'id')} $reference',
             style: TrydosWalletStyles.bodyMedium.copyWith(
               color: const Color(0xff1D1D1D),
               fontSize: 11,
@@ -75,24 +78,24 @@ class ReceiptWidget extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          _buildFullWidthBox('Sender Account Number', senderAccount),
+          _buildFullWidthBox(AppStrings.get(languageCode, 'sender_account'), senderAccount),
           const SizedBox(height: 5),
 
           if (recipientPhoneNumber != null &&
               recipientName != null &&
               recipientId != null) ...[
-            _buildFullWidthBox('Recipient Phone Number', recipientPhoneNumber!),
+            _buildFullWidthBox(AppStrings.get(languageCode, 'recipient_phone'), recipientPhoneNumber!),
             const SizedBox(height: 5),
             _buildFullWidthBox(
-              'Recipient Name & Surname Exact ID',
+              AppStrings.get(languageCode, 'recipient_name_id'),
               recipientName!,
             ),
             const SizedBox(height: 5),
-            _buildFullWidthBox('Recipient ID NUMBER', recipientId!),
+            _buildFullWidthBox(AppStrings.get(languageCode, 'recipient_id_num'), recipientId!),
             const SizedBox(height: 5),
           ] else ...[
             _buildFullWidthBox(
-              'Recipient Account Number',
+              AppStrings.get(languageCode, 'recipient_account'),
               recipientAccount,
               isFromQr: isFromQr,
             ),
@@ -102,13 +105,13 @@ class ReceiptWidget extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildHalfWidthBox(
-                  'Amount Sanded          ',
+                  AppStrings.get(languageCode, 'amount_to_be_sent'),
                   '$amount $currencySymbol',
                   isBold: true,
                 ),
               ),
               const SizedBox(width: 5),
-              Expanded(child: _buildHalfWidthBox('Reference', reference)),
+              Expanded(child: _buildHalfWidthBox(AppStrings.get(languageCode, 'reference'), reference)),
             ],
           ),
           const SizedBox(height: 5),
@@ -116,12 +119,12 @@ class ReceiptWidget extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildHalfWidthBox(
-                  'Date & Time          ',
+                  AppStrings.get(languageCode, 'date_time'),
                   dateAndTimeString,
                 ),
               ),
               const SizedBox(width: 5),
-              Expanded(child: _buildHalfWidthBox('Type', type)),
+              Expanded(child: _buildHalfWidthBox(AppStrings.get(languageCode, 'type'), type)),
             ],
           ),
           const SizedBox(height: 5),
@@ -129,15 +132,15 @@ class ReceiptWidget extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildHalfWidthBox(
-                  'Purpose Of Money Send            ',
+                  AppStrings.get(languageCode, 'purpose_of_send'),
                   purpose,
                 ),
               ),
               const SizedBox(width: 5),
               Expanded(
                 child: _buildStatusBox(
-                  'Status',
-                  isSuccess ? 'Succeeded' : 'Failed',
+                  AppStrings.get(languageCode, 'status'),
+                  isSuccess ? AppStrings.get(languageCode, 'succeeded') : AppStrings.get(languageCode, 'failed'),
                   isSuccess,
                 ),
               ),
@@ -152,7 +155,7 @@ class ReceiptWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              'You Can Receive The Money Through All Our Centers, Or You Can Download Our Application, Open An Account, Use The Money, And Benefit From All The Services.',
+              AppStrings.get(languageCode, 'receipt_footer_msg'),
               style: TrydosWalletStyles.bodyMedium.copyWith(
                 color: const Color(0xff8D8D8D),
                 fontSize: 9,
