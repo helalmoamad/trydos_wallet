@@ -22,6 +22,10 @@ class WalletState {
     this.transactionsHasNext = false,
     this.transactionsNextCursor,
     this.transactionsErrorMessage,
+    // Transfer Purposes
+    this.transferPurposes = const [],
+    this.transferPurposesStatus = WalletStatus.initial,
+    this.transferPurposesErrorMessage,
     // Banks
     this.banks = const [],
     this.banksStatus = WalletStatus.initial,
@@ -74,6 +78,11 @@ class WalletState {
   final bool transactionsHasNext;
   final String? transactionsNextCursor;
   final String? transactionsErrorMessage;
+
+  // Transfer Purposes
+  final List<TransferPurpose> transferPurposes;
+  final WalletStatus transferPurposesStatus;
+  final String? transferPurposesErrorMessage;
 
   // Banks (Paginated)
   final List<Bank> banks;
@@ -130,6 +139,9 @@ class WalletState {
     bool? transactionsHasNext,
     String? transactionsNextCursor,
     String? transactionsErrorMessage,
+    List<TransferPurpose>? transferPurposes,
+    WalletStatus? transferPurposesStatus,
+    String? transferPurposesErrorMessage,
     List<Bank>? banks,
     WalletStatus? banksStatus,
     bool? banksHasNext,
@@ -170,6 +182,11 @@ class WalletState {
           transactionsNextCursor ?? this.transactionsNextCursor,
       transactionsErrorMessage:
           transactionsErrorMessage ?? this.transactionsErrorMessage,
+      transferPurposes: transferPurposes ?? this.transferPurposes,
+      transferPurposesStatus:
+          transferPurposesStatus ?? this.transferPurposesStatus,
+      transferPurposesErrorMessage:
+          transferPurposesErrorMessage ?? this.transferPurposesErrorMessage,
       banks: banks ?? this.banks,
       banksStatus: banksStatus ?? this.banksStatus,
       banksHasNext: banksHasNext ?? this.banksHasNext,

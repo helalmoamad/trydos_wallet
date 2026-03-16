@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/qr_scanner_page.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/receive_modal.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/send_modal.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
@@ -31,10 +32,13 @@ class WalletHeader extends StatelessWidget {
               state.balanceCardIsSelected
                   ? InkWell(
                       onTap: () {
+                        final walletBloc = context.read<WalletBloc>();
                         showWalletModal(
                           context: context,
-                          builder: (context, sc) =>
-                              ReceiveModal(scrollController: sc),
+                          builder: (context, sc) => BlocProvider.value(
+                            value: walletBloc,
+                            child: ReceiveModal(scrollController: sc),
+                          ),
                         );
                       },
                       child: Column(
@@ -96,7 +100,7 @@ class WalletHeader extends StatelessWidget {
                     context: context,
                     builder: (context, sc) => BlocProvider.value(
                       value: walletBloc,
-                      child: ReceiveModal(scrollController: sc),
+                      child: QRScannerPage(scrollController: sc),
                     ),
                   );
                 },

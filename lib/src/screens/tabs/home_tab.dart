@@ -109,250 +109,194 @@ class _HomeTabState extends State<HomeTab> {
   Widget build(BuildContext context) {
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const WalletHeader(),
-            const Padding(
-              padding: EdgeInsets.only(top: 5, left: 24, right: 24),
-              child: Divider(color: Color(0xffD3D3D3)),
-            ),
-            (_selectedCurrencies.isNotEmpty)
-                ? Padding(
-                    padding: const EdgeInsets.only(left: 24, right: 0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
+        final transactions = state.transactions;
+        final hasNext = state.transactionsHasNext;
+        final isLoadingMore =
+            state.transactionsStatus == WalletStatus.loading &&
+            transactions.isNotEmpty;
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            context.read<WalletBloc>().add(const WalletRefreshAllRequested());
+          },
+          child: ListView(
+            controller: _transactionsScrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              const WalletHeader(),
+              const Padding(
+                padding: EdgeInsets.only(top: 5, left: 24, right: 24),
+                child: Divider(color: Color(0xffD3D3D3)),
+              ),
+              (_selectedCurrencies.isNotEmpty)
+                  ? Padding(
+                      padding: const EdgeInsets.only(left: 24, right: 0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                AppStrings.get(
+                                  state.languageCode,
+                                  'your_total_balance_of',
+                                ).replaceAll(
+                                  '{currency}',
+                                  _selectedCurrencies[0],
+                                ),
+                                style: TrydosWalletStyles.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xff1D1D1D),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _hideBalance = !_hideBalance;
+                                  });
+                                },
+                                child: SvgPicture.asset(
+                                  TrydosWalletAssets.hide,
+                                  package: TrydosWalletStyles.packageName,
+                                  colorFilter: ColorFilter.mode(
+                                    _hideBalance
+                                        ? const Color(0xff1D1D1D)
+                                        : const Color(0xff8D8D8D),
+                                    BlendMode.srcIn,
+                                  ),
+                                  height: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                          TextButton.icon(
+                            onPressed:
+                                state.currenciesStatus == WalletStatus.loading
+                                ? null
+                                : () => context.read<WalletBloc>().add(
+                                    const WalletRefreshAllRequested(),
+                                  ),
+                            icon: SvgPicture.asset(
+                              TrydosWalletAssets.addAccount,
+                              package: TrydosWalletStyles.packageName,
+                            ),
+                            label: Text(
                               AppStrings.get(
                                 state.languageCode,
-                                'your_total_balance_of',
+                                'add_account_of',
                               ).replaceAll(
                                 '{currency}',
                                 _selectedCurrencies[0],
                               ),
-                              style: TrydosWalletStyles.bodyMedium.copyWith(
+                              style: TrydosWalletStyles.bodySmall.copyWith(
+                                color: const Color(0xFF388CFF),
                                 fontWeight: FontWeight.bold,
-                                color: const Color(0xff1D1D1D),
+                                fontSize: 11,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _hideBalance = !_hideBalance;
-                                });
-                              },
-                              child: SvgPicture.asset(
-                                TrydosWalletAssets.hide,
-                                package: TrydosWalletStyles.packageName,
-                                colorFilter: ColorFilter.mode(
-                                  _hideBalance
-                                      ? const Color(0xff1D1D1D)
-                                      : const Color(0xff8D8D8D),
-                                  BlendMode.srcIn,
+                          ),
+                        ],
+                      ),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.only(left: 24, right: 0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                AppStrings.get(
+                                  state.languageCode,
+                                  'your_total_balance',
                                 ),
-                                height: 15,
+                                style: TrydosWalletStyles.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xff1D1D1D),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        TextButton.icon(
-                          onPressed:
-                              state.currenciesStatus == WalletStatus.loading
-                              ? null
-                              : () => context.read<WalletBloc>().add(
-                                  const WalletCurrenciesRefreshRequested(),
+                              const SizedBox(width: 8),
+                              InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _hideBalance = !_hideBalance;
+                                  });
+                                },
+                                child: SvgPicture.asset(
+                                  TrydosWalletAssets.hide,
+                                  package: TrydosWalletStyles.packageName,
+                                  colorFilter: ColorFilter.mode(
+                                    _hideBalance
+                                        ? Colors.black
+                                        : const Color(0xff8D8D8D),
+                                    BlendMode.srcIn,
+                                  ),
+                                  height: 15,
                                 ),
-                          icon: SvgPicture.asset(
-                            TrydosWalletAssets.addAccount,
-                            package: TrydosWalletStyles.packageName,
+                              ),
+                            ],
                           ),
-                          label: Text(
-                            AppStrings.get(
-                              state.languageCode,
-                              'add_account_of',
-                            ).replaceAll('{currency}', _selectedCurrencies[0]),
-                            style: TrydosWalletStyles.bodySmall.copyWith(
-                              color: const Color(0xFF388CFF),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
+                          TextButton.icon(
+                            onPressed:
+                                state.currenciesStatus == WalletStatus.loading
+                                ? null
+                                : () => context.read<WalletBloc>().add(
+                                    const WalletRefreshAllRequested(),
+                                  ),
+                            icon: SvgPicture.asset(
+                              TrydosWalletAssets.addCurrency,
+                              package: TrydosWalletStyles.packageName,
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : Padding(
-                    padding: const EdgeInsets.only(left: 24, right: 0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
+                            label: Text(
                               AppStrings.get(
                                 state.languageCode,
-                                'your_total_balance',
+                                'add_currency',
                               ),
-                              style: TrydosWalletStyles.bodyMedium.copyWith(
+                              style: TrydosWalletStyles.bodySmall.copyWith(
+                                color: const Color(0xFF388CFF),
                                 fontWeight: FontWeight.bold,
-                                color: const Color(0xff1D1D1D),
+                                fontSize: 11,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _hideBalance = !_hideBalance;
-                                });
-                              },
-                              child: SvgPicture.asset(
-                                TrydosWalletAssets.hide,
-                                package: TrydosWalletStyles.packageName,
-                                colorFilter: ColorFilter.mode(
-                                  _hideBalance
-                                      ? Colors.black
-                                      : const Color(0xff8D8D8D),
-                                  BlendMode.srcIn,
-                                ),
-                                height: 15,
-                              ),
-                            ),
-                          ],
-                        ),
-                        TextButton.icon(
-                          onPressed:
-                              state.currenciesStatus == WalletStatus.loading
-                              ? null
-                              : () => context.read<WalletBloc>().add(
-                                  const WalletCurrenciesRefreshRequested(),
-                                ),
-                          icon: SvgPicture.asset(
-                            TrydosWalletAssets.addCurrency,
-                            package: TrydosWalletStyles.packageName,
                           ),
-                          label: Text(
-                            AppStrings.get(state.languageCode, 'add_currency'),
-                            style: TrydosWalletStyles.bodySmall.copyWith(
-                              color: const Color(0xFF388CFF),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-            SizedBox(
-              height: 120,
-              child: Builder(
-                builder: (context) {
-                  if (state.currenciesStatus == WalletStatus.loading &&
-                      state.currencies.isEmpty) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (state.currenciesStatus == WalletStatus.failure &&
-                      state.currencies.isEmpty) {
-                    return Center(
-                      child: TextButton(
-                        onPressed: () => context.read<WalletBloc>().add(
-                          const WalletCurrenciesLoadRequested(),
-                        ),
-                        child: Text(
-                          AppStrings.get(state.languageCode, 'retry'),
-                        ),
-                      ),
-                    );
-                  }
-
-                  final currencies = state.currencies;
-                  final hasNext = state.currenciesHasNext;
-                  final isLoadingMore =
-                      state.currenciesStatus == WalletStatus.loading &&
-                      currencies.isNotEmpty;
-
-                  if (_selectedCurrencies.isNotEmpty) {
-                    final currency = currencies.firstWhere(
-                      (element) => _selectedCurrencies.contains(element.symbol),
-                      orElse: () => currencies.first,
-                    );
-                    final balance = state.balances[currency.id];
-                    final isLoadingBalance = state.loadingBalanceIds.contains(
-                      currency.id,
-                    );
-                    final amountStr = _hideBalance
-                        ? '*****'
-                        : (balance != null
-                              ? balance.available.toStringAsFixed(
-                                  balance.available.truncateToDouble() ==
-                                          balance.available
-                                      ? 0
-                                      : 2,
-                                )
-                              : '0');
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: BalanceCard(
-                        symbolImageUrl: currency.symbolImageUrl,
-                        symbol: currency.symbol,
-                        currencyName: currency.displayName.isNotEmpty
-                            ? currency.displayName
-                            : currency.name,
-                        amount: amountStr,
-                        currencyCode: currency.symbol,
-                        color: const Color(0xFF404040),
-                        isSelected: true,
-                        isLoadingBalance: isLoadingBalance,
-                        onTap: () {
-                          context.read<WalletBloc>().add(
-                            const BalanceCardIsSelected(isSelected: false),
-                          );
-                          context.read<WalletBloc>().add(
-                            WalletBalanceLoadRequested(currency.id),
-                          );
-                          setState(() {
-                            final code = currency.symbol;
-                            if (_selectedCurrencies.contains(code)) {
-                              _selectedCurrencies.remove(code);
-                            } else {
-                              _selectedCurrencies.add(code);
-                            }
-                          });
-                        },
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    controller: _currenciesScrollController,
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: currencies.length + (hasNext ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == currencies.length) {
-                        return Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: SizedBox(
-                            width: 40,
-                            child: isLoadingMore
-                                ? const Center(
-                                    child: SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
+              SizedBox(
+                height: 120,
+                child: Builder(
+                  builder: (context) {
+                    if (state.currenciesStatus == WalletStatus.loading &&
+                        state.currencies.isEmpty) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (state.currenciesStatus == WalletStatus.failure &&
+                        state.currencies.isEmpty) {
+                      return Center(
+                        child: TextButton(
+                          onPressed: () => context.read<WalletBloc>().add(
+                            const WalletCurrenciesLoadRequested(),
                           ),
-                        );
-                      }
-                      final currency = currencies[index];
+                          child: Text(
+                            AppStrings.get(state.languageCode, 'retry'),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final currencies = state.currencies;
+                    final hasNextCurrencies = state.currenciesHasNext;
+                    final isLoadingMoreCurrencies =
+                        state.currenciesStatus == WalletStatus.loading &&
+                        currencies.isNotEmpty;
+
+                    if (_selectedCurrencies.isNotEmpty) {
+                      final currency = currencies.firstWhere(
+                        (element) =>
+                            _selectedCurrencies.contains(element.symbol),
+                        orElse: () => currencies.first,
+                      );
                       final balance = state.balances[currency.id];
                       final isLoadingBalance = state.loadingBalanceIds.contains(
                         currency.id,
@@ -369,7 +313,7 @@ class _HomeTabState extends State<HomeTab> {
                                 : '0');
 
                       return Padding(
-                        padding: EdgeInsets.only(left: index > 0 ? 5 : 0),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: BalanceCard(
                           symbolImageUrl: currency.symbolImageUrl,
                           symbol: currency.symbol,
@@ -378,22 +322,12 @@ class _HomeTabState extends State<HomeTab> {
                               : currency.name,
                           amount: amountStr,
                           currencyCode: currency.symbol,
-                          color: _selectedCurrencies.contains(currency.symbol)
-                              ? const Color(0xff315391)
-                              : const Color(0xFF404040),
-                          isSelected: _selectedCurrencies.contains(
-                            currency.symbol,
-                          ),
+                          color: const Color(0xFF404040),
+                          isSelected: true,
                           isLoadingBalance: isLoadingBalance,
                           onTap: () {
                             context.read<WalletBloc>().add(
-                              BalanceCardIsSelected(
-                                isSelected: true,
-                                assetId: currency.id,
-                              ),
-                            );
-                            context.read<WalletBloc>().add(
-                              WalletBalanceLoadRequested(currency.id),
+                              const BalanceCardIsSelected(isSelected: false),
                             );
                             setState(() {
                               final code = currency.symbol;
@@ -406,94 +340,161 @@ class _HomeTabState extends State<HomeTab> {
                           },
                         ),
                       );
-                    },
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 15),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                _getTransactionsTitle(state.languageCode),
-                style: TrydosWalletStyles.bodyMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xff1D1D1D),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: Builder(
-                builder: (context) {
-                  if (state.transactionsStatus == WalletStatus.loading &&
-                      state.transactions.isEmpty) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (state.transactionsStatus == WalletStatus.failure &&
-                      state.transactions.isEmpty) {
-                    return Center(
-                      child: TextButton(
-                        onPressed: () => context.read<WalletBloc>().add(
-                          const WalletTransactionsLoadRequested(),
-                        ),
-                        child: Text(
-                          AppStrings.get(state.languageCode, 'retry'),
-                        ),
-                      ),
-                    );
-                  }
+                    }
 
-                  final transactions = state.transactions;
-                  final hasNext = state.transactionsHasNext;
-                  final isLoadingMore =
-                      state.transactionsStatus == WalletStatus.loading &&
-                      transactions.isNotEmpty;
+                    return ListView.builder(
+                      controller: _currenciesScrollController,
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount:
+                          currencies.length + (hasNextCurrencies ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == currencies.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: SizedBox(
+                              width: 40,
+                              child: isLoadingMoreCurrencies
+                                  ? const Center(
+                                      child: SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                          );
+                        }
+                        final currency = currencies[index];
+                        final balance = state.balances[currency.id];
+                        final isLoadingBalance = state.loadingBalanceIds
+                            .contains(currency.id);
+                        final amountStr = _hideBalance
+                            ? '*****'
+                            : (balance != null
+                                  ? balance.available.toStringAsFixed(
+                                      balance.available.truncateToDouble() ==
+                                              balance.available
+                                          ? 0
+                                          : 2,
+                                    )
+                                  : '0');
 
-                  return ListView.builder(
-                    controller: _transactionsScrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: transactions.length + (hasNext ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == transactions.length) {
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          child: Center(
-                            child: isLoadingMore
-                                ? const SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
+                          padding: EdgeInsets.only(left: index > 0 ? 5 : 0),
+                          child: BalanceCard(
+                            symbolImageUrl: currency.symbolImageUrl,
+                            symbol: currency.symbol,
+                            currencyName: currency.displayName.isNotEmpty
+                                ? currency.displayName
+                                : currency.name,
+                            amount: amountStr,
+                            currencyCode: currency.symbol,
+                            color: _selectedCurrencies.contains(currency.symbol)
+                                ? const Color(0xff315391)
+                                : const Color(0xFF404040),
+                            isSelected: _selectedCurrencies.contains(
+                              currency.symbol,
+                            ),
+                            isLoadingBalance: isLoadingBalance,
+                            onTap: () {
+                              context.read<WalletBloc>().add(
+                                BalanceCardIsSelected(
+                                  isSelected: true,
+                                  assetId: currency.id,
+                                ),
+                              );
+                              setState(() {
+                                final code = currency.symbol;
+                                if (_selectedCurrencies.contains(code)) {
+                                  _selectedCurrencies.remove(code);
+                                } else {
+                                  _selectedCurrencies.add(code);
+                                }
+                              });
+                            },
                           ),
                         );
-                      }
-                      final t = transactions[index];
-                      return TransactionItem(
-                        icon: _transactionIcon(t),
-                        directionIcon: _transactionDirectionIcon(t),
-                        title: t.title.isNotEmpty ? t.title : t.type,
-                        subtitle: _formatTransactionDate(t.createdAt),
-                        amount: _formatAmount(t),
-                        status: '',
-                        amountColor: const Color(0xff1D1D1D),
-                        titleColor: const Color(0xff1D1D1D),
-                        statusColor: const Color(0xff1D1D1D),
-                        subtitleColor: const Color(0xff8D8D8D),
-                        isSelected: _selectedTransactionIndex == index,
-                        onTap: () {
-                          setState(() => _selectedTransactionIndex = index);
-                        },
-                      );
-                    },
-                  );
-                },
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 15),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  _getTransactionsTitle(state.languageCode),
+                  style: TrydosWalletStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff1D1D1D),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (state.transactionsStatus == WalletStatus.loading &&
+                  state.transactions.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (state.transactionsStatus == WalletStatus.failure &&
+                  state.transactions.isEmpty)
+                Center(
+                  child: TextButton(
+                    onPressed: () => context.read<WalletBloc>().add(
+                      const WalletTransactionsLoadRequested(),
+                    ),
+                    child: Text(AppStrings.get(state.languageCode, 'retry')),
+                  ),
+                )
+              else ...[
+                for (int index = 0; index < transactions.length; index++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TransactionItem(
+                      icon: _transactionIcon(transactions[index]),
+                      directionIcon: _transactionDirectionIcon(
+                        transactions[index],
+                      ),
+                      title: transactions[index].title.isNotEmpty
+                          ? transactions[index].title
+                          : transactions[index].type,
+                      subtitle: _formatTransactionDate(
+                        transactions[index].createdAt,
+                      ),
+                      amount: _formatAmount(transactions[index]),
+                      status: '',
+                      amountColor: const Color(0xff1D1D1D),
+                      titleColor: const Color(0xff1D1D1D),
+                      statusColor: const Color(0xff1D1D1D),
+                      subtitleColor: const Color(0xff8D8D8D),
+                      isSelected: _selectedTransactionIndex == index,
+                      onTap: () {
+                        setState(() => _selectedTransactionIndex = index);
+                      },
+                    ),
+                  ),
+                if (hasNext)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: isLoadingMore
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ),
+              ],
+              const SizedBox(height: 16),
+            ],
+          ),
         );
       },
     );

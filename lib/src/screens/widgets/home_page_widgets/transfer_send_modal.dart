@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -24,12 +25,7 @@ enum RecipientInputType { account, phone }
 class _TransferSendModalState extends State<TransferSendModal> {
   TransferState currentTransferState = TransferState.input;
   RecipientInputType currentInputType = RecipientInputType.account;
-  final List<String> purposes = [
-    'work_partnership',
-    'service_fees',
-    'home_rent',
-    'office',
-  ];
+  final TransfersApiService _transfersApi = TransfersApiService();
   String? selectedPurpose;
   final FocusNode recipientFocus = FocusNode();
   final FocusNode nameFocus = FocusNode();
@@ -43,6 +39,8 @@ class _TransferSendModalState extends State<TransferSendModal> {
   final TextEditingController noteController = TextEditingController();
 
   bool isRecipientVerified = false;
+  bool isRecipientLookupLoading = false;
+  String? recipientAccountName;
   String? recipientErrorMessage;
   String? nameErrorMessage;
   String? idErrorMessage;
@@ -60,9 +58,11 @@ class _TransferSendModalState extends State<TransferSendModal> {
 
   bool isAmountVerified = false;
   bool isEditingAmount = true;
+  bool isTransferVerifyLoading = false;
 
   bool isFromQr = false;
   bool isRequestFlow = false;
+  TransferSendResult? _lastSendResult;
   DateTime? expiryTime;
   String? referenceId;
   String? requestType;
@@ -77,6 +77,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
   @override
   void initState() {
     super.initState();
+    context.read<WalletBloc>().add(const WalletTransferPurposesLoadRequested());
     recipientFocus.addListener(() {
       if (!recipientFocus.hasFocus && isEditingRecipient) {
         _verifyRecipient();
@@ -113,10 +114,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
       if (!amountFocus.hasFocus &&
           isEditingAmount &&
           amountController.text.isNotEmpty) {
-        setState(() {
-          isAmountVerified = true;
-          isEditingAmount = false;
-        });
+        _verifyTransferByAmount();
       }
       setState(() {});
     });
@@ -128,33 +126,126 @@ class _TransferSendModalState extends State<TransferSendModal> {
     noteController.addListener(() => setState(() {}));
   }
 
-  void _verifyRecipient() {
-    final text = recipientController.text
-        .replaceAll('-', '')
-        .replaceAll(' ', '');
-    final lang = context.read<WalletBloc>().state.languageCode;
-    // If we're verifying an existing mocked account, don't re-verify
-    if (text == '100708') {
+  void _resetRecipientLookupState() {
+    isRecipientVerified = false;
+    isEditingRecipient = true;
+    isRecipientLookupLoading = false;
+    recipientAccountName = null;
+    recipientErrorMessage = null;
+    isAmountVerified = false;
+  }
+
+  double? _parseAmountValue() {
+    final normalized = amountController.text.replaceAll(',', '').trim();
+    final parsed = double.tryParse(normalized);
+    if (parsed == null || parsed <= 0) {
+      return null;
+    }
+    return parsed;
+  }
+
+  Future<void> _verifyTransferByAmount() async {
+    if (isRequestFlow) {
+      setState(() {
+        isAmountVerified = true;
+        isEditingAmount = false;
+        amountErrorMessage = null;
+      });
       return;
     }
-    if (text.isEmpty) return;
+
+    final state = context.read<WalletBloc>().state;
+    final lang = state.languageCode;
+    final amount = _parseAmountValue();
+
+    if (amount == null) {
+      setState(() {
+        isAmountVerified = false;
+        isEditingAmount = true;
+        amountErrorMessage = AppStrings.get(lang, 'invalid_amount');
+      });
+      return;
+    }
+
+    final shouldVerifyWithApi =
+        currentInputType == RecipientInputType.account ||
+        (currentInputType == RecipientInputType.phone &&
+            isPhoneRegistered == true);
+
+    if (!shouldVerifyWithApi) {
+      setState(() {
+        isAmountVerified = true;
+        isEditingAmount = false;
+        amountErrorMessage = null;
+      });
+      return;
+    }
+
+    final toAccount = recipientController.text.trim();
+    if (toAccount.isEmpty || !toAccount.contains('-')) {
+      setState(() {
+        isAmountVerified = false;
+        isEditingAmount = true;
+        amountErrorMessage = AppStrings.get(lang, 'incorrect_account_msg');
+      });
+      return;
+    }
+
+    final currencySymbol =
+        state.balances[state.selectedAssetId ?? '']?.assetSymbol ?? 'SYP';
 
     setState(() {
-      if (currentInputType == RecipientInputType.account) {
-        if (text.length >= 6 && text.startsWith('1')) {
-          isRecipientVerified = true;
-          recipientErrorMessage = null;
-          isEditingRecipient = false;
-          // Auto-focus amount field after verification
-          Future.delayed(const Duration(milliseconds: 100), () {
-            amountFocus.requestFocus();
-          });
-        } else {
-          isRecipientVerified = false;
-          recipientErrorMessage = AppStrings.get(lang, 'incorrect_account_msg');
-          isEditingRecipient = true;
+      isTransferVerifyLoading = true;
+      isAmountVerified = false;
+      amountErrorMessage = null;
+    });
+
+    final result = await _transfersApi.verifyTransfer(
+      toAccountNumber: toAccount,
+      currencySymbol: currencySymbol,
+      amount: amount,
+    );
+    if (!mounted) return;
+
+    if (result.isSuccess && result.data != null && result.data!.valid) {
+      setState(() {
+        isTransferVerifyLoading = false;
+        isAmountVerified = true;
+        isEditingAmount = false;
+        amountErrorMessage = null;
+        if (result.data!.receiver.name.isNotEmpty) {
+          recipientAccountName = result.data!.receiver.name;
         }
-      } else {
+      });
+      return;
+    }
+
+    setState(() {
+      isTransferVerifyLoading = false;
+      isAmountVerified = false;
+      isEditingAmount = true;
+      amountErrorMessage = AppStrings.get(lang, 'invalid_amount');
+    });
+
+    showMessage(
+      result.isSuccess
+          ? AppStrings.get(lang, 'invalid_amount')
+          : AppStrings.get(lang, 'account_lookup_failed_msg'),
+      context: context,
+      type: MessageType.error,
+    );
+  }
+
+  Future<void> _verifyRecipient() async {
+    final state = context.read<WalletBloc>().state;
+    final rawText = recipientController.text.trim();
+    final text = rawText.replaceAll(' ', '');
+    final lang = context.read<WalletBloc>().state.languageCode;
+
+    if (text.isEmpty) return;
+
+    if (currentInputType != RecipientInputType.account) {
+      setState(() {
         // Phone Number processing
         final phoneText = text.replaceAll('+', '');
         if (phoneText.length >= 7) {
@@ -184,8 +275,55 @@ class _TransferSendModalState extends State<TransferSendModal> {
           recipientErrorMessage = AppStrings.get(lang, 'phone_min_digits_msg');
           isEditingRecipient = true;
         }
-      }
+      });
+      return;
+    }
+
+    if (text.length <= 7 || !text.contains('-')) {
+      setState(() {
+        _resetRecipientLookupState();
+        recipientErrorMessage = AppStrings.get(lang, 'incorrect_account_msg');
+      });
+      return;
+    }
+
+    setState(() {
+      _resetRecipientLookupState();
+      isRecipientLookupLoading = true;
     });
+
+    final result = await _transfersApi.lookupAccount(text);
+    if (!mounted) return;
+
+    if (result.isSuccess && result.data != null && result.data!.found) {
+      setState(() {
+        isRecipientLookupLoading = false;
+        isRecipientVerified = true;
+        isEditingRecipient = false;
+        recipientErrorMessage = null;
+        recipientController.text = result.data!.accountNumber;
+        recipientAccountName = result.data!.name;
+      });
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          amountFocus.requestFocus();
+        }
+      });
+      return;
+    }
+
+    setState(() {
+      _resetRecipientLookupState();
+      recipientController.clear();
+    });
+
+    showMessage(
+      result.isSuccess
+          ? AppStrings.get(state.languageCode, 'account_not_found_msg')
+          : AppStrings.get(state.languageCode, 'account_lookup_failed_msg'),
+      context: context,
+      type: MessageType.error,
+    );
   }
 
   @override
@@ -218,36 +356,178 @@ class _TransferSendModalState extends State<TransferSendModal> {
     'dec',
   ];
 
+  List<TransferPurpose> _purposeOptions(WalletState state) {
+    return state.transferPurposes;
+  }
+
+  String? _resolvePurposeIdForSend(WalletState state) {
+    final candidate = selectedPurpose ?? qrPurpose;
+    if (candidate == null || candidate.isEmpty) {
+      return null;
+    }
+
+    for (final purpose in _purposeOptions(state)) {
+      if (purpose.id == candidate) {
+        return purpose.id;
+      }
+      if (purpose.name.toLowerCase() == candidate.toLowerCase()) {
+        return purpose.id;
+      }
+    }
+
+    return null;
+  }
+
+  String _generateIdempotencyKey() {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    final random = Random();
+    final suffix = List.generate(
+      9,
+      (_) => chars[random.nextInt(chars.length)],
+    ).join();
+    return 'transfer-${DateTime.now().millisecondsSinceEpoch}-$suffix';
+  }
+
+  String _formatAmount(double value) {
+    if (value.truncateToDouble() == value) {
+      return value.toInt().toString();
+    }
+    return value.toStringAsFixed(2);
+  }
+
+  String _formatDateTimeForReceipt(String createdAt, String languageCode) {
+    final dt = DateTime.tryParse(createdAt)?.toLocal();
+    if (dt == null) {
+      return '';
+    }
+    return '${dt.day.toString().padLeft(2, '0')}.${AppStrings.get(languageCode, months[dt.month - 1])} | ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _maskNameIfNeeded(String fullName) {
+    final name = fullName.trim();
+    if (name.isEmpty) {
+      return '';
+    }
+
+    return name
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) {
+          if (part.contains('*')) {
+            return part;
+          }
+          return '${part[0]}*****';
+        })
+        .join(' ');
+  }
+
+  Future<void> _submitTransfer(WalletState state) async {
+    final lang = state.languageCode;
+    final amount = _parseAmountValue();
+    final toAccountNumber = recipientController.text.trim();
+    final purposeId = _resolvePurposeIdForSend(state);
+    final currencySymbol =
+        state.balances[state.selectedAssetId ?? '']?.assetSymbol ?? 'SYP';
+
+    if (amount == null || amount <= 0) {
+      showMessage(
+        AppStrings.get(lang, 'invalid_amount'),
+        context: context,
+        type: MessageType.error,
+      );
+      return;
+    }
+    if (toAccountNumber.isEmpty) {
+      showMessage(
+        AppStrings.get(lang, 'incorrect_account_msg'),
+        context: context,
+        type: MessageType.error,
+      );
+      return;
+    }
+    if (purposeId == null) {
+      showMessage(
+        AppStrings.get(lang, 'select_purpose_send'),
+        context: context,
+        type: MessageType.error,
+      );
+      return;
+    }
+
+    setState(() {
+      currentTransferState = TransferState.sending;
+    });
+
+    final result = await _transfersApi.sendTransfer(
+      toAccountNumber: toAccountNumber,
+      currencySymbol: currencySymbol,
+      amount: amount,
+      purposeId: purposeId,
+      note: noteController.text,
+      idempotencyKey: _generateIdempotencyKey(),
+      inputMethod: 'MANUAL',
+    );
+
+    if (!mounted) return;
+
+    if (result.isSuccess && result.data != null && result.data!.isCompleted) {
+      setState(() {
+        _lastSendResult = result.data;
+        currentTransferState = TransferState.success;
+      });
+      context.read<WalletBloc>().add(const WalletRefreshAllRequested());
+      return;
+    }
+
+    setState(() {
+      currentTransferState = TransferState.input;
+    });
+    showMessage(
+      result.errorMessage ?? AppStrings.get(lang, 'transaction_failed'),
+      context: context,
+      type: MessageType.error,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (currentTransferState == TransferState.success) {
       final state = context.read<WalletBloc>().state;
-      final balance = state.balances[state.selectedAssetId ?? ''];
-      final symbol = balance?.assetSymbol ?? r'$';
-      final accountId = balance?.accountId ?? '----';
-      final subtype = balance?.accountSubtype ?? 'MAIN';
-      final senderAccount = '$subtype | $accountId | ${state.maskedName}';
+      final sendResult = _lastSendResult!;
+      final maskedSenderName = _maskNameIfNeeded(sendResult.sender.name);
+      final receiverNameSource = sendResult.receiver.name.trim().isNotEmpty
+          ? sendResult.receiver.name
+          : (recipientAccountName ?? '');
+      final maskedReceiverName = _maskNameIfNeeded(receiverNameSource);
 
-      final now = DateTime.now();
-      final dateAndTimeString =
-          '${now.day.toString().padLeft(2, '0')}.${AppStrings.get(state.languageCode, months[now.month - 1])} | ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+      final senderAccount =
+          '${sendResult.sender.accountNumber} $maskedSenderName'.trim();
+      final recipientAccount = maskedReceiverName.isNotEmpty
+          ? '${sendResult.receiver.accountNumber} $maskedReceiverName'.trim()
+          : sendResult.receiver.accountNumber;
+      final amount = _formatAmount(sendResult.amount);
+      final currencySymbol = sendResult.currency.symbol;
+      final reference = sendResult.transferId;
+      final dateAndTimeString = _formatDateTimeForReceipt(
+        sendResult.createdAt,
+        state.languageCode,
+      );
+      final purpose = sendResult.purpose;
+      final isCompleted = sendResult.isCompleted;
 
       return SingleChildScrollView(
         controller: widget.scrollController,
         physics: const BouncingScrollPhysics(),
         child: SuccessfulPage(
           senderAccount: senderAccount,
-          recipientAccount: recipientController.text,
-          amount: amountController.text,
-          currencySymbol: symbol,
-          reference:
-              'TSCR${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
+          recipientAccount: recipientAccount,
+          amount: amount,
+          currencySymbol: currencySymbol,
+          reference: reference,
           dateAndTimeString: dateAndTimeString,
           type: AppStrings.get(state.languageCode, 'transfer_send'),
-          purpose: AppStrings.get(
-            state.languageCode,
-            qrPurpose ?? selectedPurpose ?? 'work_partnership',
-          ),
+          purpose: purpose,
+          isSuccess: isCompleted,
           onDone: () => Navigator.pop(context),
           onDownload: () {},
           onShare: () {},
@@ -364,15 +644,24 @@ class _TransferSendModalState extends State<TransferSendModal> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _buildBalanceSection(state),
-                          SvgPicture.asset(
-                            TrydosWalletAssets.reload,
-                            colorFilter: const ColorFilter.mode(
-                              Colors.white,
-                              BlendMode.srcIn,
-                            ),
-                            height: 20,
-                            package: TrydosWalletStyles.packageName,
-                          ),
+                          isTransferVerifyLoading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : SvgPicture.asset(
+                                  TrydosWalletAssets.reload,
+                                  colorFilter: const ColorFilter.mode(
+                                    Colors.white,
+                                    BlendMode.srcIn,
+                                  ),
+                                  height: 20,
+                                  package: TrydosWalletStyles.packageName,
+                                ),
                         ],
                       ),
                       const SizedBox(height: 5),
@@ -464,7 +753,11 @@ class _TransferSendModalState extends State<TransferSendModal> {
                   keyboardType: TextInputType.number,
                   onEdit: isRequestFlow
                       ? null
-                      : () => setState(() => isAmountVerified = false),
+                      : () => setState(() {
+                          isAmountVerified = false;
+                          isEditingAmount = true;
+                          amountErrorMessage = null;
+                        }),
                   suffixFollowsText: true,
                   suffix: Text(
                     ' ${state.balances[state.selectedAssetId ?? '']?.assetSymbol ?? r'$'}',
@@ -588,6 +881,8 @@ class _TransferSendModalState extends State<TransferSendModal> {
         final isReadyToSend =
             (isRequestFlow || selectedPurpose != null) &&
             isAmountVerified &&
+            !isRecipientLookupLoading &&
+            !isTransferVerifyLoading &&
             (currentInputType == RecipientInputType.account
                 ? isRecipientVerified
                 : (isPhoneRegistered == true
@@ -598,16 +893,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
           onTap: isReadyToSend && currentTransferState != TransferState.sending
               ? () {
                   FocusScope.of(context).unfocus();
-                  setState(() {
-                    currentTransferState = TransferState.sending;
-                  });
-                  Future.delayed(const Duration(seconds: 3), () {
-                    if (mounted) {
-                      setState(() {
-                        currentTransferState = TransferState.success;
-                      });
-                    }
-                  });
+                  _submitTransfer(state);
                 }
               : null,
           child: Center(
@@ -651,6 +937,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
   }
 
   Widget _buildPurposeSection(WalletState state) {
+    final purposeOptions = _purposeOptions(state);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -675,9 +962,9 @@ class _TransferSendModalState extends State<TransferSendModal> {
             height: 32,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: purposes.length,
+              itemCount: purposeOptions.length,
               itemBuilder: (context, index) {
-                return _buildChip(purposes[index], state);
+                return _buildChip(purposeOptions[index], state);
               },
             ),
           ),
@@ -915,7 +1202,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
                                 child: Text(
                                   isRequestFlow
                                       ? (maskedAccountName ?? '')
-                                      : 'R***** B***** T*********** Y***** L******** S*****',
+                                      : (recipientAccountName ?? ''),
                                   style: TrydosWalletStyles.bodyMedium.copyWith(
                                     color: const Color(0xff8D8D8D),
                                     fontSize: 11,
@@ -1136,10 +1423,21 @@ class _TransferSendModalState extends State<TransferSendModal> {
           : TextInputType.number,
       onEdit: isFromQr
           ? null
-          : () => setState(() => isRecipientVerified = false),
+          : () => setState(() {
+              _resetRecipientLookupState();
+            }),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (currentInputType == RecipientInputType.account &&
+              isRecipientLookupLoading) ...[
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 8),
+          ],
           if (recipientController.text.isEmpty) ...[
             GestureDetector(
               onTap: () async {
@@ -1165,7 +1463,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
               onTap: () async {
                 final result = await showWalletModal<String>(
                   context: context,
-                  builder: (context, sc) => const QRScannerPage(),
+                  builder: (context, sc) => QRScannerPage(scrollController: sc),
                 );
                 if (result != null) {
                   setState(() {
@@ -1215,7 +1513,10 @@ class _TransferSendModalState extends State<TransferSendModal> {
             ),
           ] else
             GestureDetector(
-              onTap: () => recipientController.clear(),
+              onTap: () => setState(() {
+                recipientController.clear();
+                _resetRecipientLookupState();
+              }),
               child: SvgPicture.asset(
                 TrydosWalletAssets.close,
                 height: 18,
@@ -1227,10 +1528,10 @@ class _TransferSendModalState extends State<TransferSendModal> {
     );
   }
 
-  Widget _buildChip(String key, WalletState state) {
-    final isSelected = selectedPurpose == key;
+  Widget _buildChip(TransferPurpose purpose, WalletState state) {
+    final isSelected = selectedPurpose == purpose.id;
     return GestureDetector(
-      onTap: () => setState(() => selectedPurpose = key),
+      onTap: () => setState(() => selectedPurpose = purpose.id),
       child: Container(
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -1244,7 +1545,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          AppStrings.get(state.languageCode, key),
+          purpose.name,
           style: TrydosWalletStyles.bodyMedium.copyWith(
             color: isSelected ? Colors.white : const Color(0xff8D8D8D),
             fontSize: 11,

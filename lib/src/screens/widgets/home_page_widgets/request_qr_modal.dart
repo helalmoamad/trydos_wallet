@@ -17,7 +17,16 @@ enum RequestQRState { filling, generating, finalQR }
 class RequestQRModal extends StatefulWidget {
   final ScrollController? scrollController;
   final VoidCallback? onBack;
-  const RequestQRModal({super.key, this.scrollController, this.onBack});
+  final String? accountName;
+  final String? accountNumber;
+
+  const RequestQRModal({
+    super.key,
+    this.scrollController,
+    this.onBack,
+    this.accountName,
+    this.accountNumber,
+  });
 
   @override
   State<RequestQRModal> createState() => _RequestQRModalState();
@@ -31,24 +40,27 @@ class _RequestQRModalState extends State<RequestQRModal> {
   final TextEditingController _referenceController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
 
-  String _selectedPurpose = 'work_partnership';
+  String _selectedPurpose = '';
   String _selectedExpiry = 'always';
 
   bool _isDownloading = false;
   bool _isSharing = false;
 
-  final String _accountName =
-      'Ramaaz Bilişim Teknولojileri Yazılım Limited Sirketi';
+  static const String _fallbackAccountName =
+      'Ramaaz Bilisim Teknolojileri Yazilim Limited Sirketi';
   final String _maskedName = 'RBTYLS';
-  final String _accountNumber = '100-708';
+  static const String _fallbackAccountNumber = '100-708';
   bool _isNameMasked = false;
 
-  final List<String> _purposes = [
-    'work_partnership',
-    'service_fees',
-    'home_rent',
-    'office_shop_rent',
-  ];
+  String get _accountName =>
+      widget.accountName != null && widget.accountName!.isNotEmpty
+      ? widget.accountName!
+      : _fallbackAccountName;
+
+  String get _accountNumber =>
+      widget.accountNumber != null && widget.accountNumber!.isNotEmpty
+      ? widget.accountNumber!
+      : _fallbackAccountNumber;
 
   final List<String> _expiryOptions = [
     'always',
@@ -61,8 +73,22 @@ class _RequestQRModalState extends State<RequestQRModal> {
   @override
   void initState() {
     super.initState();
+    context.read<WalletBloc>().add(const WalletTransferPurposesLoadRequested());
     _amountController.addListener(_onFormChanged);
     _referenceController.addListener(_onFormChanged);
+  }
+
+  List<TransferPurpose> _purposeOptions(WalletState state) {
+    return state.transferPurposes;
+  }
+
+  String _purposeName(WalletState state, String purposeId) {
+    for (final purpose in _purposeOptions(state)) {
+      if (purpose.id == purposeId) {
+        return purpose.name;
+      }
+    }
+    return purposeId;
   }
 
   void _onFormChanged() {
@@ -159,11 +185,12 @@ class _RequestQRModalState extends State<RequestQRModal> {
         await file.writeAsBytes(imageBytes);
 
         // ignore: deprecated_member_use
-        await Share.shareXFiles([
-          XFile(imagePath),
-        ], text: AppStrings.get(state.languageCode, 'payment_request_for')
-            .replaceAll('{amount}', _amountController.text)
-            .replaceAll('{currency}', 'USD'));
+        await Share.shareXFiles(
+          [XFile(imagePath)],
+          text: AppStrings.get(state.languageCode, 'payment_request_for')
+              .replaceAll('{amount}', _amountController.text)
+              .replaceAll('{currency}', 'USD'),
+        );
       }
     } catch (e) {
       debugPrint('Error sharing QR card: $e');
@@ -197,7 +224,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                         accountNumber: _accountNumber,
                         amount: _amountController.text,
                         reference: _referenceController.text,
-                        purpose: _selectedPurpose,
+                        purpose: _purposeName(state, _selectedPurpose),
                         expiry: _selectedExpiry,
                         note: _noteController.text,
                         languageCode: state.languageCode,
@@ -401,7 +428,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
             Expanded(
               child: _buildSummaryBox(
                 AppStrings.get(state.languageCode, 'purpose_of_request'),
-                AppStrings.get(state.languageCode, _selectedPurpose),
+                _purposeName(state, _selectedPurpose),
               ),
             ),
             const SizedBox(width: 5),
@@ -620,6 +647,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
   }
 
   Widget _buildPurposeAndNoteSection(WalletState state) {
+    final purposeOptions = _purposeOptions(state);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -642,11 +670,11 @@ class _RequestQRModalState extends State<RequestQRModal> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: _purposes.map((option) {
-                final isSelected = _selectedPurpose == option;
+              children: purposeOptions.map((option) {
+                final isSelected = _selectedPurpose == option.id;
                 return GestureDetector(
                   onTap: () {
-                    setState(() => _selectedPurpose = option);
+                    setState(() => _selectedPurpose = option.id);
                   },
                   child: Container(
                     margin: const EdgeInsets.only(right: 3),
@@ -666,7 +694,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                       ),
                     ),
                     child: Text(
-                      AppStrings.get(state.languageCode, option),
+                      option.name,
                       style: TrydosWalletStyles.bodySmall.copyWith(
                         color: const Color(0xff1D1D1D),
                         fontSize: isSelected ? 12 : 11,
@@ -1056,7 +1084,7 @@ class _CleanRequestQRCard extends StatelessWidget {
               Expanded(
                 child: _buildInfoBox(
                   AppStrings.get(languageCode, 'purpose_of_request'),
-                  AppStrings.get(languageCode, purpose),
+                  purpose,
                 ),
               ),
               const SizedBox(width: 5),

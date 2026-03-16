@@ -50,10 +50,8 @@ class _WalletTabState extends State<WalletTab> {
   ) async {
     final result = await showWalletModal<bool>(
       context: context,
-      builder: (context, sc) => DepositModal(
-        currency: currency,
-        scrollController: sc,
-      ),
+      builder: (context, sc) =>
+          DepositModal(currency: currency, scrollController: sc),
     );
 
     if (result == true && mounted) {
@@ -123,7 +121,7 @@ class _WalletTabState extends State<WalletTab> {
                       return Center(
                         child: TextButton(
                           onPressed: () => context.read<WalletBloc>().add(
-                            const WalletCurrenciesRefreshRequested(),
+                            const WalletRefreshAllRequested(),
                           ),
                           child: Text(
                             AppStrings.get(state.languageCode, 'retry'),
@@ -150,10 +148,6 @@ class _WalletTabState extends State<WalletTab> {
                         setState(() {
                           _selectedWalletCurrencyId = currencies.first.id;
                         });
-                        final bloc = context.read<WalletBloc>();
-                        for (final currency in currencies) {
-                          bloc.add(WalletBalanceLoadRequested(currency.id));
-                        }
                       });
                     }
                     return ListView.builder(
@@ -210,9 +204,6 @@ class _WalletTabState extends State<WalletTab> {
                             isSelected: isSelected,
                             isLoadingBalance: isLoadingBalance,
                             onTap: () {
-                              context.read<WalletBloc>().add(
-                                WalletBalanceLoadRequested(currency.id),
-                              );
                               setState(
                                 () => _selectedWalletCurrencyId = currency.id,
                               );

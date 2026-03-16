@@ -5,6 +5,7 @@ import 'package:trydos_wallet/src/services/bank_deposits_api_service.dart';
 import 'package:trydos_wallet/src/services/banks_api_service.dart';
 import 'package:trydos_wallet/src/services/currencies_api_service.dart';
 import 'package:trydos_wallet/src/services/media_api_service.dart';
+import 'package:trydos_wallet/src/services/transfer_purposes_api_service.dart';
 import 'package:trydos_wallet/src/services/transactions_api_service.dart';
 
 import '../config/trydos_wallet_config.dart';
@@ -19,6 +20,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     BanksApiService? banksApi,
     BankDepositsApiService? depositApi,
     MediaApiService? mediaApi,
+    TransferPurposesApiService? transferPurposesApi,
     String? initialLanguage,
     String? firstName,
     String? lastName,
@@ -28,6 +30,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
        _banksApi = banksApi ?? BanksApiService(),
        _depositApi = depositApi ?? BankDepositsApiService(),
        _mediaApi = mediaApi ?? MediaApiService(),
+       _transferPurposesApi =
+           transferPurposesApi ?? TransferPurposesApiService(),
        super(
          WalletState(
            languageCode: initialLanguage ?? TrydosWallet.config.languageCode,
@@ -36,6 +40,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
          ),
        ) {
     on<WalletLanguageChanged>(_onLanguageChanged);
+    on<WalletRefreshAllRequested>(_onRefreshAllRequested);
     on<WalletCurrenciesLoadRequested>(_onCurrenciesLoadRequested);
     on<WalletCurrenciesLoadMoreRequested>(_onCurrenciesLoadMoreRequested);
     on<WalletCurrenciesRefreshRequested>(_onCurrenciesRefreshRequested);
@@ -51,6 +56,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<BalanceCardIsSelected>(_onBalanceCardIsSelected);
     on<WalletDepositFeesRequested>(_onDepositFeesRequested);
     on<WalletDepositRequestsRequested>(_onDepositRequestsRequested);
+    on<WalletTransferPurposesLoadRequested>(_onTransferPurposesLoadRequested);
   }
 
   final CurrenciesApiService _currenciesApi;
@@ -59,6 +65,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   final BanksApiService _banksApi;
   final BankDepositsApiService _depositApi;
   final MediaApiService _mediaApi;
+  final TransferPurposesApiService _transferPurposesApi;
 
   int _currenciesPage = 0;
   int _banksPage = 0;
@@ -73,6 +80,23 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   }
 
   /// Currencies
+  Future<void> _onRefreshAllRequested(
+    WalletRefreshAllRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    _currenciesPage = 0;
+    emit(
+      state.copyWith(
+        currenciesStatus: WalletStatus.loading,
+        balancesStatus: WalletStatus.loading,
+        transactionsStatus: WalletStatus.loading,
+      ),
+    );
+    await _fetchCurrencies(emit, page: 0, append: false);
+    await _fetchAllBalances(emit);
+    await _fetchTransactions(emit, cursor: null, append: false);
+  }
+
   Future<void> _onCurrenciesLoadRequested(
     WalletCurrenciesLoadRequested event,
     Emitter<WalletState> emit,
@@ -149,28 +173,36 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     WalletBalanceLoadRequested event,
     Emitter<WalletState> emit,
   ) async {
-    emit(
-      state.copyWith(
-        loadingBalanceIds: {...state.loadingBalanceIds, event.assetId},
-      ),
-    );
+    // Balances are loaded in one request via _fetchAllBalances.
+    // Tapping a currency should only change UI selection.
+    return;
+  }
 
-    final result = await _balancesApi.getBalance(event.assetId);
+  Future<void> _fetchAllBalances(Emitter<WalletState> emit) async {
+    emit(state.copyWith(balancesStatus: WalletStatus.loading));
 
-    final updatedLoadingIds = {...state.loadingBalanceIds}
-      ..remove(event.assetId);
-
+    final result = await _balancesApi.getBalances();
     if (result.isSuccess && result.data != null) {
-      final updatedBalances = Map<String, Balance>.from(state.balances)
-        ..[event.assetId] = result.data!;
+      final updatedBalances = <String, Balance>{};
+      for (final balance in result.data!) {
+        if (balance.assetId.isNotEmpty) {
+          updatedBalances[balance.assetId] = balance;
+        }
+      }
       emit(
         state.copyWith(
           balances: updatedBalances,
-          loadingBalanceIds: updatedLoadingIds,
+          balancesStatus: WalletStatus.success,
+          loadingBalanceIds: const {},
         ),
       );
     } else {
-      emit(state.copyWith(loadingBalanceIds: updatedLoadingIds));
+      emit(
+        state.copyWith(
+          balancesStatus: WalletStatus.failure,
+          loadingBalanceIds: const {},
+        ),
+      );
     }
   }
 
@@ -414,6 +446,38 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         state.copyWith(
           depositRequestsStatus: WalletStatus.failure,
           depositRequestsErrorMessage: result.errorMessage,
+        ),
+      );
+    }
+  }
+
+  Future<void> _onTransferPurposesLoadRequested(
+    WalletTransferPurposesLoadRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    if (state.transferPurposesStatus == WalletStatus.loading) {
+      return;
+    }
+    if (state.transferPurposesStatus == WalletStatus.success &&
+        state.transferPurposes.isNotEmpty) {
+      return;
+    }
+
+    emit(state.copyWith(transferPurposesStatus: WalletStatus.loading));
+    final result = await _transferPurposesApi.getTransferPurposes(type: 'ALL');
+    if (result.isSuccess && result.data != null) {
+      emit(
+        state.copyWith(
+          transferPurposes: result.data!,
+          transferPurposesStatus: WalletStatus.success,
+          transferPurposesErrorMessage: null,
+        ),
+      );
+    } else {
+      emit(
+        state.copyWith(
+          transferPurposesStatus: WalletStatus.failure,
+          transferPurposesErrorMessage: result.errorMessage,
         ),
       );
     }

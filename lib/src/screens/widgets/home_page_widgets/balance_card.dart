@@ -62,12 +62,14 @@ class BalanceCard extends StatelessWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (symbolImageUrl != null && symbolImageUrl!.isNotEmpty)
+                          if (symbolImageUrl != null &&
+                              symbolImageUrl!.isNotEmpty)
                             Image.network(
                               symbolImageUrl!,
                               height: 20,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _buildFallbackIcon(),
+                              errorBuilder: (_, __, ___) =>
+                                  _buildFallbackIcon(),
                             )
                           else
                             _buildFallbackIcon(),
@@ -122,7 +124,10 @@ class BalanceCard extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 5),
                                 Text(
-                                  AppStrings.get(state.languageCode, 'statistic'),
+                                  AppStrings.get(
+                                    state.languageCode,
+                                    'statistic',
+                                  ),
                                   style: TrydosWalletStyles.bodySmall.copyWith(
                                     color: const Color(0xffFCFCFC),
                                     fontSize: 9,
@@ -135,12 +140,13 @@ class BalanceCard extends StatelessWidget {
                             Column(
                               children: [
                                 SvgPicture.asset(
-                                  TrydosWalletAssets.chart1,
+                                  TrydosWalletAssets.chart,
+                                  height: 15,
                                   package: TrydosWalletStyles.packageName,
                                 ),
                                 const SizedBox(height: 5),
                                 Text(
-                                  AppStrings.get(state.languageCode, 'info'),
+                                  AppStrings.get(state.languageCode, 'chart'),
                                   style: TrydosWalletStyles.bodySmall.copyWith(
                                     color: const Color(0xffFCFCFC),
                                     fontSize: 9,
@@ -195,12 +201,14 @@ class BalanceCard extends StatelessWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (symbolImageUrl != null && symbolImageUrl!.isNotEmpty)
+                          if (symbolImageUrl != null &&
+                              symbolImageUrl!.isNotEmpty)
                             Image.network(
                               symbolImageUrl!,
                               height: 20,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _buildFallbackIcon(),
+                              errorBuilder: (_, __, ___) =>
+                                  _buildFallbackIcon(),
                             )
                           else
                             _buildFallbackIcon(),

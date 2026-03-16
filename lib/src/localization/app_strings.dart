@@ -67,7 +67,8 @@ class AppStrings {
       'valid_until': 'Valid Until',
       'note': 'Note',
       'select_purpose_request': 'Select Purpose Of Money Request',
-      'cannot_use_after_expiry': 'Will Not Be Able To Use The Code After Its Expiry Time',
+      'cannot_use_after_expiry':
+          'Will Not Be Able To Use The Code After Its Expiry Time',
       'purpose_of_request': 'Purpose Of Money Request',
       'always': 'Always',
       'minutes_3': '3 Minute',
@@ -191,7 +192,9 @@ class AppStrings {
       'invalid_amount': 'Invalid Amount',
       'insufficient_balance': 'Insufficient Balance',
       'incorrect_account_msg':
-          'Incorrect Account Number. It Should Start With 1 And Consist Of 6 Digits',
+          'Incorrect account number. It must be longer than 7 characters and include -',
+      'account_not_found_msg': 'Account not found',
+      'account_lookup_failed_msg': 'Failed to verify account',
       'phone_min_digits_msg': 'Phone number must be at least 7 digits',
       'recipient_account_num': 'Recipient Account Number',
       'recipient_phone_num': 'Recipient Phone Number',
@@ -214,12 +217,14 @@ class AppStrings {
       'select_purpose_send': 'Select Purpose Of Money Send',
       'send_label': 'Send',
       'receive_label': 'Receive',
+      'chart': 'Chart',
     },
     'ar': {
       // Home Tab
       'home_title': 'الرئيسية',
       'total_balance': 'إجمالي رصيدك',
       'add_currency': 'إضافة عملة',
+      'chart': 'مخطط',
       'available_balance': 'الرصيد المتاح',
       'records': 'السجلات',
       'no_deposit_requests_yet': 'لا توجد طلبات إيداع حتى الآن',
@@ -284,7 +289,8 @@ class AppStrings {
       'valid_until': 'صالح حتى',
       'note': 'ملاحظة',
       'select_purpose_request': 'اختر الغرض من طلب المال',
-      'cannot_use_after_expiry': 'لن يتم التمكن من استخدام الرمز بعد انتهاء وقت الصلاحية',
+      'cannot_use_after_expiry':
+          'لن يتم التمكن من استخدام الرمز بعد انتهاء وقت الصلاحية',
       'purpose_of_request': 'الغرض من طلب المال',
       'always': 'دائماً',
       'minutes_3': '3 دقائق',
@@ -341,6 +347,7 @@ class AppStrings {
       'change_image': 'تغيير الصورة',
       'uploading_msg': 'جاري الرفع...',
       'confirm_upload': 'تأكيد الرفع',
+
       'confirm_deposit_label': 'تأكيد الإيداع',
       'deposit_request_submitted': 'تم تقديم طلب الإيداع بنجاح',
       'deposit_completed_success': 'تم اكتمال الإيداع بنجاح',
@@ -402,7 +409,9 @@ class AppStrings {
       'invalid_amount': 'مبلغ غير صحيح',
       'insufficient_balance': 'رصيد غير كافٍ',
       'incorrect_account_msg':
-          'رقم الحساب غير صحيح. يجب أن يبدأ بـ 1 ويتكون من 6 أرقام',
+          'رقم الحساب غير صحيح. يجب أن يكون أكثر من 7 خانات ويحتوي على -',
+      'account_not_found_msg': 'الحساب غير موجود',
+      'account_lookup_failed_msg': 'فشل التحقق من الحساب',
       'phone_min_digits_msg': 'رقم الهاتف يجب أن يتكون من 7 أرقام على الأقل',
       'recipient_account_num': 'رقم حساب المستلم',
       'recipient_phone_num': 'رقم هاتف المستلم',
@@ -449,6 +458,7 @@ class AppStrings {
       'recent_transactions': 'وەرگێڕانە نوێیەکان',
       'your_total_balance': 'کۆی بەروونی تۆ',
       'view_all': 'هەمووی ببینە',
+      'chart': 'مخطط',
       'your_total_balance_of': 'کۆی باڵانسی {currency} تۆ',
       'add_account_of': 'زیادکردنی هەژماری {currency}',
 
@@ -505,7 +515,8 @@ class AppStrings {
       'valid_until': 'بەردەستە تا',
       'note': 'تێبینی',
       'select_purpose_request': 'هۆکاری داواکاری پارە هەڵبژێرە',
-      'cannot_use_after_expiry': 'ناتوانی کۆدەکە بەکاربهێنیت دوای بەسەرچوونی کاتەکەی',
+      'cannot_use_after_expiry':
+          'ناتوانی کۆدەکە بەکاربهێنیت دوای بەسەرچوونی کاتەکەی',
       'purpose_of_request': 'هۆکاری داواکاری پارە',
       'always': 'هەمیشە',
       'minutes_3': '٣ خولەک',
@@ -585,11 +596,13 @@ class AppStrings {
           'دەتوانیت پارەکە لە ڕێگەی هەموو سەنتەرەكانمانەوە وەربگریت، یان دەتوانیت ئەپڵیکەیشنەکەمان دابەزێنیت، هەژمارێک بكەیتەوە، پارەکە بەکاربهێنیت، و سوود لە هەموو خزمەتگوزارییەکان وەربگریت.',
       'statistic': 'ئامارەكان',
       'info': 'زانیاری',
-      'scan_qr_msg': 'بۆ ئەوەی کردارێک ئەنجام بدەیت، کۆدەکە لە لای بەرامبەر بخوێنەرەوە',
+      'scan_qr_msg':
+          'بۆ ئەوەی کردارێک ئەنجام بدەیت، کۆدەکە لە لای بەرامبەر بخوێنەرەوە',
       'or_choose': 'یان هەڵبژێرە',
       'send_pay_cash': 'ناردن | پارەدان | ڕاكێشانی کاش',
       'send_money_pay': 'ناردنی پارە یان پارەدان',
-      'receive_charge_request': 'وەرگرتن | بارگاویکردنەوەی هەژمارەکەم | داواکاری',
+      'receive_charge_request':
+          'وەرگرتن | بارگاویکردنەوەی هەژمارەکەم | داواکاری',
       'charge_wallet_msg': 'بارگاویکردنەوەی پارەی هەژماری جزدانەکەت',
       'splash_safe': 'پارێزراو...',
       'splash_easy': 'ئاسان...',
@@ -621,7 +634,9 @@ class AppStrings {
       'invalid_amount': 'بڕی نادروست',
       'insufficient_balance': 'باڵانسی تەواو نییە',
       'incorrect_account_msg':
-          'ژمارەی هەژمارەکە هەڵەیە. دەبێت بە ١ دەست پێ بکات و لە ٦ ژمارە پێک بێت',
+          'ژمارەی هەژمارەکە هەڵەیە. دەبێت زیاتر لە ٧ کاراکتەر بێت و - تێدا بێت',
+      'account_not_found_msg': 'هەژمارەکە نەدۆزرایەوە',
+      'account_lookup_failed_msg': 'پشکنینی هەژمارەکە سەرکەوتوو نەبوو',
       'phone_min_digits_msg': 'ژمارەی تەلەفۆن دەبێت لانی کەم ٧ ژمارە بێت',
       'recipient_account_num': 'ژمارەی هەژماری وەرگر',
       'recipient_phone_num': 'ژمارەی تەلەفۆنی وەرگر',
@@ -666,6 +681,7 @@ class AppStrings {
       'no_deposit_requests_yet': 'Henüz hiçbir yatırma talebi yok',
       'transaction_history': 'İşlem Geçmişi',
       'no_transactions': 'Henüz hiçbir işlem yok',
+      'chart': 'Grafik',
       'recent_transactions': 'Son İşlemler',
       'view_all': 'Tümünü Görüntüle',
       'your_total_balance_of': 'Toplam {currency} Bakiyeniz',
@@ -724,7 +740,8 @@ class AppStrings {
       'valid_until': 'Geçerlilik Süresi',
       'note': 'Not',
       'select_purpose_request': 'Para Talep Amacını Seçin',
-      'cannot_use_after_expiry': 'Süresi dolduktan sonra kod kullanılamayacaktır',
+      'cannot_use_after_expiry':
+          'Süresi dolduktan sonra kod kullanılamayacaktır',
       'purpose_of_request': 'Para Talep Amacı',
       'always': 'Her zaman',
       'minutes_3': '3 Dakika',
@@ -821,7 +838,8 @@ class AppStrings {
       'transfer_send_msg': 'Gönder | rdb | nakit | bankaya para transferi yap',
       'history': 'Geçmiş',
       'cash_withdrawal': 'Nakit Çekme',
-      'withdrawal_msg': 'Merkezlerimiz veya Acentelerimiz Aracılığıyla Para Çekme',
+      'withdrawal_msg':
+          'Merkezlerimiz veya Acentelerimiz Aracılığıyla Para Çekme',
       'nearby_centers': 'Yakındaki Merkezler',
       'bill_payments': 'Fatura Ödemeleri',
       'pay_invoice_msg': 'Fatura Öde | Makbuz |',
@@ -840,7 +858,9 @@ class AppStrings {
       'invalid_amount': 'Geçersiz Tutar',
       'insufficient_balance': 'Yetersiz Bakiye',
       'incorrect_account_msg':
-          'Yanlış Hesap Numarası. 1 ile başlamalı ve 6 haneli olmalıdır',
+          'Hatalı hesap numarası. 7 karakterden uzun olmalı ve - içermelidir',
+      'account_not_found_msg': 'Hesap bulunamadı',
+      'account_lookup_failed_msg': 'Hesap doğrulanamadı',
       'phone_min_digits_msg': 'Telefon numarası en az 7 haneli olmalıdır',
       'recipient_account_num': 'Alıcı Hesap Numarası',
       'recipient_phone_num': 'Alıcı Telefon Numarası',

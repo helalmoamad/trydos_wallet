@@ -104,6 +104,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
         showMessage(
           // ignore: use_build_context_synchronously
           AppStrings.get(
+            // ignore: use_build_context_synchronously
             context.read<WalletBloc>().state.languageCode,
             'saved_successfully',
           ),
@@ -116,6 +117,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
       showMessage(
         // ignore: use_build_context_synchronously
         AppStrings.get(
+          // ignore: use_build_context_synchronously
           context.read<WalletBloc>().state.languageCode,
           'failed_to_save',
         ),
@@ -150,6 +152,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
             // ignore: use_build_context_synchronously
           ],
           text:
+              // ignore: use_build_context_synchronously
               '${AppStrings.get(context.read<WalletBloc>().state.languageCode, 'receipt')} ${widget.reference}',
         );
       }

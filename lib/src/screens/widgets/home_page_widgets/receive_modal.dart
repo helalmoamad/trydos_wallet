@@ -30,14 +30,48 @@ class _ReceiveModalState extends State<ReceiveModal> {
   bool _isSharing = false;
   ReceiveModalView _currentView = ReceiveModalView.main;
 
-  final String _accountName =
-      'Ramaaz Bilişim Teknolojileri Yazılım Limited Sirketi';
-  final String _maskedName = 'RBTYLS';
-  final String _accountNumber = '100-708';
+  static const String _fallbackAccountName =
+      'Ramaaz Bilisim Teknolojileri Yazilim Limited Sirketi';
+  static const String _maskedName = 'RBTYLS';
+  static const String _fallbackAccountNumber = '100-708';
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  Balance? _resolveReceiveBalance(WalletState state) {
+    if (state.selectedAssetId != null) {
+      final selected = state.balances[state.selectedAssetId!];
+      if (selected != null) return selected;
+    }
+
+    for (final balance in state.balances.values) {
+      if (balance.assetSymbol.toUpperCase() == 'USD') {
+        return balance;
+      }
+    }
+
+    if (state.balances.isNotEmpty) {
+      return state.balances.values.first;
+    }
+    return null;
+  }
+
+  String _accountNameFromState(WalletState state) {
+    final accountName = _resolveReceiveBalance(state)?.accountName ?? '';
+    return accountName.isNotEmpty ? accountName : _fallbackAccountName;
+  }
+
+  String _accountNumberFromState(WalletState state) {
+    final accountNumber = _resolveReceiveBalance(state)?.accountNumber ?? '';
+    return accountNumber.isNotEmpty ? accountNumber : _fallbackAccountNumber;
+  }
 
   void _handleCopy() {
     final state = context.read<WalletBloc>().state;
-    Clipboard.setData(ClipboardData(text: _accountNumber));
+    final accountNumber = _accountNumberFromState(state);
+    Clipboard.setData(ClipboardData(text: accountNumber));
     showMessage(
       AppStrings.get(state.languageCode, 'acc_copied_msg'),
       context: context,
@@ -64,6 +98,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
     if (_isDownloading || _isSharing) return;
     setState(() => _isDownloading = true);
     final state = context.read<WalletBloc>().state;
+    final accountNumber = _accountNumberFromState(state);
 
     try {
       final hasAccess = await Gal.hasAccess();
@@ -74,7 +109,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
       final imageBytes = await _captureCard();
       if (imageBytes != null) {
         final directory = await getTemporaryDirectory();
-        final imagePath = '${directory.path}/qr_card_$_accountNumber.png';
+        final imagePath = '${directory.path}/qr_card_$accountNumber.png';
         final file = File(imagePath);
         await file.writeAsBytes(imageBytes);
 
@@ -107,12 +142,13 @@ class _ReceiveModalState extends State<ReceiveModal> {
     if (_isDownloading || _isSharing) return;
     setState(() => _isSharing = true);
     final state = context.read<WalletBloc>().state;
+    final accountNumber = _accountNumberFromState(state);
 
     try {
       final imageBytes = await _captureCard();
       if (imageBytes != null) {
         final directory = await getTemporaryDirectory();
-        final imagePath = '${directory.path}/qr_card_$_accountNumber.png';
+        final imagePath = '${directory.path}/qr_card_$accountNumber.png';
         final file = File(imagePath);
         await file.writeAsBytes(imageBytes);
 
@@ -120,7 +156,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
         await Share.shareXFiles(
           [XFile(imagePath)],
           text:
-              '${AppStrings.get(state.languageCode, 'my_receipt_qr')} $_accountNumber',
+              '${AppStrings.get(state.languageCode, 'my_receipt_qr')} $accountNumber',
         );
       }
     } catch (e) {
@@ -136,6 +172,8 @@ class _ReceiveModalState extends State<ReceiveModal> {
   Widget build(BuildContext context) {
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
+        final accountName = _accountNameFromState(state);
+        final accountNumber = _accountNumberFromState(state);
         return Stack(
           children: [
             // Hidden card for screen capture
@@ -145,8 +183,8 @@ class _ReceiveModalState extends State<ReceiveModal> {
               child: RepaintBoundary(
                 key: _cardKey,
                 child: _CleanQRCard(
-                  accountName: _isMasked ? _maskedName : _accountName,
-                  accountNumber: _accountNumber,
+                  accountName: _isMasked ? _maskedName : accountName,
+                  accountNumber: accountNumber,
                   languageCode: state.languageCode,
                 ),
               ),
@@ -161,9 +199,16 @@ class _ReceiveModalState extends State<ReceiveModal> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: _currentView == ReceiveModalView.main
-                          ? _buildReceiveView(context, state)
+                          ? _buildReceiveView(
+                              context,
+                              state,
+                              accountName,
+                              accountNumber,
+                            )
                           : RequestQRModal(
                               scrollController: widget.scrollController,
+                              accountName: accountName,
+                              accountNumber: accountNumber,
                               onBack: () {
                                 setState(() {
                                   _currentView = ReceiveModalView.main;
@@ -181,7 +226,12 @@ class _ReceiveModalState extends State<ReceiveModal> {
     );
   }
 
-  Widget _buildReceiveView(BuildContext context, WalletState state) {
+  Widget _buildReceiveView(
+    BuildContext context,
+    WalletState state,
+    String accountName,
+    String accountNumber,
+  ) {
     return Column(
       children: [
         Container(
@@ -229,7 +279,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
               ),
               const SizedBox(height: 5),
               Text(
-                _accountNumber,
+                accountNumber,
                 style: TrydosWalletStyles.bodyMedium.copyWith(
                   color: const Color(0xff1D1D1D),
                   fontSize: 16,
@@ -242,7 +292,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
         // Account Details
         _buildInfoSection(
           AppStrings.get(state.languageCode, 'account_name'),
-          _isMasked ? _maskedName : _accountName,
+          _isMasked ? _maskedName : accountName,
           trailing: GestureDetector(
             onTap: () => setState(() => _isMasked = !_isMasked),
             child: SvgPicture.asset(
@@ -258,7 +308,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
         const SizedBox(height: 5),
         _buildInfoSection(
           AppStrings.get(state.languageCode, 'account_number'),
-          '$_accountNumber  ${AppStrings.get(state.languageCode, 'american_dollars')}',
+          '$accountNumber  ${AppStrings.get(state.languageCode, 'american_dollars')}',
         ),
 
         const Spacer(),

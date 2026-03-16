@@ -2,14 +2,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
-import 'package:trydos_wallet/src/bloc/wallet_state.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
-import 'package:trydos_wallet/src/localization/app_strings.dart';
+import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/receive_modal.dart';
+import 'package:trydos_wallet/src/screens/widgets/widgets.dart';
+import 'package:trydos_wallet/trydos_wallet.dart';
 
 class QRScannerPage extends StatefulWidget {
-  const QRScannerPage({super.key});
+  final ScrollController? scrollController;
+  const QRScannerPage({super.key, this.scrollController});
 
   @override
   State<QRScannerPage> createState() => _QRScannerPageState();
@@ -23,7 +24,8 @@ class _QRScannerPageState extends State<QRScannerPage> {
     Timer(const Duration(seconds: 5), () {
       if (mounted) {
         // Mock data for a Request Flow
-        const mockResult = '{'
+        const mockResult =
+            '{'
             '"account_id": "100-708",'
             '"account_name": "R***** B***** T*********** Y***** L******** S*****",'
             '"amount": "100",'
@@ -41,92 +43,128 @@ class _QRScannerPageState extends State<QRScannerPage> {
   Widget build(BuildContext context) {
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 10),
-              // Handle
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 2,
-                  decoration: BoxDecoration(
-                    color: const Color(0xffC4C2C2),
-                    borderRadius: BorderRadius.circular(2),
+        return SingleChildScrollView(
+          controller: widget.scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.9,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 10),
+                  // Handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 2,
+                      decoration: BoxDecoration(
+                        color: const Color(0xffC4C2C2),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 15),
+                  const SizedBox(height: 15),
 
-              // Scanner Frame
-              Container(
-                height: 350,
-                width: 400,
-                margin: const EdgeInsets.symmetric(horizontal: 25),
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    SvgPicture.asset(
-                      TrydosWalletAssets.qr,
-                      height: 16,
-                      width: 16,
-                      colorFilter: const ColorFilter.mode(
-                        Color(0xffFCFCFC),
-                        BlendMode.srcIn,
-                      ),
-                      package: TrydosWalletStyles.packageName,
+                  // Scanner Frame
+                  Container(
+                    height: 350,
+                    width: 400,
+                    margin: const EdgeInsets.symmetric(horizontal: 25),
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(30),
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      AppStrings.get(state.languageCode, 'scan_qr_msg'),
-                      textAlign: TextAlign.center,
-                      style: TrydosWalletStyles.bodyMedium.copyWith(
-                        color: const Color(0xffFCFCFC),
-                        fontSize: 11,
-                        height: 1.3,
-                      ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        SvgPicture.asset(
+                          TrydosWalletAssets.qr,
+                          height: 16,
+                          width: 16,
+                          colorFilter: const ColorFilter.mode(
+                            Color(0xffFCFCFC),
+                            BlendMode.srcIn,
+                          ),
+                          package: TrydosWalletStyles.packageName,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          AppStrings.get(state.languageCode, 'scan_qr_msg'),
+                          textAlign: TextAlign.center,
+                          style: TrydosWalletStyles.bodyMedium.copyWith(
+                            color: const Color(0xffFCFCFC),
+                            fontSize: 11,
+                            height: 1.3,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
                     ),
-                    const SizedBox(height: 10),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 150),
+                  ),
+                  const SizedBox(height: 150),
 
-              Text(
-                AppStrings.get(state.languageCode, 'or_choose'),
-                style: TrydosWalletStyles.bodyMedium.copyWith(
-                  color: const Color(0xff1D1D1D),
-                  fontSize: 13,
-                  height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 10),
+                  Text(
+                    AppStrings.get(state.languageCode, 'or_choose'),
+                    style: TrydosWalletStyles.bodyMedium.copyWith(
+                      color: const Color(0xff1D1D1D),
+                      fontSize: 13,
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
 
-              // Options
-              _buildOption(
-                icon: TrydosWalletAssets.send,
-                title: AppStrings.get(state.languageCode, 'send_pay_cash'),
-                subtitle: AppStrings.get(state.languageCode, 'send_money_pay'),
-                onTap: () {},
+                  // Options
+                  _buildOption(
+                    icon: TrydosWalletAssets.send,
+                    title: AppStrings.get(state.languageCode, 'send_pay_cash'),
+                    subtitle: AppStrings.get(
+                      state.languageCode,
+                      'send_money_pay',
+                    ),
+                    onTap: () {
+                      Navigator.pop(context); // Close the QR Scanner Modal
+                      final walletBloc = context.read<WalletBloc>();
+                      showWalletModal(
+                        context: context,
+                        builder: (context, sc) => BlocProvider.value(
+                          value: walletBloc,
+                          child: SendModal(scrollController: sc),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 5),
+                  _buildOption(
+                    icon: TrydosWalletAssets.receive,
+                    title: AppStrings.get(
+                      state.languageCode,
+                      'receive_charge_request',
+                    ),
+                    subtitle: AppStrings.get(
+                      state.languageCode,
+                      'charge_wallet_msg',
+                    ),
+                    onTap: () {
+                      Navigator.pop(context); // Close the QR Scanner Modal
+                      final walletBloc = context.read<WalletBloc>();
+                      showWalletModal(
+                        context: context,
+                        builder: (context, sc) => BlocProvider.value(
+                          value: walletBloc,
+                          child: ReceiveModal(scrollController: sc),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 30),
+                ],
               ),
-              const SizedBox(height: 5),
-              _buildOption(
-                icon: TrydosWalletAssets.receive,
-                title: AppStrings.get(state.languageCode, 'receive_charge_request'),
-                subtitle: AppStrings.get(state.languageCode, 'charge_wallet_msg'),
-                onTap: () {},
-              ),
-              const SizedBox(height: 30),
-            ],
+            ),
           ),
         );
       },

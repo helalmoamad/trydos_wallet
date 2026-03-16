@@ -12,6 +12,8 @@ class Balance {
     required this.createdAt,
     required this.updatedAt,
     this.asset,
+    this.accountNumber = '',
+    this.accountName = '',
     this.accountSubtype = 'MAIN',
   });
 
@@ -30,8 +32,98 @@ class Balance {
       asset: json['asset'] != null
           ? BalanceAsset.fromJson(json['asset'] as Map<String, dynamic>)
           : null,
+      accountNumber: json['accountNumber'] as String? ?? '',
+      accountName: json['accountName'] as String? ?? '',
       accountSubtype: json['accountSubtype'] as String? ?? 'MAIN',
     );
+  }
+
+  factory Balance.fromMyAccountsJson(
+    Map<String, dynamic> json, {
+    required String requestedAssetId,
+    String? fallbackSymbol,
+  }) {
+    final wallets = (json['wallets'] as List?)?.cast<dynamic>() ?? const [];
+    Map<String, dynamic>? fallbackWallet;
+    Map<String, dynamic>? fallbackBalance;
+
+    for (final rawWallet in wallets) {
+      final wallet = rawWallet as Map<String, dynamic>?;
+      if (wallet == null) continue;
+      final balances =
+          (wallet['balances'] as List?)?.cast<dynamic>() ?? const [];
+
+      for (final rawBalance in balances) {
+        final balance = rawBalance as Map<String, dynamic>?;
+        if (balance == null) continue;
+
+        fallbackWallet ??= wallet;
+        fallbackBalance ??= balance;
+
+        final assetId = balance['assetId'] as String? ?? '';
+        final assetSymbol = (balance['assetSymbol'] as String? ?? '')
+            .toUpperCase();
+        final desiredSymbol = (fallbackSymbol ?? '').toUpperCase();
+
+        if (assetId == requestedAssetId ||
+            (desiredSymbol.isNotEmpty && assetSymbol == desiredSymbol)) {
+          return Balance.fromJson({
+            ...balance,
+            'accountNumber': wallet['accountNumber'],
+            'accountName': wallet['name'],
+          });
+        }
+      }
+    }
+
+    if (fallbackBalance != null && fallbackWallet != null) {
+      return Balance.fromJson({
+        ...fallbackBalance,
+        'accountNumber': fallbackWallet['accountNumber'],
+        'accountName': fallbackWallet['name'],
+      });
+    }
+
+    return Balance(
+      id: '',
+      accountId: '',
+      assetType: 'CURRENCY',
+      assetId: requestedAssetId,
+      assetSymbol: fallbackSymbol ?? '',
+      available: 0,
+      locked: 0,
+      reserved: 0,
+      createdAt: '',
+      updatedAt: '',
+      accountSubtype: 'MAIN',
+    );
+  }
+
+  static List<Balance> listFromMyAccountsJson(Map<String, dynamic> json) {
+    final wallets = (json['wallets'] as List?)?.cast<dynamic>() ?? const [];
+    final result = <Balance>[];
+
+    for (final rawWallet in wallets) {
+      final wallet = rawWallet as Map<String, dynamic>?;
+      if (wallet == null) continue;
+
+      final balances =
+          (wallet['balances'] as List?)?.cast<dynamic>() ?? const [];
+      for (final rawBalance in balances) {
+        final balance = rawBalance as Map<String, dynamic>?;
+        if (balance == null) continue;
+
+        result.add(
+          Balance.fromJson({
+            ...balance,
+            'accountNumber': wallet['accountNumber'],
+            'accountName': wallet['name'],
+          }),
+        );
+      }
+    }
+
+    return result;
   }
 
   final String id;
@@ -45,6 +137,8 @@ class Balance {
   final String createdAt;
   final String updatedAt;
   final BalanceAsset? asset;
+  final String accountNumber;
+  final String accountName;
   final String accountSubtype;
 
   double get total => available + locked + reserved;
@@ -59,9 +153,9 @@ class BalanceAsset {
 
   factory BalanceAsset.fromJson(Map<String, dynamic> json) {
     return BalanceAsset(
-      id: json['id'] as String? ?? '',
+      id: json['id'] as String? ?? json['_id'] as String? ?? '',
       symbol: json['symbol'] as String? ?? '',
-      name: json['name'] as String? ?? '',
+      name: json['name'] as String? ?? json['displayName'] as String? ?? '',
     );
   }
 

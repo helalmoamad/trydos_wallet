@@ -41,6 +41,10 @@ class WalletCurrenciesRefreshRequested extends WalletEvent {
   const WalletCurrenciesRefreshRequested();
 }
 
+class WalletRefreshAllRequested extends WalletEvent {
+  const WalletRefreshAllRequested();
+}
+
 /// Balances
 class WalletBalanceLoadRequested extends WalletEvent {
   const WalletBalanceLoadRequested(this.assetId);
@@ -106,4 +110,8 @@ class WalletDepositRequestsRequested extends WalletEvent {
   const WalletDepositRequestsRequested({this.page = 0, this.limit = 10});
   final int page;
   final int limit;
+}
+
+class WalletTransferPurposesLoadRequested extends WalletEvent {
+  const WalletTransferPurposesLoadRequested();
 }

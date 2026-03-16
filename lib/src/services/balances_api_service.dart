@@ -9,18 +9,12 @@ class BalancesApiService {
 
   final ApiClient _client;
 
-  Future<ApiResult<Balance>> getBalance(
-    String assetId, {
-    String accountSubtype = 'MAIN',
-    String assetType = 'CURRENCY',
-  }) async {
-    return _client.get<Balance>(
-      ApiPaths.balance(assetId),
-      queryParameters: {
-        'accountSubtype': accountSubtype,
-        'assetType': assetType,
-      },
-      fromJson: (d) => Balance.fromJson(d as Map<String, dynamic>),
+  Future<ApiResult<List<Balance>>> getBalances() async {
+    return _client.get<List<Balance>>(
+      ApiPaths.myAccounts,
+      queryParameters: {"currencySymbol": "USD"},
+      fromJson: (d) =>
+          Balance.listFromMyAccountsJson(d as Map<String, dynamic>),
     );
   }
 }

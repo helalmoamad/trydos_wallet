@@ -1,5 +1,6 @@
 library;
 
+export 'account_lookup_result/account_lookup_result.dart';
 export 'balance/balance.dart';
 export 'bank/bank.dart';
 export 'bank_deposit_request/bank_deposit_request.dart';
@@ -11,3 +12,6 @@ export 'currency/currency_paytab.dart';
 export 'cursor_paginated_response.dart';
 export 'paginated_response.dart';
 export 'transaction/transaction.dart';
+export 'transfer_purpose/transfer_purpose.dart';
+export 'transfer_send_result/transfer_send_result.dart';
+export 'transfer_verify_result/transfer_verify_result.dart';

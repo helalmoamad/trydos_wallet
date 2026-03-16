@@ -10,10 +10,25 @@ abstract class ApiPaths {
   /// Wallet transactions (cursor pagination).
   static const String myTransactions = '/financial-ledger';
 
+  // ─── Transfer Purposes ───
+  /// Purposes used in send/request UI.
+  /// Query: type (ALL/SEND/REQUEST)
+  static const String transferPurpose = '/transfer-purpose';
+
+  /// Lookup recipient account by full account number.
+  static String lookupAccount(String accountNumber) =>
+      '/transfers/lookup-account/$accountNumber';
+
+  /// Verify transfer before sending.
+  static const String verifyTransfer = '/transfers/verify';
+
+  /// Execute transfer.
+  static const String sendTransfer = '/transfers/send';
+
   // ─── Balances ───
-  /// Wallet balance for specific currency.
-  /// Query: accountSubtype (MAIN/TRADING), assetType (CURRENCY/METAL)
-  static String balance(String assetId) => '/wallets/my/balances/$assetId';
+  /// Wallet accounts and balances by currency symbol.
+  /// Query: currencySymbol (e.g. USD)
+  static const String myAccounts = '/wallets/myAcounts';
 
   // ─── Banks ───
   /// Banks list (GET).
