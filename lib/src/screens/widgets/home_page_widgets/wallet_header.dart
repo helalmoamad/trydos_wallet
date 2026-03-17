@@ -22,8 +22,9 @@ class WalletHeader extends StatelessWidget {
       builder: (context, state) {
         final canScanFromHeader = state.selectedAssetId != null;
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
+          padding: EdgeInsets.only(left: 24, right: 24, top: 20),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               SvgPicture.asset(
@@ -45,12 +46,14 @@ class WalletHeader extends StatelessWidget {
                         );
                       },
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           SvgPicture.asset(
                             TrydosWalletAssets.receive,
                             height: 20,
                             package: TrydosWalletStyles.packageName,
                           ),
+                          SizedBox(height: 5),
                           Text(
                             AppStrings.get(state.languageCode, 'receive_label'),
                             style: TrydosWalletStyles.bodySmall.copyWith(
@@ -62,7 +65,7 @@ class WalletHeader extends StatelessWidget {
                         ],
                       ),
                     )
-                  : const SizedBox.shrink(),
+                  : const SizedBox(height: 30),
               const SizedBox(width: 20),
               state.balanceCardIsSelected
                   ? InkWell(
@@ -77,12 +80,14 @@ class WalletHeader extends StatelessWidget {
                         );
                       },
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           SvgPicture.asset(
                             TrydosWalletAssets.send,
                             height: 20,
                             package: TrydosWalletStyles.packageName,
                           ),
+                          SizedBox(height: 5),
                           Text(
                             AppStrings.get(state.languageCode, 'send_label'),
                             style: TrydosWalletStyles.bodySmall.copyWith(
@@ -94,7 +99,20 @@ class WalletHeader extends StatelessWidget {
                         ],
                       ),
                     )
-                  : const SizedBox.shrink(),
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 25),
+                        Text(
+                          "",
+                          style: TrydosWalletStyles.bodySmall.copyWith(
+                            color: const Color(0xff404040),
+                            fontSize: 11,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
               const SizedBox(width: 20),
               InkWell(
                 onTap: () async {

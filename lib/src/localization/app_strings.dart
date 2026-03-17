@@ -85,7 +85,7 @@ class AppStrings {
       'enter_note_receiver': 'Enter Your Note To See On Receiver Account',
 
       // Send Flow
-      'transfer_send': 'Transfer / Send',
+      'transfer_send': 'Transfer | Send',
       'sender_account': 'Sender Account',
       'send_to': 'Send To',
       'recipient_account': 'Recipient Account',
@@ -309,7 +309,7 @@ class AppStrings {
       'enter_note_receiver': 'أدخل ملاحظتك ليراها حساب المستلم',
 
       // Send Flow
-      'transfer_send': 'تحويل / إرسال',
+      'transfer_send': 'تحويل | إرسال',
       'sender_account': 'حساب المرسل',
       'send_to': 'إرسال إلى',
       'recipient_account': 'حساب المستلم',
@@ -536,7 +536,7 @@ class AppStrings {
       'enter_note_receiver': 'تێبینی بنووسە بۆ هەژماری وەرگر',
 
       // Send Flow
-      'transfer_send': 'گواستنەوە / ناردن',
+      'transfer_send': 'گواستنەوە | ناردن',
       'sender_account': 'هەژماری نێرەر',
       'send_to': 'ناردن بۆ',
       'recipient_account': 'هەژماری وەرگر',
@@ -763,7 +763,7 @@ class AppStrings {
       'enter_note_receiver': 'Alıcı hesabında görünecek notu girin',
 
       // Send Flow
-      'transfer_send': 'Transfer / Gönder',
+      'transfer_send': 'Transfer | Gönder',
       'sender_account': 'Gönderen Hesabı',
       'send_to': 'Şuna Gönder',
       'recipient_account': 'Alıcı Hesabı',

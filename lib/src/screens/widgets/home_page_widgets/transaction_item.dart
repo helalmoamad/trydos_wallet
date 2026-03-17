@@ -11,6 +11,7 @@ class TransactionItem extends StatelessWidget {
   final String subtitle;
   final Color subtitleColor;
   final String amount;
+  final String symbol;
   final Color amountColor;
   final String status;
   final Color statusColor;
@@ -21,6 +22,7 @@ class TransactionItem extends StatelessWidget {
     super.key,
     required this.icon,
     required this.directionIcon,
+    required this.symbol,
     required this.title,
     this.titleColor = Colors.black87,
     required this.subtitle,
@@ -43,7 +45,7 @@ class TransactionItem extends StatelessWidget {
         decoration: BoxDecoration(
           border: isSelected
               ? Border.all(color: const Color(0xFFD3D3D3))
-              : Border.all(color: Colors.transparent),
+              : null,
           color: const Color(0xFFFCFCFC),
           borderRadius: BorderRadius.circular(15),
         ),
@@ -67,7 +69,6 @@ class TransactionItem extends StatelessWidget {
                   Text(
                     title,
                     style: TrydosWalletStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w500,
                       fontSize: 13,
                       color: titleColor,
                     ),
@@ -86,13 +87,24 @@ class TransactionItem extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  amount,
-                  style: TrydosWalletStyles.bodyMedium.copyWith(
-                    fontWeight: isSelected ? FontWeight.bold : null,
-                    color: amountColor,
-                    fontSize: 13,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      amount,
+                      style: TrydosWalletStyles.bodyMedium.copyWith(
+                        fontWeight: isSelected ? FontWeight.bold : null,
+                        color: amountColor,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Text(
+                      symbol,
+                      style: TrydosWalletStyles.bodyMedium.copyWith(
+                        color: amountColor,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(

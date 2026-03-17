@@ -70,7 +70,7 @@ class _SendModalState extends State<SendModal> {
                     child: Center(
                       child: Container(
                         width: 40,
-                        height: 4,
+                        height: 2,
                         decoration: BoxDecoration(
                           color: const Color(0xffC4C2C2),
                           borderRadius: BorderRadius.circular(2),
@@ -174,7 +174,7 @@ class _SendModalState extends State<SendModal> {
           borderRadius: BorderRadius.circular(15),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             SvgPicture.asset(
               icon,
@@ -200,7 +200,7 @@ class _SendModalState extends State<SendModal> {
                       Row(children: actions1),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 5),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -237,7 +237,7 @@ class _SendModalState extends State<SendModal> {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.only(top: 15, bottom: 15, left: 15),
       decoration: BoxDecoration(
         color: const Color(0xffF7F7F7),
         borderRadius: BorderRadius.circular(15),
@@ -246,7 +246,7 @@ class _SendModalState extends State<SendModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SvgPicture.asset(
                 TrydosWalletAssets.billPayments,
@@ -280,10 +280,13 @@ class _SendModalState extends State<SendModal> {
                         ),
                       ],
                     ),
-                    _buildTextAction(
-                      AppStrings.get(state.languageCode, 'history'),
-                      11,
-                      onTap: () {},
+                    Padding(
+                      padding: const EdgeInsets.only(right: 15.0),
+                      child: _buildTextAction(
+                        AppStrings.get(state.languageCode, 'history'),
+                        11,
+                        onTap: () {},
+                      ),
                     ),
                   ],
                 ),
@@ -338,6 +341,7 @@ class _SendModalState extends State<SendModal> {
           fontSize: fontSize,
           height: 1.3,
           decoration: TextDecoration.underline,
+          decorationColor: const Color(0xff8D8D8D),
         ),
       ),
     );

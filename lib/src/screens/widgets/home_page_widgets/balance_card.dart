@@ -42,18 +42,13 @@ class BalanceCard extends StatelessWidget {
           onTap: onTap,
           child: isSelected
               ? Container(
+                  height: 120,
                   width: MediaQuery.of(context).size.width,
-                  padding: const EdgeInsets.only(top: 12, left: 15, right: 15),
+                  padding: const EdgeInsets.only(top: 12, left: 7, right: 15),
                   decoration: BoxDecoration(
                     color: color,
                     borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    border: Border.all(color: Color(0xffD3D3D3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,12 +59,15 @@ class BalanceCard extends StatelessWidget {
                         children: [
                           if (symbolImageUrl != null &&
                               symbolImageUrl!.isNotEmpty)
-                            Image.network(
-                              symbolImageUrl!,
-                              height: 20,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  _buildFallbackIcon(),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 5),
+                              child: Image.network(
+                                symbolImageUrl!,
+                                height: 20,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _buildFallbackIcon(),
+                              ),
                             )
                           else
                             _buildFallbackIcon(),
@@ -78,13 +76,13 @@ class BalanceCard extends StatelessWidget {
                             currencyName,
                             style: TrydosWalletStyles.bodySmall.copyWith(
                               color: Colors.white,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 11,
                             ),
                           ),
                         ],
                       ),
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 5),
+                        padding: const EdgeInsets.only(bottom: 10),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           textBaseline: TextBaseline.alphabetic,
@@ -107,12 +105,15 @@ class BalanceCard extends StatelessWidget {
                                 ),
                               ),
                             const SizedBox(width: 6),
-                            Text(
-                              currencyCode,
-                              style: TrydosWalletStyles.bodySmall.copyWith(
-                                color: Colors.white,
-                                fontSize: 10,
-                                height: 1.3,
+                            Padding(
+                              padding: const EdgeInsets.only(top: 20),
+                              child: Text(
+                                currencyCode,
+                                style: TrydosWalletStyles.bodySmall.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  height: 1.3,
+                                ),
                               ),
                             ),
                             const Spacer(),
@@ -181,18 +182,13 @@ class BalanceCard extends StatelessWidget {
                   ),
                 )
               : Container(
+                  height: 120,
                   width: 200,
-                  padding: const EdgeInsets.only(top: 12, left: 15, right: 15),
+                  padding: const EdgeInsets.only(top: 12, left: 13, right: 15),
                   decoration: BoxDecoration(
                     color: color,
                     borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    border: Border.all(color: Color(0xffD3D3D3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,13 +213,13 @@ class BalanceCard extends StatelessWidget {
                             currencyName,
                             style: TrydosWalletStyles.bodySmall.copyWith(
                               color: Colors.white,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 11,
                             ),
                           ),
                         ],
                       ),
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 5),
+                        padding: const EdgeInsets.only(bottom: 10),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.baseline,
                           textBaseline: TextBaseline.alphabetic,
@@ -246,11 +242,14 @@ class BalanceCard extends StatelessWidget {
                                 ),
                               ),
                             const SizedBox(width: 6),
-                            Text(
-                              currencyCode,
-                              style: TrydosWalletStyles.bodySmall.copyWith(
-                                color: Colors.white,
-                                fontSize: 10,
+                            Padding(
+                              padding: const EdgeInsets.only(top: 20),
+                              child: Text(
+                                currencyCode,
+                                style: TrydosWalletStyles.bodySmall.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                ),
                               ),
                             ),
                           ],

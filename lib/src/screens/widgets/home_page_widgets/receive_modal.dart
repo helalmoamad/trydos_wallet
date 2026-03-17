@@ -6,7 +6,7 @@ import 'package:trydos_wallet/trydos_wallet.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:qr_flutter/qr_flutter.dart';
+import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -264,7 +264,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
           child: Center(
             child: Container(
               width: 40,
-              height: 4,
+              height: 2,
               decoration: BoxDecoration(
                 color: const Color(0xffC4C2C2),
                 borderRadius: BorderRadius.circular(2),
@@ -296,17 +296,18 @@ class _ReceiveModalState extends State<ReceiveModal> {
           ),
           child: Column(
             children: [
-              QrImageView(
-                data: qrPayload,
-                size: 250,
-                backgroundColor: Colors.white,
-                eyeStyle: const QrEyeStyle(
-                  eyeShape: QrEyeShape.square,
-                  color: Color(0xff1D1D1D),
-                ),
-                dataModuleStyle: const QrDataModuleStyle(
-                  dataModuleShape: QrDataModuleShape.square,
-                  color: Color(0xff1D1D1D),
+              SizedBox.square(
+                dimension: 250,
+                child: PrettyQrView.data(
+                  data: qrPayload,
+                  errorCorrectLevel: QrErrorCorrectLevel.M,
+                  decoration: const PrettyQrDecoration(
+                    shape: PrettyQrSmoothSymbol(
+                      color: Color(0xff1D1D1D),
+                      roundFactor: 0.9,
+                    ),
+                    quietZone: PrettyQrQuietZone.modules(0),
+                  ),
                 ),
               ),
               const SizedBox(height: 5),
@@ -496,17 +497,18 @@ class _CleanQRCard extends StatelessWidget {
             package: TrydosWalletStyles.packageName,
           ),
           const SizedBox(height: 20),
-          QrImageView(
-            data: qrPayload,
-            size: 300,
-            backgroundColor: Colors.white,
-            eyeStyle: const QrEyeStyle(
-              eyeShape: QrEyeShape.square,
-              color: Color(0xff1D1D1D),
-            ),
-            dataModuleStyle: const QrDataModuleStyle(
-              dataModuleShape: QrDataModuleShape.square,
-              color: Color(0xff1D1D1D),
+          SizedBox.square(
+            dimension: 300,
+            child: PrettyQrView.data(
+              data: qrPayload,
+              errorCorrectLevel: QrErrorCorrectLevel.M,
+              decoration: const PrettyQrDecoration(
+                shape: PrettyQrSmoothSymbol(
+                  color: Color(0xff1D1D1D),
+                  roundFactor: 0.9,
+                ),
+                quietZone: PrettyQrQuietZone.modules(0),
+              ),
             ),
           ),
           const SizedBox(height: 10),

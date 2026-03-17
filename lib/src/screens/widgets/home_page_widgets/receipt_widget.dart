@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:qr_flutter/qr_flutter.dart';
+import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
@@ -79,17 +79,18 @@ class ReceiptWidget extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          QrImageView(
-            data: _receiptQrPayload(),
-            size: 70,
-            backgroundColor: Colors.white,
-            eyeStyle: const QrEyeStyle(
-              eyeShape: QrEyeShape.square,
-              color: Color(0xff1D1D1D),
-            ),
-            dataModuleStyle: const QrDataModuleStyle(
-              dataModuleShape: QrDataModuleShape.square,
-              color: Color(0xff1D1D1D),
+          SizedBox.square(
+            dimension: 70,
+            child: PrettyQrView.data(
+              data: _receiptQrPayload(),
+              errorCorrectLevel: QrErrorCorrectLevel.M,
+              decoration: const PrettyQrDecoration(
+                shape: PrettyQrSmoothSymbol(
+                  color: Color(0xff1D1D1D),
+                  roundFactor: 0.9,
+                ),
+                quietZone: PrettyQrQuietZone.modules(0),
+              ),
             ),
           ),
           const SizedBox(height: 10),

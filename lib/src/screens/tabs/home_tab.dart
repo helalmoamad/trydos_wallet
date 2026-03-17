@@ -162,7 +162,7 @@ class _HomeTabState extends State<HomeTab> {
     final fmt = amt.abs().toStringAsFixed(
       amt.truncateToDouble() == amt ? 0 : 2,
     );
-    return '$prefix$fmt ${t.assetSymbol}';
+    return '$prefix$fmt ';
   }
 
   @override
@@ -185,139 +185,134 @@ class _HomeTabState extends State<HomeTab> {
             children: [
               const WalletHeader(),
               const Padding(
-                padding: EdgeInsets.only(top: 5, left: 24, right: 24),
+                padding: EdgeInsets.only(top: 1, left: 24, right: 24),
                 child: Divider(color: Color(0xffD3D3D3)),
               ),
               (_selectedCurrencies.isNotEmpty)
                   ? Padding(
-                      padding: const EdgeInsets.only(left: 24, right: 0),
+                      padding: const EdgeInsets.only(
+                        left: 24,
+                        right: 12,
+                        top: 10,
+                        bottom: 10,
+                      ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                AppStrings.get(
-                                  state.languageCode,
-                                  'your_total_balance_of',
-                                ).replaceAll(
-                                  '{currency}',
-                                  _selectedCurrencies[0],
-                                ),
-                                style: TrydosWalletStyles.bodyMedium.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xff1D1D1D),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _hideBalance = !_hideBalance;
-                                  });
-                                },
-                                child: SvgPicture.asset(
-                                  TrydosWalletAssets.hide,
-                                  package: TrydosWalletStyles.packageName,
-                                  colorFilter: ColorFilter.mode(
-                                    _hideBalance
-                                        ? const Color(0xff1D1D1D)
-                                        : const Color(0xff8D8D8D),
-                                    BlendMode.srcIn,
-                                  ),
-                                  height: 15,
-                                ),
-                              ),
-                            ],
-                          ),
-                          TextButton.icon(
-                            onPressed:
-                                state.currenciesStatus == WalletStatus.loading
-                                ? null
-                                : () => context.read<WalletBloc>().add(
-                                    const WalletRefreshAllRequested(),
-                                  ),
-                            icon: SvgPicture.asset(
-                              TrydosWalletAssets.addAccount,
-                              package: TrydosWalletStyles.packageName,
+                          Text(
+                            AppStrings.get(
+                              state.languageCode,
+                              'your_total_balance_of',
+                            ).replaceAll('{currency}', _selectedCurrencies[0]),
+                            style: TrydosWalletStyles.bodyMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                              color: const Color(0xff1D1D1D),
                             ),
-                            label: Text(
-                              AppStrings.get(
-                                state.languageCode,
-                                'add_account_of',
-                              ).replaceAll(
-                                '{currency}',
-                                _selectedCurrencies[0],
+                          ),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                _hideBalance = !_hideBalance;
+                              });
+                            },
+                            child: SizedBox(
+                              height: 15,
+
+                              child: SvgPicture.asset(
+                                TrydosWalletAssets.hide,
+                                package: TrydosWalletStyles.packageName,
+                                colorFilter: ColorFilter.mode(
+                                  _hideBalance
+                                      ? const Color(0xff1D1D1D)
+                                      : const Color(0xff8D8D8D),
+                                  BlendMode.srcIn,
+                                ),
+                                height: 14,
                               ),
-                              style: TrydosWalletStyles.bodySmall.copyWith(
-                                color: const Color(0xFF388CFF),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
+                            ),
+                          ),
+                          const Spacer(),
+
+                          SvgPicture.asset(
+                            TrydosWalletAssets.addAccount,
+                            package: TrydosWalletStyles.packageName,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            AppStrings.get(
+                              state.languageCode,
+                              'add_account_of',
+                            ).replaceAll('{currency}', _selectedCurrencies[0]),
+                            style: TrydosWalletStyles.bodySmall.copyWith(
+                              color: const Color(0xFF388CFF),
+
+                              fontSize: 11,
                             ),
                           ),
                         ],
                       ),
                     )
                   : Padding(
-                      padding: const EdgeInsets.only(left: 24, right: 0),
+                      padding: const EdgeInsets.only(
+                        left: 24,
+                        right: 12,
+                        top: 10,
+                        bottom: 10,
+                      ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                AppStrings.get(
-                                  state.languageCode,
-                                  'your_total_balance',
-                                ),
-                                style: TrydosWalletStyles.bodyMedium.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xff1D1D1D),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _hideBalance = !_hideBalance;
-                                  });
-                                },
-                                child: SvgPicture.asset(
-                                  TrydosWalletAssets.hide,
-                                  package: TrydosWalletStyles.packageName,
-                                  colorFilter: ColorFilter.mode(
-                                    _hideBalance
-                                        ? Colors.black
-                                        : const Color(0xff8D8D8D),
-                                    BlendMode.srcIn,
-                                  ),
-                                  height: 15,
-                                ),
-                              ),
-                            ],
-                          ),
-                          TextButton.icon(
-                            onPressed:
-                                state.currenciesStatus == WalletStatus.loading
-                                ? null
-                                : () => context.read<WalletBloc>().add(
-                                    const WalletRefreshAllRequested(),
-                                  ),
-                            icon: SvgPicture.asset(
-                              TrydosWalletAssets.addCurrency,
-                              package: TrydosWalletStyles.packageName,
+                          Text(
+                            AppStrings.get(
+                              state.languageCode,
+                              'your_total_balance',
                             ),
-                            label: Text(
-                              AppStrings.get(
-                                state.languageCode,
-                                'add_currency',
+                            style: TrydosWalletStyles.bodyMedium.copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xff1D1D1D),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                _hideBalance = !_hideBalance;
+                              });
+                            },
+                            child: SizedBox(
+                              height: 15,
+
+                              child: SvgPicture.asset(
+                                TrydosWalletAssets.hide,
+                                package: TrydosWalletStyles.packageName,
+                                colorFilter: ColorFilter.mode(
+                                  _hideBalance
+                                      ? Colors.black
+                                      : const Color(0xff8D8D8D),
+                                  BlendMode.srcIn,
+                                ),
+                                height: 11,
                               ),
-                              style: TrydosWalletStyles.bodySmall.copyWith(
-                                color: const Color(0xFF388CFF),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
+                            ),
+                          ),
+                          Spacer(),
+
+                          SvgPicture.asset(
+                            TrydosWalletAssets.addCurrency,
+                            package: TrydosWalletStyles.packageName,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            AppStrings.get(state.languageCode, 'add_currency'),
+                            style: TrydosWalletStyles.bodySmall.copyWith(
+                              color: const Color(0xFF388CFF),
+
+                              fontSize: 11,
                             ),
                           ),
                         ],
@@ -325,6 +320,7 @@ class _HomeTabState extends State<HomeTab> {
                     ),
               SizedBox(
                 height: 120,
+                width: 200,
                 child: Builder(
                   builder: (context) {
                     if (state.currenciesStatus == WalletStatus.loading &&
@@ -483,18 +479,19 @@ class _HomeTabState extends State<HomeTab> {
                   },
                 ),
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
                   _getTransactionsTitle(state.languageCode),
                   style: TrydosWalletStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.bold,
+                    fontSize: 11,
                     color: const Color(0xff1D1D1D),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               if (state.transactionsStatus == WalletStatus.loading &&
                   state.transactions.isEmpty)
                 const Padding(
@@ -526,8 +523,10 @@ class _HomeTabState extends State<HomeTab> {
                       ),
                       subtitle: _transactionSubtitle(
                         state.languageCode,
+
                         transactions[index],
                       ),
+                      symbol: transactions[index].assetSymbol,
                       amount: _formatAmount(transactions[index]),
                       status: _transactionStatus(
                         state.languageCode,

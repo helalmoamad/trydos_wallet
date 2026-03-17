@@ -75,10 +75,10 @@ class _WalletTabState extends State<WalletTab> {
                 padding: ResponsivePadding.only(
                   start: 24,
                   end: 24,
-                  top: 5,
+                  top: 1,
                   isRtl: state.isRtl,
                 ),
-                child: const Divider(color: Color(0xffD3D3D3)),
+                child: const Divider(height: 0.5, color: Color(0xffD3D3D3)),
               ),
               Padding(
                 padding: ResponsivePadding.horizontal(
