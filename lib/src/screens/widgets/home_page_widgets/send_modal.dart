@@ -7,20 +7,31 @@ import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/transfer_send_modal.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
+import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 
 enum SendModalView { main, transfer }
 
 /// ويدجت يعرض الـ Bottom Sheet الخاص بعمليات الإرسال والدفع.
 class SendModal extends StatefulWidget {
   final ScrollController? scrollController;
-  const SendModal({super.key, this.scrollController});
+  final QrTransferPayload? initialPayload;
+
+  const SendModal({super.key, this.scrollController, this.initialPayload});
 
   @override
   State<SendModal> createState() => _SendModalState();
 }
 
 class _SendModalState extends State<SendModal> {
-  SendModalView _currentView = SendModalView.main;
+  late SendModalView _currentView;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentView = widget.initialPayload == null
+        ? SendModalView.main
+        : SendModalView.transfer;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +44,7 @@ class _SendModalState extends State<SendModal> {
             TransferSendModal(
               key: const ValueKey('transfer'),
               scrollController: widget.scrollController,
+              initialPayload: widget.initialPayload,
             ),
           ],
         );
@@ -88,7 +100,10 @@ class _SendModalState extends State<SendModal> {
                   _buildActionCard(
                     icon: TrydosWalletAssets.transferSend,
                     title: AppStrings.get(state.languageCode, 'transfer_send'),
-                    subtitle: AppStrings.get(state.languageCode, 'transfer_send_msg'),
+                    subtitle: AppStrings.get(
+                      state.languageCode,
+                      'transfer_send_msg',
+                    ),
                     onTap: () =>
                         setState(() => _currentView = SendModalView.transfer),
                     actions2: [
@@ -104,8 +119,14 @@ class _SendModalState extends State<SendModal> {
                   // Second Card: Cash Withdrawal
                   _buildActionCard(
                     icon: TrydosWalletAssets.cashWithdrawal,
-                    title: AppStrings.get(state.languageCode, 'cash_withdrawal'),
-                    subtitle: AppStrings.get(state.languageCode, 'withdrawal_msg'),
+                    title: AppStrings.get(
+                      state.languageCode,
+                      'cash_withdrawal',
+                    ),
+                    subtitle: AppStrings.get(
+                      state.languageCode,
+                      'withdrawal_msg',
+                    ),
                     onTap: () {},
                     actions1: [
                       _buildTextAction(

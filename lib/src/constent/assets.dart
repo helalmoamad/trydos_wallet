@@ -11,6 +11,7 @@ class TrydosWalletAssets {
   static const String rammazDigitalBanking =
       '$_svgPath/rammaz_digital_banking.svg';
   static const String setting = '$_svgPath/setting.svg';
+  static const String depositSend = '$_svgPath/deposit_send.svg';
   static const String addCurrency = '$_svgPath/add_currency.svg';
   static const String transactions = '$_svgPath/transactions.svg';
   static const String addresses = '$_svgPath/addresses.svg';

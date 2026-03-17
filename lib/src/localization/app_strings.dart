@@ -215,6 +215,8 @@ class AppStrings {
       'reference_id': 'Reference | ID',
       'minutes_until': ' Minutes Until ',
       'select_purpose_send': 'Select Purpose Of Money Send',
+      'select_currency_to_send_msg':
+          'Please select a currency before scanning to send',
       'send_label': 'Send',
       'receive_label': 'Receive',
       'chart': 'Chart',
@@ -432,6 +434,7 @@ class AppStrings {
       'reference_id': 'المرجع | المعرف',
       'minutes_until': ' دقائق حتى ',
       'select_purpose_send': 'اختر الغرض من إرسال المال',
+      'select_currency_to_send_msg': 'يجب اختيار عملة قبل مسح الباركود للإرسال',
       'send_label': 'إرسال',
       'receive_label': 'استلام',
       'until': 'حتى',
@@ -657,6 +660,8 @@ class AppStrings {
       'reference_id': 'سەرچاوە | ناسنامە',
       'minutes_until': ' خولەک تاوەکو ',
       'select_purpose_send': 'هۆکاری ناردنی پارە هەڵبژێرە',
+      'select_currency_to_send_msg':
+          'پێویستە پێش سکانکردنی کۆد بۆ ناردن، دراوێک هەڵبژێریت',
       'send_label': 'ناردن',
       'receive_label': 'وەرگرتن',
       'until': 'تاوەکو',
@@ -881,6 +886,8 @@ class AppStrings {
       'reference_id': 'Referans | ID',
       'minutes_until': ' Dakika Kaldı ',
       'select_purpose_send': 'Para Gönderim Amacını Seçin',
+      'select_currency_to_send_msg':
+          'Göndermek için barkodu taramadan önce bir para birimi seçin',
       'send_label': 'Gönder',
       'receive_label': 'Al',
       'until': 'kadar',

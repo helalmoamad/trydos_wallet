@@ -8,6 +8,8 @@ class CursorPaginatedResponse<T> {
     required this.hasNextPage,
     required this.hasPreviousPage,
     required this.total,
+    this.page,
+    this.totalPages,
   });
 
   factory CursorPaginatedResponse.fromJson(
@@ -15,14 +17,25 @@ class CursorPaginatedResponse<T> {
     T Function(dynamic) fromJsonT,
   ) {
     final itemsJson = json['items'] as List<dynamic>? ?? [];
+    final page = json['page'] as int?;
+    final hasNextPage =
+        json['hasNextPage'] as bool? ?? json['hasNext'] as bool? ?? false;
     return CursorPaginatedResponse(
       items: itemsJson.map((e) => fromJsonT(e)).toList(),
       startCursor: json['startCursor'] as String?,
-      endCursor: json['endCursor'] as String?,
+      endCursor:
+          json['endCursor'] as String? ??
+          json['cursor'] as String? ??
+          (hasNextPage && page != null ? (page + 1).toString() : null),
       limit: json['limit'] as int? ?? 10,
-      hasNextPage: json['hasNextPage'] as bool? ?? false,
-      hasPreviousPage: json['hasPreviousPage'] as bool? ?? false,
+      hasNextPage: hasNextPage,
+      hasPreviousPage:
+          json['hasPreviousPage'] as bool? ??
+          json['hasPrevious'] as bool? ??
+          false,
       total: json['total'] as int? ?? 0,
+      page: page,
+      totalPages: json['totalPages'] as int?,
     );
   }
 
@@ -33,4 +46,6 @@ class CursorPaginatedResponse<T> {
   final bool hasNextPage;
   final bool hasPreviousPage;
   final int total;
+  final int? page;
+  final int? totalPages;
 }

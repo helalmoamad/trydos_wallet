@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -14,6 +15,7 @@ import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/receipt_widget.dart';
+import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 import 'package:trydos_wallet/src/utils/ui_utils.dart';
 
 class SuccessfulPage extends StatefulWidget {
@@ -64,6 +66,20 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
   final GlobalKey _receiptKey = GlobalKey();
   bool _isDownloading = false;
   bool _isSharing = false;
+
+  String _successQrPayload() {
+    return QrTransferPayloadCodec.buildTransferResultPayload(
+      senderAccount: widget.senderAccount,
+      recipientAccount: widget.recipientAccount,
+      amount: widget.amount,
+      currencySymbol: widget.currencySymbol,
+      reference: widget.reference,
+      dateAndTime: widget.dateAndTimeString,
+      transferType: widget.type,
+      purpose: widget.purpose,
+      isSuccess: widget.isSuccess,
+    );
+  }
 
   Future<Uint8List?> _captureReceipt() async {
     try {
@@ -243,10 +259,18 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  SvgPicture.asset(
-                    TrydosWalletAssets.realQr,
-                    height: 120,
-                    package: TrydosWalletStyles.packageName,
+                  QrImageView(
+                    data: _successQrPayload(),
+                    size: 120,
+                    backgroundColor: const Color(0xffF4FFFA),
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: Color(0xff1D1D1D),
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Color(0xff1D1D1D),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
@@ -283,7 +307,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                     _buildInfoRow(
                       AppStrings.get(state.languageCode, 'recipient_account'),
                       widget.recipientAccount,
-                      isFromQr: widget.isFromQr,
+                      qrData: widget.isFromQr ? _successQrPayload() : null,
                     ),
                   const SizedBox(height: 15),
                   Row(
@@ -427,7 +451,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
     String label,
     String value, {
     bool isBold = false,
-    bool isFromQr = false,
+    String? qrData,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -446,7 +470,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
         const SizedBox(height: 5),
         Row(
           children: [
-            if (isFromQr) ...[
+            if (qrData != null && qrData.isNotEmpty) ...[
               SvgPicture.asset(
                 TrydosWalletAssets.realQr,
                 height: 16,

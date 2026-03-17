@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,10 +8,17 @@ import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/successful_page.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/qr_scanner_page.dart';
+import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 
 class TransferSendModal extends StatefulWidget {
   final ScrollController? scrollController;
-  const TransferSendModal({super.key, this.scrollController});
+  final QrTransferPayload? initialPayload;
+
+  const TransferSendModal({
+    super.key,
+    this.scrollController,
+    this.initialPayload,
+  });
 
   @override
   State<TransferSendModal> createState() => _TransferSendModalState();
@@ -72,7 +78,51 @@ class _TransferSendModalState extends State<TransferSendModal> {
   bool get isExpired =>
       isRequestFlow &&
       expiryTime != null &&
-      DateTime.now().isBefore(expiryTime!);
+      DateTime.now().isAfter(expiryTime!);
+
+  Future<void> _applyScannedPayload(QrTransferPayload payload) async {
+    setState(() {
+      isFromQr = true;
+      currentInputType = RecipientInputType.account;
+      recipientController.text = payload.accountNumber;
+      maskedAccountName = payload.accountName;
+      recipientErrorMessage = null;
+      recipientAccountName = payload.accountName;
+    });
+
+    if (payload.isRequestFlow) {
+      setState(() {
+        isRequestFlow = true;
+        amountController.text = payload.amount ?? '';
+        referenceId = payload.reference;
+        qrPurpose = payload.purpose;
+        requestType = payload.requestType;
+        expiryTime = payload.expiryTime;
+        if ((payload.note ?? '').isNotEmpty) {
+          noteController.text = payload.note!;
+        }
+        isRecipientVerified = true;
+        isAmountVerified = true;
+        isEditingRecipient = false;
+        isEditingAmount = false;
+      });
+      return;
+    }
+
+    setState(() {
+      isRequestFlow = false;
+      referenceId = null;
+      qrPurpose = null;
+      requestType = null;
+      expiryTime = null;
+      isEditingRecipient = true;
+      isEditingAmount = true;
+      isAmountVerified = false;
+      amountErrorMessage = null;
+    });
+
+    await _verifyRecipient();
+  }
 
   @override
   void initState() {
@@ -124,6 +174,13 @@ class _TransferSendModalState extends State<TransferSendModal> {
     idController.addListener(() => setState(() {}));
     amountController.addListener(() => setState(() {}));
     noteController.addListener(() => setState(() {}));
+    final initialPayload = widget.initialPayload;
+    if (initialPayload != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _applyScannedPayload(initialPayload);
+      });
+    }
   }
 
   void _resetRecipientLookupState() {
@@ -1465,45 +1522,22 @@ class _TransferSendModalState extends State<TransferSendModal> {
                   context: context,
                   builder: (context, sc) => QRScannerPage(scrollController: sc),
                 );
-                if (result != null) {
-                  setState(() {
-                    isFromQr = true;
-                    try {
-                      final data = jsonDecode(result);
-                      if (data is Map<String, dynamic> &&
-                          data.containsKey('expiry_time') &&
-                          data.containsKey('amount')) {
-                        isRequestFlow = true;
-                        currentInputType = RecipientInputType.account;
-                        recipientController.text =
-                            data['account_id']?.toString() ?? '';
-                        amountController.text =
-                            data['amount']?.toString() ?? '';
-                        referenceId = data['reference']?.toString();
-                        qrPurpose = data['purpose']?.toString();
-                        requestType = data['type']?.toString();
-                        maskedAccountName = data['account_name']?.toString();
-                        if (data['expiry_time'] != null) {
-                          expiryTime = DateTime.parse(data['expiry_time']);
-                        }
-                        isRecipientVerified = true;
-                        isAmountVerified = true;
-                        isEditingRecipient = false;
-                        isEditingAmount = false;
-                      } else {
-                        isRequestFlow = false;
-                        currentInputType = RecipientInputType.account;
-                        recipientController.text = result;
-                        _verifyRecipient();
-                      }
-                    } catch (e) {
-                      isRequestFlow = false;
-                      currentInputType = RecipientInputType.account;
-                      recipientController.text = result;
-                      _verifyRecipient();
-                    }
-                  });
+                if (result == null) {
+                  return;
                 }
+
+                final payload = QrTransferPayloadCodec.tryParse(result);
+                if (payload == null) {
+                  if (!mounted) return;
+                  showMessage(
+                    AppStrings.get(state.languageCode, 'incorrect_account_msg'),
+                    context: context,
+                    type: MessageType.error,
+                  );
+                  return;
+                }
+
+                await _applyScannedPayload(payload);
               },
               child: SvgPicture.asset(
                 TrydosWalletAssets.qr,
@@ -1536,10 +1570,10 @@ class _TransferSendModalState extends State<TransferSendModal> {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xff388CFF) : Colors.white,
+          color: isSelected ? const Color(0xffFCFCFC) : Colors.white,
           border: Border.all(
             color: isSelected
-                ? const Color(0xff388CFF)
+                ? const Color(0xff5D5C5D)
                 : const Color(0xffD3D3D3),
           ),
           borderRadius: BorderRadius.circular(20),

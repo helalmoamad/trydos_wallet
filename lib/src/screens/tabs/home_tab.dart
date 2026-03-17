@@ -72,6 +72,11 @@ class _HomeTabState extends State<HomeTab> {
   }
 
   String _transactionIcon(Transaction t) {
+    if (t.isAccountTransfer) {
+      return t.isDeposit
+          ? TrydosWalletAssets.depositReceive
+          : TrydosWalletAssets.depositSend;
+    }
     final type = t.type.toUpperCase();
     if (type == 'DEPOSIT') return TrydosWalletAssets.cashDeposit;
     if (type == 'WITHDRAWAL') return TrydosWalletAssets.cashWithdrawal;
@@ -85,15 +90,70 @@ class _HomeTabState extends State<HomeTab> {
   String _transactionDirectionIcon(Transaction t) =>
       t.isDeposit ? TrydosWalletAssets.downArrow : TrydosWalletAssets.upArrow;
 
-  String _formatTransactionDate(String? iso) {
+  String _monthLabel(String languageCode, int month) {
+    const monthKeys = [
+      'jan',
+      'feb',
+      'mar',
+      'apr',
+      'may',
+      'jun',
+      'jul',
+      'aug',
+      'sep',
+      'oct',
+      'nov',
+      'dec',
+    ];
+    return AppStrings.get(languageCode, monthKeys[month - 1]);
+  }
+
+  String _formatTransactionDate(String languageCode, String? iso) {
     if (iso == null || iso.isEmpty) return '';
     try {
       final dt = DateTime.tryParse(iso);
       if (dt == null) return iso;
-      return '${dt.day}.${dt.month} | ${dt.year}';
+      return '${dt.day}.${_monthLabel(languageCode, dt.month)}';
     } catch (_) {
       return iso;
     }
+  }
+
+  String _transactionTitle(String languageCode, Transaction t) {
+    if (t.isAccountTransfer) {
+      return t.isDeposit
+          ? AppStrings.get(languageCode, 'receive_label').replaceAll('/', '|')
+          : AppStrings.get(languageCode, 'transfer_send').replaceAll('/', '|');
+    }
+    return t.title.isNotEmpty ? t.title : t.type;
+  }
+
+  String _transactionSubtitle(String languageCode, Transaction t) {
+    final date = _formatTransactionDate(languageCode, t.createdAt);
+    if (t.isAccountTransfer) {
+      final party = t.isOutgoing ? t.receiverAccount : t.senderAccount;
+      final details = <String>[
+        if (date.isNotEmpty) date,
+        if (party.accountNumber.isNotEmpty) party.accountNumber,
+        if (party.name.isNotEmpty) party.name,
+      ];
+      return details.join(' | ');
+    }
+    return date;
+  }
+
+  String _transactionStatus(String languageCode, Transaction t) {
+    final status = t.status.toUpperCase();
+    if (status == 'COMPLETED') {
+      return AppStrings.get(languageCode, 'success');
+    }
+    if (status == 'FAILED') {
+      return AppStrings.get(languageCode, 'failed');
+    }
+    if (status == 'PENDING') {
+      return AppStrings.get(languageCode, 'pending');
+    }
+    return t.status;
   }
 
   String _formatAmount(Transaction t) {
@@ -460,17 +520,22 @@ class _HomeTabState extends State<HomeTab> {
                       directionIcon: _transactionDirectionIcon(
                         transactions[index],
                       ),
-                      title: transactions[index].title.isNotEmpty
-                          ? transactions[index].title
-                          : transactions[index].type,
-                      subtitle: _formatTransactionDate(
-                        transactions[index].createdAt,
+                      title: _transactionTitle(
+                        state.languageCode,
+                        transactions[index],
+                      ),
+                      subtitle: _transactionSubtitle(
+                        state.languageCode,
+                        transactions[index],
                       ),
                       amount: _formatAmount(transactions[index]),
-                      status: '',
+                      status: _transactionStatus(
+                        state.languageCode,
+                        transactions[index],
+                      ),
                       amountColor: const Color(0xff1D1D1D),
                       titleColor: const Color(0xff1D1D1D),
-                      statusColor: const Color(0xff1D1D1D),
+                      statusColor: const Color(0xff8D8D8D),
                       subtitleColor: const Color(0xff8D8D8D),
                       isSelected: _selectedTransactionIndex == index,
                       onTap: () {

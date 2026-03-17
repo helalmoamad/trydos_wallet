@@ -6,12 +6,14 @@ import 'package:trydos_wallet/trydos_wallet.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/request_qr_modal.dart';
+import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 
 enum ReceiveModalView { main, request }
 
@@ -30,10 +32,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
   bool _isSharing = false;
   ReceiveModalView _currentView = ReceiveModalView.main;
 
-  static const String _fallbackAccountName =
-      'Ramaaz Bilisim Teknolojileri Yazilim Limited Sirketi';
   static const String _maskedName = 'RBTYLS';
-  static const String _fallbackAccountNumber = '100-708';
 
   @override
   void initState() {
@@ -60,12 +59,29 @@ class _ReceiveModalState extends State<ReceiveModal> {
 
   String _accountNameFromState(WalletState state) {
     final accountName = _resolveReceiveBalance(state)?.accountName ?? '';
-    return accountName.isNotEmpty ? accountName : _fallbackAccountName;
+    return accountName;
   }
 
   String _accountNumberFromState(WalletState state) {
     final accountNumber = _resolveReceiveBalance(state)?.accountNumber ?? '';
-    return accountNumber.isNotEmpty ? accountNumber : _fallbackAccountNumber;
+    return accountNumber;
+  }
+
+  String _currencySymbolFromState(WalletState state) {
+    final symbol = _resolveReceiveBalance(state)?.assetSymbol ?? '';
+    return symbol;
+  }
+
+  String _buildReceiveQrPayload(
+    WalletState state,
+    String accountName,
+    String accountNumber,
+  ) {
+    return QrTransferPayloadCodec.buildReceivePayload(
+      accountNumber: accountNumber,
+      accountName: accountName,
+      currencySymbol: _currencySymbolFromState(state),
+    );
   }
 
   void _handleCopy() {
@@ -174,6 +190,11 @@ class _ReceiveModalState extends State<ReceiveModal> {
       builder: (context, state) {
         final accountName = _accountNameFromState(state);
         final accountNumber = _accountNumberFromState(state);
+        final qrPayload = _buildReceiveQrPayload(
+          state,
+          accountName,
+          accountNumber,
+        );
         return Stack(
           children: [
             // Hidden card for screen capture
@@ -185,6 +206,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
                 child: _CleanQRCard(
                   accountName: _isMasked ? _maskedName : accountName,
                   accountNumber: accountNumber,
+                  qrPayload: qrPayload,
                   languageCode: state.languageCode,
                 ),
               ),
@@ -204,6 +226,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
                               state,
                               accountName,
                               accountNumber,
+                              qrPayload,
                             )
                           : RequestQRModal(
                               scrollController: widget.scrollController,
@@ -231,6 +254,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
     WalletState state,
     String accountName,
     String accountNumber,
+    String qrPayload,
   ) {
     return Column(
       children: [
@@ -272,10 +296,18 @@ class _ReceiveModalState extends State<ReceiveModal> {
           ),
           child: Column(
             children: [
-              SvgPicture.asset(
-                TrydosWalletAssets.realQr,
-                height: 250,
-                package: TrydosWalletStyles.packageName,
+              QrImageView(
+                data: qrPayload,
+                size: 250,
+                backgroundColor: Colors.white,
+                eyeStyle: const QrEyeStyle(
+                  eyeShape: QrEyeShape.square,
+                  color: Color(0xff1D1D1D),
+                ),
+                dataModuleStyle: const QrDataModuleStyle(
+                  dataModuleShape: QrDataModuleShape.square,
+                  color: Color(0xff1D1D1D),
+                ),
               ),
               const SizedBox(height: 5),
               Text(
@@ -318,6 +350,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
           children: [
             _buildActionButton(
               asset: TrydosWalletAssets.generate,
+
               label: AppStrings.get(state.languageCode, 'request'),
               onTap: () {
                 setState(() {
@@ -436,11 +469,13 @@ class _ReceiveModalState extends State<ReceiveModal> {
 class _CleanQRCard extends StatelessWidget {
   final String accountName;
   final String accountNumber;
+  final String qrPayload;
   final String languageCode;
 
   const _CleanQRCard({
     required this.accountName,
     required this.accountNumber,
+    required this.qrPayload,
     required this.languageCode,
   });
 
@@ -461,10 +496,18 @@ class _CleanQRCard extends StatelessWidget {
             package: TrydosWalletStyles.packageName,
           ),
           const SizedBox(height: 20),
-          SvgPicture.asset(
-            TrydosWalletAssets.realQr,
-            height: 300,
-            package: TrydosWalletStyles.packageName,
+          QrImageView(
+            data: qrPayload,
+            size: 300,
+            backgroundColor: Colors.white,
+            eyeStyle: const QrEyeStyle(
+              eyeShape: QrEyeShape.square,
+              color: Color(0xff1D1D1D),
+            ),
+            dataModuleStyle: const QrDataModuleStyle(
+              dataModuleShape: QrDataModuleShape.square,
+              color: Color(0xff1D1D1D),
+            ),
           ),
           const SizedBox(height: 10),
           Text(

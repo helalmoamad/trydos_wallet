@@ -1,11 +1,12 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/receive_modal.dart';
 import 'package:trydos_wallet/src/screens/widgets/widgets.dart';
+import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
 class QRScannerPage extends StatefulWidget {
@@ -17,26 +18,38 @@ class QRScannerPage extends StatefulWidget {
 }
 
 class _QRScannerPageState extends State<QRScannerPage> {
+  final MobileScannerController _scannerController = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    formats: const [BarcodeFormat.qrCode],
+  );
+  bool _didReturnResult = false;
+
   @override
-  void initState() {
-    super.initState();
-    // Simulate scanning for 5 seconds
-    Timer(const Duration(seconds: 5), () {
-      if (mounted) {
-        // Mock data for a Request Flow
-        const mockResult =
-            '{'
-            '"account_id": "100-708",'
-            '"account_name": "R***** B***** T*********** Y***** L******** S*****",'
-            '"amount": "100",'
-            '"reference": "101213",'
-            '"purpose": "work_partnership",'
-            '"type": "Transfer | Send",'
-            '"expiry_time": "2026-03-03T13:59:00Z"'
-            '}';
-        Navigator.pop(context, mockResult);
+  void dispose() {
+    _scannerController.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (!mounted || _didReturnResult) {
+      return;
+    }
+
+    for (final barcode in capture.barcodes) {
+      final raw = barcode.rawValue?.trim();
+      if (raw == null || raw.isEmpty) {
+        continue;
       }
-    });
+
+      final parsed = QrTransferPayloadCodec.tryParse(raw);
+      if (parsed == null || parsed.accountNumber.trim().isEmpty) {
+        continue;
+      }
+
+      _didReturnResult = true;
+      Navigator.pop(context, raw);
+      return;
+    }
   }
 
   @override
@@ -79,31 +92,62 @@ class _QRScannerPageState extends State<QRScannerPage> {
                       color: Colors.black,
                       borderRadius: BorderRadius.circular(30),
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        SvgPicture.asset(
-                          TrydosWalletAssets.qr,
-                          height: 16,
-                          width: 16,
-                          colorFilter: const ColorFilter.mode(
-                            Color(0xffFCFCFC),
-                            BlendMode.srcIn,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(30),
+                      child: Stack(
+                        children: [
+                          MobileScanner(
+                            controller: _scannerController,
+                            onDetect: _onDetect,
                           ),
-                          package: TrydosWalletStyles.packageName,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          AppStrings.get(state.languageCode, 'scan_qr_msg'),
-                          textAlign: TextAlign.center,
-                          style: TrydosWalletStyles.bodyMedium.copyWith(
-                            color: const Color(0xffFCFCFC),
-                            fontSize: 11,
-                            height: 1.3,
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.only(bottom: 10),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withValues(alpha: 0.0),
+                                    Colors.black.withValues(alpha: 0.75),
+                                  ],
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SvgPicture.asset(
+                                    TrydosWalletAssets.qr,
+                                    height: 16,
+                                    width: 16,
+                                    colorFilter: const ColorFilter.mode(
+                                      Color(0xffFCFCFC),
+                                      BlendMode.srcIn,
+                                    ),
+                                    package: TrydosWalletStyles.packageName,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    AppStrings.get(
+                                      state.languageCode,
+                                      'scan_qr_msg',
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    style: TrydosWalletStyles.bodyMedium
+                                        .copyWith(
+                                          color: const Color(0xffFCFCFC),
+                                          fontSize: 11,
+                                          height: 1.3,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 150),

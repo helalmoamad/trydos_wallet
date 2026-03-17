@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
 enum RequestQRState { filling, generating, finalQR }
@@ -46,21 +48,12 @@ class _RequestQRModalState extends State<RequestQRModal> {
   bool _isDownloading = false;
   bool _isSharing = false;
 
-  static const String _fallbackAccountName =
-      'Ramaaz Bilisim Teknolojileri Yazilim Limited Sirketi';
   final String _maskedName = 'RBTYLS';
-  static const String _fallbackAccountNumber = '100-708';
   bool _isNameMasked = false;
 
-  String get _accountName =>
-      widget.accountName != null && widget.accountName!.isNotEmpty
-      ? widget.accountName!
-      : _fallbackAccountName;
+  String get _accountName => widget.accountName?.trim() ?? '';
 
-  String get _accountNumber =>
-      widget.accountNumber != null && widget.accountNumber!.isNotEmpty
-      ? widget.accountNumber!
-      : _fallbackAccountNumber;
+  String get _accountNumber => widget.accountNumber?.trim() ?? '';
 
   final List<String> _expiryOptions = [
     'always',
@@ -101,16 +94,79 @@ class _RequestQRModalState extends State<RequestQRModal> {
         _selectedPurpose.isNotEmpty;
   }
 
+  Duration? _expiryDuration() {
+    switch (_selectedExpiry) {
+      case 'minutes_3':
+        return const Duration(minutes: 3);
+      case 'minutes_15':
+        return const Duration(minutes: 15);
+      case 'hour_1':
+        return const Duration(hours: 1);
+      case 'hours_24':
+        return const Duration(hours: 24);
+      default:
+        return null;
+    }
+  }
+
+  DateTime? _expiryDateTime() {
+    final duration = _expiryDuration();
+    if (duration == null) {
+      return null;
+    }
+    return DateTime.now().add(duration);
+  }
+
+  String _currencySymbol(WalletState state) {
+    return state.balances[state.selectedAssetId ?? '']?.assetSymbol ?? 'SYP';
+  }
+
+  String _monthKey(int month) {
+    const months = [
+      'jan',
+      'feb',
+      'mar',
+      'apr',
+      'may',
+      'jun',
+      'jul',
+      'aug',
+      'sep',
+      'oct',
+      'nov',
+      'dec',
+    ];
+    return months[month - 1];
+  }
+
+  String _validUntilText(WalletState state) {
+    final expiry = _expiryDateTime();
+    if (expiry == null) {
+      return AppStrings.get(state.languageCode, 'always');
+    }
+
+    return '${expiry.hour.toString().padLeft(2, '0')}:${expiry.minute.toString().padLeft(2, '0')} | ${expiry.day} ${AppStrings.get(state.languageCode, _monthKey(expiry.month))} ${expiry.year}';
+  }
+
+  String _requestQrPayload(WalletState state) {
+    return QrTransferPayloadCodec.buildRequestPayload(
+      accountNumber: _accountNumber,
+      accountName: _accountName,
+      currencySymbol: _currencySymbol(state),
+      amount: _amountController.text.trim(),
+      reference: _referenceController.text.trim(),
+      purpose: _selectedPurpose,
+      requestType: AppStrings.get(state.languageCode, 'deposit_request'),
+      expiryTime: _expiryDateTime(),
+      note: _noteController.text.trim().isEmpty
+          ? null
+          : _noteController.text.trim(),
+    );
+  }
+
   void _generateRequest() async {
     if (!_isFormValid) return;
-
-    setState(() => _state = RequestQRState.generating);
-
-    await Future.delayed(const Duration(seconds: 5));
-
-    if (mounted) {
-      setState(() => _state = RequestQRState.finalQR);
-    }
+    setState(() => _state = RequestQRState.finalQR);
   }
 
   Future<Uint8List?> _captureCard() async {
@@ -189,7 +245,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
           [XFile(imagePath)],
           text: AppStrings.get(state.languageCode, 'payment_request_for')
               .replaceAll('{amount}', _amountController.text)
-              .replaceAll('{currency}', 'USD'),
+              .replaceAll('{currency}', _currencySymbol(state)),
         );
       }
     } catch (e) {
@@ -205,6 +261,8 @@ class _RequestQRModalState extends State<RequestQRModal> {
   Widget build(BuildContext context) {
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
+        final qrPayload = _requestQrPayload(state);
+        final validUntilText = _validUntilText(state);
         return SizedBox(
           height: MediaQuery.of(context).size.height * 0.9,
           child: SingleChildScrollView(
@@ -222,10 +280,16 @@ class _RequestQRModalState extends State<RequestQRModal> {
                       child: _CleanRequestQRCard(
                         accountName: _accountName,
                         accountNumber: _accountNumber,
+                        qrPayload: qrPayload,
                         amount: _amountController.text,
+                        currencySymbol: _currencySymbol(state),
                         reference: _referenceController.text,
                         purpose: _purposeName(state, _selectedPurpose),
-                        expiry: _selectedExpiry,
+                        validUntilText: validUntilText,
+                        requestType: AppStrings.get(
+                          state.languageCode,
+                          'deposit_request',
+                        ),
                         note: _noteController.text,
                         languageCode: state.languageCode,
                       ),
@@ -259,7 +323,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
 
                     if (_state == RequestQRState.finalQR) ...[
                       // Final QR View
-                      _buildFinalQRView(state),
+                      _buildFinalQRView(state, qrPayload, validUntilText),
                     ] else ...[
                       // Filling Form (including generating state)
                       _buildFormView(state),
@@ -275,15 +339,16 @@ class _RequestQRModalState extends State<RequestQRModal> {
   }
 
   Widget _buildFormView(WalletState state) {
+    final qrPayload = _requestQrPayload(state);
     return Column(
       children: [
         // Faded QR Placeholder
         Opacity(
           opacity: 0.1,
-          child: SvgPicture.asset(
-            TrydosWalletAssets.realQr,
-            height: 250,
-            package: TrydosWalletStyles.packageName,
+          child: QrImageView(
+            data: qrPayload,
+            size: 250,
+            backgroundColor: Colors.white,
           ),
         ),
         const SizedBox(height: 5),
@@ -356,7 +421,11 @@ class _RequestQRModalState extends State<RequestQRModal> {
     );
   }
 
-  Widget _buildFinalQRView(WalletState state) {
+  Widget _buildFinalQRView(
+    WalletState state,
+    String qrPayload,
+    String validUntilText,
+  ) {
     return Column(
       children: [
         // Vibrant QR Code
@@ -375,10 +444,18 @@ class _RequestQRModalState extends State<RequestQRModal> {
           ),
           child: Column(
             children: [
-              SvgPicture.asset(
-                TrydosWalletAssets.realQr,
-                height: 250,
-                package: TrydosWalletStyles.packageName,
+              QrImageView(
+                data: qrPayload,
+                size: 250,
+                backgroundColor: Colors.white,
+                eyeStyle: const QrEyeStyle(
+                  eyeShape: QrEyeShape.square,
+                  color: Color(0xff1D1D1D),
+                ),
+                dataModuleStyle: const QrDataModuleStyle(
+                  dataModuleShape: QrDataModuleShape.square,
+                  color: Color(0xff1D1D1D),
+                ),
               ),
               const SizedBox(height: 5),
               Text(
@@ -410,7 +487,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
             Expanded(
               child: _buildSummaryBox(
                 AppStrings.get(state.languageCode, 'amount'),
-                '${_amountController.text} USD',
+                '${_amountController.text} ${_currencySymbol(state)}',
               ),
             ),
             const SizedBox(width: 5),
@@ -463,9 +540,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        _selectedExpiry == 'always'
-                            ? AppStrings.get(state.languageCode, 'always')
-                            : '${AppStrings.get(state.languageCode, _selectedExpiry)} ${AppStrings.get(state.languageCode, 'until')} 13:59 | 3 ${AppStrings.get(state.languageCode, 'mar')} 2026',
+                        validUntilText,
                         style: TrydosWalletStyles.bodyMedium.copyWith(
                           color: const Color(0xff1D1D1D),
                           fontSize: 13,
@@ -877,7 +952,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
               TrydosWalletAssets.generate,
               package: TrydosWalletStyles.packageName,
               colorFilter: ColorFilter.mode(
-                isValid ? const Color(0xff388CFF) : const Color(0xff5D5C5D),
+                isValid ? const Color(0xff388CFF) : const Color(0xff8D8D8D),
                 BlendMode.srcIn,
               ),
             ),
@@ -914,6 +989,10 @@ class _RequestQRModalState extends State<RequestQRModal> {
             padding: const EdgeInsets.all(12),
             child: SvgPicture.asset(
               TrydosWalletAssets.cancel,
+              colorFilter: const ColorFilter.mode(
+                Color(0xff8D8D8D),
+                BlendMode.srcIn,
+              ),
               package: TrydosWalletStyles.packageName,
             ),
           ),
@@ -1002,20 +1081,26 @@ class _RequestQRModalState extends State<RequestQRModal> {
 class _CleanRequestQRCard extends StatelessWidget {
   final String accountName;
   final String accountNumber;
+  final String qrPayload;
   final String amount;
+  final String currencySymbol;
   final String reference;
   final String purpose;
-  final String expiry;
+  final String requestType;
+  final String validUntilText;
   final String note;
   final String languageCode;
 
   const _CleanRequestQRCard({
     required this.accountName,
     required this.accountNumber,
+    required this.qrPayload,
     required this.amount,
+    required this.currencySymbol,
     required this.reference,
     required this.purpose,
-    required this.expiry,
+    required this.requestType,
+    required this.validUntilText,
     required this.note,
     required this.languageCode,
   });
@@ -1036,10 +1121,18 @@ class _CleanRequestQRCard extends StatelessWidget {
             package: TrydosWalletStyles.packageName,
           ),
           const SizedBox(height: 20),
-          SvgPicture.asset(
-            TrydosWalletAssets.realQr,
-            height: 300,
-            package: TrydosWalletStyles.packageName,
+          QrImageView(
+            data: qrPayload,
+            size: 300,
+            backgroundColor: Colors.white,
+            eyeStyle: const QrEyeStyle(
+              eyeShape: QrEyeShape.square,
+              color: Color(0xff1D1D1D),
+            ),
+            dataModuleStyle: const QrDataModuleStyle(
+              dataModuleShape: QrDataModuleShape.square,
+              color: Color(0xff1D1D1D),
+            ),
           ),
           const SizedBox(height: 10),
           Text(
@@ -1066,7 +1159,7 @@ class _CleanRequestQRCard extends StatelessWidget {
               Expanded(
                 child: _buildInfoBox(
                   AppStrings.get(languageCode, 'amount'),
-                  '$amount USD',
+                  '$amount $currencySymbol',
                 ),
               ),
               const SizedBox(width: 5),
@@ -1091,7 +1184,7 @@ class _CleanRequestQRCard extends StatelessWidget {
               Expanded(
                 child: _buildInfoBox(
                   AppStrings.get(languageCode, 'type'),
-                  AppStrings.get(languageCode, 'deposit_request'),
+                  requestType,
                 ),
               ),
             ],
@@ -1099,9 +1192,7 @@ class _CleanRequestQRCard extends StatelessWidget {
           const SizedBox(height: 5),
           _buildInfoBox(
             AppStrings.get(languageCode, 'valid_until'),
-            expiry == 'always'
-                ? AppStrings.get(languageCode, 'always')
-                : '${AppStrings.get(languageCode, expiry)} ${AppStrings.get(languageCode, 'until')} 13:59 | 3 ${AppStrings.get(languageCode, 'mar')} 2026',
+            validUntilText,
           ),
           if (note.isNotEmpty) ...[
             const SizedBox(height: 5),

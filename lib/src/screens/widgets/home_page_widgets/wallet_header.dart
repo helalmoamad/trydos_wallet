@@ -6,6 +6,7 @@ import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/qr_scanner_page.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/receive_modal.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/send_modal.dart';
+import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
 /// رأس الصفحة (شعار + أيقونة QR).
@@ -16,8 +17,10 @@ class WalletHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<WalletBloc, WalletState>(
       buildWhen: (previous, current) =>
-          previous.balanceCardIsSelected != current.balanceCardIsSelected,
+          previous.balanceCardIsSelected != current.balanceCardIsSelected ||
+          previous.selectedAssetId != current.selectedAssetId,
       builder: (context, state) {
+        final canScanFromHeader = state.selectedAssetId != null;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
           child: Row(
@@ -94,13 +97,52 @@ class WalletHeader extends StatelessWidget {
                   : const SizedBox.shrink(),
               const SizedBox(width: 20),
               InkWell(
-                onTap: () {
+                onTap: () async {
+                  if (!canScanFromHeader) {
+                    showMessage(
+                      AppStrings.get(
+                        state.languageCode,
+                        'select_currency_to_send_msg',
+                      ),
+                      context: context,
+                      type: MessageType.error,
+                    );
+                    return;
+                  }
+
                   final walletBloc = context.read<WalletBloc>();
-                  showWalletModal(
+                  final result = await showWalletModal<String>(
                     context: context,
                     builder: (context, sc) => BlocProvider.value(
                       value: walletBloc,
                       child: QRScannerPage(scrollController: sc),
+                    ),
+                  );
+                  if (!context.mounted || result == null) {
+                    return;
+                  }
+
+                  final payload = QrTransferPayloadCodec.tryParse(result);
+                  if (payload == null) {
+                    showMessage(
+                      AppStrings.get(
+                        state.languageCode,
+                        'incorrect_account_msg',
+                      ),
+                      context: context,
+                      type: MessageType.error,
+                    );
+                    return;
+                  }
+
+                  showWalletModal(
+                    context: context,
+                    builder: (context, sc) => BlocProvider.value(
+                      value: walletBloc,
+                      child: SendModal(
+                        scrollController: sc,
+                        initialPayload: payload,
+                      ),
                     ),
                   );
                 },

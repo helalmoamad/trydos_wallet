@@ -12,6 +12,8 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_svg: ^2.2.3
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^7.1.2
   dio: ^5.7.0
   flutter_bloc: ^8.1.6
   image_picker: 1.0.6
