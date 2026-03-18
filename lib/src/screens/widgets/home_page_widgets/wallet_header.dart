@@ -20,7 +20,6 @@ class WalletHeader extends StatelessWidget {
           previous.balanceCardIsSelected != current.balanceCardIsSelected ||
           previous.selectedAssetId != current.selectedAssetId,
       builder: (context, state) {
-        final canScanFromHeader = state.selectedAssetId != null;
         return Padding(
           padding: EdgeInsets.only(left: 24, right: 24, top: 20),
           child: Row(
@@ -75,7 +74,7 @@ class WalletHeader extends StatelessWidget {
                           context: context,
                           builder: (context, sc) => BlocProvider.value(
                             value: walletBloc,
-                            child: SendModal(scrollController: sc),
+                            child: QRScannerPage(fromQR: false),
                           ),
                         );
                       },
@@ -116,7 +115,7 @@ class WalletHeader extends StatelessWidget {
               const SizedBox(width: 20),
               InkWell(
                 onTap: () async {
-                  if (!canScanFromHeader) {
+                  if (!state.balanceCardIsSelected) {
                     showMessage(
                       AppStrings.get(
                         state.languageCode,
@@ -129,40 +128,45 @@ class WalletHeader extends StatelessWidget {
                   }
 
                   final walletBloc = context.read<WalletBloc>();
-                  final result = await showWalletModal<String>(
-                    context: context,
-                    builder: (context, sc) => BlocProvider.value(
-                      value: walletBloc,
-                      child: QRScannerPage(scrollController: sc),
-                    ),
-                  );
-                  if (!context.mounted || result == null) {
-                    return;
-                  }
+                  final headerContext = context;
 
-                  final payload = QrTransferPayloadCodec.tryParse(result);
-                  if (payload == null) {
-                    showMessage(
-                      AppStrings.get(
-                        state.languageCode,
-                        'incorrect_account_msg',
+                  Future<void> openQRThenSend() async {
+                    if (!headerContext.mounted) return;
+                    final result = await showWalletModal<String>(
+                      context: headerContext,
+                      builder: (ctx, sc) => BlocProvider.value(
+                        value: walletBloc,
+                        child: QRScannerPage(fromQR: true),
                       ),
-                      context: context,
-                      type: MessageType.error,
                     );
-                    return;
+                    if (!headerContext.mounted || result == null) return;
+
+                    final payload = QrTransferPayloadCodec.tryParse(result);
+                    if (payload == null) {
+                      showMessage(
+                        AppStrings.get(
+                          state.languageCode,
+                          'incorrect_account_msg',
+                        ),
+                        context: headerContext,
+                        type: MessageType.error,
+                      );
+                      return;
+                    }
+
+                    showWalletModal(
+                      context: headerContext,
+                      builder: (ctx, sc) => BlocProvider.value(
+                        value: walletBloc,
+                        child: SendModal(
+                          initialPayload: payload,
+                          onBack: openQRThenSend,
+                        ),
+                      ),
+                    );
                   }
 
-                  showWalletModal(
-                    context: context,
-                    builder: (context, sc) => BlocProvider.value(
-                      value: walletBloc,
-                      child: SendModal(
-                        scrollController: sc,
-                        initialPayload: payload,
-                      ),
-                    ),
-                  );
+                  await openQRThenSend();
                 },
                 child: SvgPicture.asset(
                   TrydosWalletAssets.qr,

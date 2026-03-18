@@ -29,30 +29,13 @@ void showMessage(
 
   late OverlayEntry entry;
 
-  IconData icon;
-  Color color;
-
-  switch (type) {
-    case MessageType.success:
-      icon = Icons.check_circle_outline;
-      color = Colors.green.shade600;
-      break;
-    case MessageType.error:
-      icon = Icons.error_outline;
-      color = Colors.red.shade600;
-      break;
-    case MessageType.info:
-      icon = Icons.info_outline;
-      color = Colors.blue.shade600;
-      break;
-  }
+  // Keep the signature compatible while always rendering the same notification style.
+  final _ = type;
 
   entry = OverlayEntry(
     builder: (context) {
       return _TopNotificationWidget(
         message: message,
-        icon: icon,
-        backgroundColor: color,
         duration: duration,
         onDismissed: () {
           entry.remove();
@@ -64,39 +47,97 @@ void showMessage(
   overlay.insert(entry);
 }
 
-/// Custom curve for wallet modals: fast opening below 50%, slow above 50%.
+/// Custom curve for wallet modals:
+/// starts slowly from the bottom, then slows down more after mid screen.
 class PiecewiseCurve extends Curve {
   const PiecewiseCurve();
 
   @override
   double transformInternal(double t) {
-    // Opening: Extremely fast to 70% of transition (in 10% time), then crawls.
-    if (t < 0.1) return (t / 0.1) * 0.7;
-    return 0.7 + ((t - 0.1) / 0.9) * 0.3;
+    if (t <= 0.6) {
+      // First stage: slow movement up to around half of the visual travel.
+      return 0.55 * Curves.easeInOutCubic.transform(t / 0.6);
+    }
+
+    // Second stage: much slower approach toward the final resting position.
+    return 0.55 + 0.45 * Curves.easeOutQuart.transform((t - 0.6) / 0.4);
   }
 }
 
-/// Custom curve for closing: slow for top half, very fast for bottom half.
+/// Closing uses the same feel as opening: slow, then much slower after midpoint.
 class ReversePiecewiseCurve extends Curve {
   const ReversePiecewiseCurve();
 
   @override
   double transformInternal(double t) {
-    // We want "slow then fast" during closing (progress 1.0 down to 0.0).
-    // Reach 0.5 height slowly (first 70% of time), then snap 0.5 to 0.0 (final 30%).
-    if (t > 0.3) {
-      // Top 70% of closing time: Moves from height 1.0 down to 0.5
-      return 0.5 + ((t - 0.3) / 0.7) * 0.5;
-    } else {
-      // Final 30% of closing time: Moves from height 0.5 down to 0.0 (Rapid)
-      return (t / 0.3) * 0.5;
-    }
+    return const PiecewiseCurve().transform(t);
   }
 }
 
 /// Helper to show consistent wallet modals with 90% height and custom animation.
 typedef WalletModalBuilder =
     Widget Function(BuildContext context, ScrollController scrollController);
+
+class _WalletModalBackgroundScope
+    extends InheritedNotifier<ValueNotifier<Color>> {
+  const _WalletModalBackgroundScope({
+    required ValueNotifier<Color> super.notifier,
+    required super.child,
+  });
+
+  static ValueNotifier<Color>? maybeNotifierOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<_WalletModalBackgroundScope>()
+        ?.notifier;
+  }
+}
+
+class _WalletModalBackButtonState {
+  final bool visible;
+  final VoidCallback? onPressed;
+
+  const _WalletModalBackButtonState({required this.visible, this.onPressed});
+}
+
+class _WalletModalBackButtonScope
+    extends InheritedNotifier<ValueNotifier<_WalletModalBackButtonState>> {
+  const _WalletModalBackButtonScope({
+    required ValueNotifier<_WalletModalBackButtonState> notifier,
+    required Widget child,
+  }) : super(notifier: notifier, child: child);
+
+  static ValueNotifier<_WalletModalBackButtonState>? maybeNotifierOf(
+    BuildContext context,
+  ) {
+    return context
+        .dependOnInheritedWidgetOfExactType<_WalletModalBackButtonScope>()
+        ?.notifier;
+  }
+}
+
+void setWalletModalBackground(BuildContext context, Color color) {
+  final notifier = _WalletModalBackgroundScope.maybeNotifierOf(context);
+  if (notifier == null || notifier.value == color) {
+    return;
+  }
+  notifier.value = color;
+}
+
+void setWalletModalBackButton(
+  BuildContext context, {
+  required bool visible,
+  VoidCallback? onPressed,
+}) {
+  final notifier = _WalletModalBackButtonScope.maybeNotifierOf(context);
+  if (notifier == null) {
+    return;
+  }
+
+  notifier.value = _WalletModalBackButtonState(
+    visible: visible,
+    onPressed: visible ? onPressed : null,
+  );
+}
 
 Future<T?> showWalletModal<T>({
   required BuildContext context,
@@ -112,7 +153,7 @@ Future<T?> showWalletModal<T>({
     barrierDismissible: isDismissible,
     barrierLabel: 'Wallet Modal',
     barrierColor: Colors.black54,
-    transitionDuration: const Duration(milliseconds: 600),
+    transitionDuration: const Duration(milliseconds: 900),
     pageBuilder: (context, animation, secondaryAnimation) {
       return _WalletModalContainer(
         builder: builder,
@@ -162,15 +203,27 @@ class _WalletModalContainer extends StatefulWidget {
 
 class _WalletModalContainerState extends State<_WalletModalContainer> {
   late DraggableScrollableController _dragController;
+  late ScrollController _contentScrollController;
+  late ValueNotifier<Color> _backgroundColorNotifier;
+  late ValueNotifier<_WalletModalBackButtonState> _backButtonNotifier;
+  double _handleDragDistance = 0;
 
   @override
   void initState() {
     super.initState();
     _dragController = DraggableScrollableController();
+    _contentScrollController = ScrollController();
+    _backgroundColorNotifier = ValueNotifier<Color>(widget.backgroundColor);
+    _backButtonNotifier = ValueNotifier<_WalletModalBackButtonState>(
+      const _WalletModalBackButtonState(visible: false),
+    );
   }
 
   @override
   void dispose() {
+    _backgroundColorNotifier.dispose();
+    _backButtonNotifier.dispose();
+    _contentScrollController.dispose();
     _dragController.dispose();
     super.dispose();
   }
@@ -195,71 +248,165 @@ class _WalletModalContainerState extends State<_WalletModalContainer> {
           expand: false,
           snap: true,
           snapSizes: const [0.0, 0.9],
-          builder: (context, scrollController) {
+          builder: (context, sheetScrollController) {
             return Material(
               color: Colors.transparent,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: widget.backgroundColor,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(30),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: 0,
-                      maxHeight: MediaQuery.of(context).size.height,
+              child: ValueListenableBuilder<Color>(
+                valueListenable: _backgroundColorNotifier,
+                builder: (context, modalColor, _) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: modalColor,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(30),
+                      ),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Handle and Drag Area (Header)
-                        // We wrap this in a GestureDetector to make it draggable.
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onVerticalDragUpdate: (details) {
-                            if (widget.enableDrag) {
-                              final currentSize = _dragController.size;
-                              final delta =
-                                  details.primaryDelta! /
-                                  MediaQuery.of(context).size.height;
-                              _dragController.jumpTo(currentSize - delta);
-                            }
-                          },
-                          onVerticalDragEnd: (details) {
-                            if (widget.enableDrag) {
-                              final currentSize = _dragController.size;
-                              if (currentSize < 0.45) {
-                                _dragController.animateTo(
-                                  0,
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeOut,
-                                );
-                              } else {
-                                _dragController.animateTo(
-                                  0.9,
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeOut,
-                                );
-                              }
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 0),
-                            width: double.infinity,
-                            child: Center(
-                              child: Container(
-                                width: 40,
-                                height: 0,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xffC4C2C2),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                            ),
+                        // Keep the sheet controller attached even if child content does not use it.
+                        SizedBox(
+                          height: 0,
+                          child: SingleChildScrollView(
+                            controller: sheetScrollController,
+                            physics: const NeverScrollableScrollPhysics(),
+                            child: const SizedBox(height: 1),
                           ),
+                        ),
+                        ValueListenableBuilder<_WalletModalBackButtonState>(
+                          valueListenable: _backButtonNotifier,
+                          builder: (context, backState, _) {
+                            return SizedBox(
+                              height: 36,
+                              child: Stack(
+                                children: [
+                                  if (backState.visible)
+                                    Positioned(
+                                      left: 10,
+                                      top: 15,
+                                      bottom: 0,
+                                      child: InkWell(
+                                        onTap: backState.onPressed,
+                                        child: SizedBox(
+                                          height: 30,
+                                          width: 60,
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                  left: 10,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.arrow_back_ios_new,
+                                                  size: 13,
+                                                  color: Color(0xff1D1D1D),
+                                                ),
+                                              ),
+                                              Text(
+                                                " Back",
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  color: Color(0xff1D1D1D),
+                                                  fontSize: 11,
+
+                                                  fontFamily: 'Quicksand',
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  Center(
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onVerticalDragStart: (_) {
+                                        _handleDragDistance = 0;
+                                      },
+                                      onVerticalDragUpdate: (details) {
+                                        if (!widget.enableDrag ||
+                                            !_dragController.isAttached) {
+                                          return;
+                                        }
+
+                                        final dy = details.primaryDelta ?? 0;
+                                        if (dy > 0) {
+                                          _handleDragDistance += dy;
+                                        }
+
+                                        final currentSize =
+                                            _dragController.size;
+                                        final delta =
+                                            dy /
+                                            MediaQuery.of(context).size.height;
+                                        _dragController.jumpTo(
+                                          (currentSize - delta).clamp(0.0, 0.9),
+                                        );
+                                      },
+                                      onVerticalDragEnd: (details) {
+                                        if (!widget.enableDrag ||
+                                            !_dragController.isAttached) {
+                                          return;
+                                        }
+
+                                        final velocity =
+                                            details.primaryVelocity ?? 0;
+                                        final shouldClose =
+                                            _handleDragDistance > 24 ||
+                                            velocity > 600;
+
+                                        if (shouldClose) {
+                                          _dragController
+                                              .animateTo(
+                                                0,
+                                                duration: const Duration(
+                                                  milliseconds: 220,
+                                                ),
+                                                curve: Curves.easeOut,
+                                              )
+                                              .then((_) {
+                                                if (mounted) {
+                                                  widget.onDismiss();
+                                                }
+                                              });
+                                          return;
+                                        }
+
+                                        _dragController.animateTo(
+                                          0.9,
+                                          duration: const Duration(
+                                            milliseconds: 220,
+                                          ),
+                                          curve: Curves.easeOut,
+                                        );
+                                      },
+                                      child: Container(
+                                        width: 60,
+                                        height: 35,
+                                        alignment: Alignment.topCenter,
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 10,
+                                          ),
+                                          child: Container(
+                                            width: 40,
+                                            height: 2,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xffC4C2C2),
+                                              borderRadius:
+                                                  BorderRadius.circular(2),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                         // Wrap the builder in a Flexible instead of Expanded to avoid overflow issues
                         // during sheet compression (closing).
@@ -268,13 +415,22 @@ class _WalletModalContainerState extends State<_WalletModalContainer> {
                             borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(30),
                             ),
-                            child: widget.builder(context, scrollController),
+                            child: _WalletModalBackgroundScope(
+                              notifier: _backgroundColorNotifier,
+                              child: _WalletModalBackButtonScope(
+                                notifier: _backButtonNotifier,
+                                child: widget.builder(
+                                  context,
+                                  _contentScrollController,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             );
           },
@@ -286,15 +442,11 @@ class _WalletModalContainerState extends State<_WalletModalContainer> {
 
 class _TopNotificationWidget extends StatefulWidget {
   final String message;
-  final IconData icon;
-  final Color backgroundColor;
   final Duration duration;
   final VoidCallback onDismissed;
 
   const _TopNotificationWidget({
     required this.message,
-    required this.icon,
-    required this.backgroundColor,
     required this.duration,
     required this.onDismissed,
   });
@@ -351,35 +503,57 @@ class _TopNotificationWidgetState extends State<_TopNotificationWidget>
         child: Material(
           color: Colors.transparent,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: widget.backgroundColor,
-              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xff444146),
+              borderRadius: BorderRadius.circular(14),
               boxShadow: const [
                 BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 10,
-                  offset: Offset(0, 4),
+                  color: Color(0x3D000000),
+                  blurRadius: 14,
+                  offset: Offset(0, 5),
                 ),
               ],
             ),
             child: Row(
               children: [
-                Icon(widget.icon, color: Colors.white, size: 28),
-                const SizedBox(width: 12),
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: const BoxDecoration(
+                    color: Color(0xffFF4D4F),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.priority_high_rounded,
+                      color: Colors.white,
+                      size: 15,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     widget.message,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
                       fontFamily: 'Quicksand',
+                      height: 1.1,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(
+                    Icons.close,
+                    color: Color(0xff9A999D),
+                    size: 22,
+                  ),
                   onPressed: () async {
                     await _controller.reverse();
                     widget.onDismissed();

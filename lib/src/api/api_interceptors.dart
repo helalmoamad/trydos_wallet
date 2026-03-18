@@ -23,13 +23,40 @@ class ApiErrorEvent {
   const ApiErrorEvent(this.message, {this.statusCode});
 }
 
+/// حدث تسجيل الخروج.
+class LogoutEvent {
+  final String reason;
+  final int? statusCode;
+
+  const LogoutEvent(this.reason, {this.statusCode});
+}
+
+/// حدث تغيير اللغة.
+class LanguageChangeEvent {
+  final String languageCode;
+  final String languageName;
+
+  const LanguageChangeEvent(this.languageCode, {required this.languageName});
+}
+
 // Broadcast streams تسمح لأي عدد من المستمعين بالتسجيل.
 final StreamController<AuthEvent> _authEventController =
     StreamController<AuthEvent>.broadcast();
 final StreamController<ApiErrorEvent> _errorEventController =
     StreamController<ApiErrorEvent>.broadcast();
+final StreamController<LogoutEvent> _logoutEventController =
+    StreamController<LogoutEvent>.broadcast();
+final StreamController<LanguageChangeEvent> _languageChangeEventController =
+    StreamController<LanguageChangeEvent>.broadcast();
 
 /// ستستعملها التطبيقات للاستماع لأحداث المصادقة.
+
+/// ستستعملها التطبيقات للاستماع لأحداث تسجيل الخروج.
+Stream<LogoutEvent> get logoutEvents => _logoutEventController.stream;
+
+/// ستستعملها التطبيقات للاستماع لأحداث تغيير اللغة.
+Stream<LanguageChangeEvent> get languageChangeEvents =>
+    _languageChangeEventController.stream;
 Stream<AuthEvent> get authEvents => _authEventController.stream;
 
 /// ستستعملها التطبيقات للاستماع لأخطاء API لعرض SnackBars.
@@ -45,6 +72,22 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void emitAuthEvent(AuthEvent evt) {
   try {
     _authEventController.add(evt);
+  } catch (_) {
+    // ignore stream errors
+  }
+}
+
+void emitLogoutEvent(LogoutEvent evt) {
+  try {
+    _logoutEventController.add(evt);
+  } catch (_) {
+    // ignore stream errors
+  }
+}
+
+void emitLanguageChangeEvent(LanguageChangeEvent evt) {
+  try {
+    _languageChangeEventController.add(evt);
   } catch (_) {
     // ignore stream errors
   }

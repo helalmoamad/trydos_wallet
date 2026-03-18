@@ -17,14 +17,13 @@ import 'package:trydos_wallet/trydos_wallet.dart';
 enum RequestQRState { filling, generating, finalQR }
 
 class RequestQRModal extends StatefulWidget {
-  final ScrollController? scrollController;
   final VoidCallback? onBack;
   final String? accountName;
   final String? accountNumber;
 
   const RequestQRModal({
     super.key,
-    this.scrollController,
+
     this.onBack,
     this.accountName,
     this.accountNumber,
@@ -265,54 +264,39 @@ class _RequestQRModalState extends State<RequestQRModal> {
         final validUntilText = _validUntilText(state);
         return SizedBox(
           height: MediaQuery.of(context).size.height * 0.9,
-          child: SingleChildScrollView(
-            controller: widget.scrollController,
-            child: Stack(
-              children: [
-                // Hidden card for screen capture
-                Positioned(
-                  left: -4000,
-                  top: -4000,
-                  child: RepaintBoundary(
-                    key: _cardKey,
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: _CleanRequestQRCard(
-                        accountName: _accountName,
-                        accountNumber: _accountNumber,
-                        qrPayload: qrPayload,
-                        amount: _amountController.text,
-                        currencySymbol: _currencySymbol(state),
-                        reference: _referenceController.text,
-                        purpose: _purposeName(state, _selectedPurpose),
-                        validUntilText: validUntilText,
-                        requestType: AppStrings.get(
-                          state.languageCode,
-                          'deposit_request',
-                        ),
-                        note: _noteController.text,
-                        languageCode: state.languageCode,
+          child: Stack(
+            children: [
+              // Hidden card for screen capture
+              Positioned(
+                left: -4000,
+                top: -4000,
+                child: RepaintBoundary(
+                  key: _cardKey,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: _CleanRequestQRCard(
+                      accountName: _accountName,
+                      accountNumber: _accountNumber,
+                      qrPayload: qrPayload,
+                      amount: _amountController.text,
+                      currencySymbol: _currencySymbol(state),
+                      reference: _referenceController.text,
+                      purpose: _purposeName(state, _selectedPurpose),
+                      validUntilText: validUntilText,
+                      requestType: AppStrings.get(
+                        state.languageCode,
+                        'deposit_request',
                       ),
+                      note: _noteController.text,
+                      languageCode: state.languageCode,
                     ),
                   ),
                 ),
-                Column(
+              ),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.9,
+                child: Column(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      width: double.infinity,
-                      child: Center(
-                        child: Container(
-                          width: 40,
-                          height: 2,
-                          decoration: BoxDecoration(
-                            color: const Color(0xffC4C2C2),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
                     // Trydos Logo
                     SvgPicture.asset(
                       TrydosWalletAssets.trydos,
@@ -330,8 +314,8 @@ class _RequestQRModalState extends State<RequestQRModal> {
                     ],
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -360,64 +344,80 @@ class _RequestQRModalState extends State<RequestQRModal> {
             ),
           ),
         ),
-        const SizedBox(height: 5),
-        Text(
-          _accountNumber,
-          style: TrydosWalletStyles.bodyMedium.copyWith(
-            color: const Color(0xff404040),
-            fontSize: 16,
+        SizedBox(
+          height: (MediaQuery.of(context).size.height * 0.9) - 427,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 5),
+                Text(
+                  _accountNumber,
+                  style: TrydosWalletStyles.bodyMedium.copyWith(
+                    color: const Color(0xff404040),
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Account Details (Masked)
+                _buildInfoBox(
+                  AppStrings.get(state.languageCode, 'account_name'),
+                  _isNameMasked ? _maskedName : _accountName,
+                  isMasked: true,
+                  onMaskToggle: () =>
+                      setState(() => _isNameMasked = !_isNameMasked),
+                  isMaskedNow: _isNameMasked,
+                ),
+                const SizedBox(height: 5),
+                _buildInfoBox(
+                  AppStrings.get(state.languageCode, 'account_number'),
+                  '$_accountNumber  ${AppStrings.get(state.languageCode, 'american_dollars')}',
+                ),
+                const SizedBox(height: 5),
+                // Amount and Reference
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        label: AppStrings.get(
+                          state.languageCode,
+                          'enter_amount',
+                        ),
+                        controller: _amountController,
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: _buildTextField(
+                        label: AppStrings.get(
+                          state.languageCode,
+                          'enter_reference',
+                        ),
+                        controller: _referenceController,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                // Combined Purpose and Note
+                _buildPurposeAndNoteSection(state),
+                const SizedBox(height: 5),
+                // Expiry Selection
+                _buildChipSelection(
+                  label: AppStrings.get(state.languageCode, 'valid_until'),
+                  options: _expiryOptions,
+                  selectedItem: _selectedExpiry,
+                  onSelected: (val) => setState(() => _selectedExpiry = val),
+                  state: state,
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 20),
-        // Account Details (Masked)
-        _buildInfoBox(
-          AppStrings.get(state.languageCode, 'account_name'),
-          _isNameMasked ? _maskedName : _accountName,
-          isMasked: true,
-          onMaskToggle: () => setState(() => _isNameMasked = !_isNameMasked),
-          isMaskedNow: _isNameMasked,
-        ),
-        const SizedBox(height: 5),
-        _buildInfoBox(
-          AppStrings.get(state.languageCode, 'account_number'),
-          '$_accountNumber  ${AppStrings.get(state.languageCode, 'american_dollars')}',
-        ),
-        const SizedBox(height: 5),
-        // Amount and Reference
-        Row(
-          children: [
-            Expanded(
-              child: _buildTextField(
-                label: AppStrings.get(state.languageCode, 'enter_amount'),
-                controller: _amountController,
-                keyboardType: TextInputType.number,
-              ),
-            ),
-            const SizedBox(width: 5),
-            Expanded(
-              child: _buildTextField(
-                label: AppStrings.get(state.languageCode, 'enter_reference'),
-                controller: _referenceController,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 5),
-        // Combined Purpose and Note
-        _buildPurposeAndNoteSection(state),
-        const SizedBox(height: 5),
-        // Expiry Selection
-        _buildChipSelection(
-          label: AppStrings.get(state.languageCode, 'valid_until'),
-          options: _expiryOptions,
-          selectedItem: _selectedExpiry,
-          onSelected: (val) => setState(() => _selectedExpiry = val),
-          state: state,
-        ),
 
-        const SizedBox(height: 25),
         // Action Buttons
         Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             const SizedBox(width: 20),

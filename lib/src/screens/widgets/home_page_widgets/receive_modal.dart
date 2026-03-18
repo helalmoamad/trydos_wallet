@@ -19,7 +19,9 @@ enum ReceiveModalView { main, request }
 
 class ReceiveModal extends StatefulWidget {
   final ScrollController? scrollController;
-  const ReceiveModal({super.key, this.scrollController});
+  final VoidCallback? onBack;
+
+  const ReceiveModal({super.key, this.scrollController, this.onBack});
 
   @override
   State<ReceiveModal> createState() => _ReceiveModalState();
@@ -34,9 +36,38 @@ class _ReceiveModalState extends State<ReceiveModal> {
 
   static const String _maskedName = 'RBTYLS';
 
+  void _handleBackAction() {
+    final canGoBack = _currentView == ReceiveModalView.request;
+    if (canGoBack) {
+      setState(() {
+        _currentView = ReceiveModalView.main;
+      });
+      return;
+    }
+
+    if (widget.onBack != null) {
+      widget.onBack!.call();
+      return;
+    }
+
+    Navigator.pop(context);
+  }
+
   @override
   void initState() {
     super.initState();
+  }
+
+  void _syncModalBackButton() {
+    final canGoBack = _currentView == ReceiveModalView.request;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setWalletModalBackButton(
+        context,
+        visible: canGoBack || widget.onBack != null,
+        onPressed: _handleBackAction,
+      );
+    });
   }
 
   Balance? _resolveReceiveBalance(WalletState state) {
@@ -186,66 +217,66 @@ class _ReceiveModalState extends State<ReceiveModal> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<WalletBloc, WalletState>(
-      builder: (context, state) {
-        final accountName = _accountNameFromState(state);
-        final accountNumber = _accountNumberFromState(state);
-        final qrPayload = _buildReceiveQrPayload(
-          state,
-          accountName,
-          accountNumber,
-        );
-        return Stack(
-          children: [
-            // Hidden card for screen capture
-            Positioned(
-              left: -4000,
-              top: -4000,
-              child: RepaintBoundary(
-                key: _cardKey,
-                child: _CleanQRCard(
-                  accountName: _isMasked ? _maskedName : accountName,
-                  accountNumber: accountNumber,
-                  qrPayload: qrPayload,
-                  languageCode: state.languageCode,
+    _syncModalBackButton();
+    return WillPopScope(
+      onWillPop: () async {
+        if (!mounted) return false;
+        _handleBackAction();
+        return false;
+      },
+      child: BlocBuilder<WalletBloc, WalletState>(
+        builder: (context, state) {
+          final accountName = _accountNameFromState(state);
+          final accountNumber = _accountNumberFromState(state);
+          final qrPayload = _buildReceiveQrPayload(
+            state,
+            accountName,
+            accountNumber,
+          );
+          return Stack(
+            children: [
+              // Hidden card for screen capture
+              Positioned(
+                left: -4000,
+                top: -4000,
+                child: RepaintBoundary(
+                  key: _cardKey,
+                  child: _CleanQRCard(
+                    accountName: _isMasked ? _maskedName : accountName,
+                    accountNumber: accountNumber,
+                    qrPayload: qrPayload,
+                    languageCode: state.languageCode,
+                  ),
                 ),
               ),
-            ),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  controller: widget.scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.9,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: _currentView == ReceiveModalView.main
-                          ? _buildReceiveView(
-                              context,
-                              state,
-                              accountName,
-                              accountNumber,
-                              qrPayload,
-                            )
-                          : RequestQRModal(
-                              scrollController: widget.scrollController,
-                              accountName: accountName,
-                              accountNumber: accountNumber,
-                              onBack: () {
-                                setState(() {
-                                  _currentView = ReceiveModalView.main;
-                                });
-                              },
-                            ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        );
-      },
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: _currentView == ReceiveModalView.main
+                        ? _buildReceiveView(
+                            context,
+                            state,
+                            accountName,
+                            accountNumber,
+                            qrPayload,
+                          )
+                        : RequestQRModal(
+                            accountName: accountName,
+                            accountNumber: accountNumber,
+                            onBack: () {
+                              setState(() {
+                                _currentView = ReceiveModalView.main;
+                              });
+                            },
+                          ),
+                  );
+                },
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -258,21 +289,6 @@ class _ReceiveModalState extends State<ReceiveModal> {
   ) {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          width: double.infinity,
-          child: Center(
-            child: Container(
-              width: 40,
-              height: 2,
-              decoration: BoxDecoration(
-                color: const Color(0xffC4C2C2),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
         // Trydos Logo
         SvgPicture.asset(
           TrydosWalletAssets.trydos,
@@ -344,7 +360,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
           '$accountNumber  ${AppStrings.get(state.languageCode, 'american_dollars')}',
         ),
 
-        const Spacer(),
+        Spacer(),
         // Action Buttons
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

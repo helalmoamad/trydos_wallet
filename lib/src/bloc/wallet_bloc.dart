@@ -129,6 +129,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     BalanceCardIsSelected event,
     Emitter<WalletState> emit,
   ) {
+    print(
+      "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD${event.isSelected} ${event.assetId}",
+    );
     emit(
       state.copyWith(
         balanceCardIsSelected: event.isSelected,

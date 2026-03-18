@@ -382,9 +382,15 @@ class _HomeTabState extends State<HomeTab> {
                           isSelected: true,
                           isLoadingBalance: isLoadingBalance,
                           onTap: () {
-                            context.read<WalletBloc>().add(
-                              const BalanceCardIsSelected(isSelected: false),
-                            );
+                            if (_selectedCurrencies.contains(currency.symbol)) {
+                              context.read<WalletBloc>().add(
+                                const BalanceCardIsSelected(isSelected: false),
+                              );
+                            } else {
+                              context.read<WalletBloc>().add(
+                                const BalanceCardIsSelected(isSelected: true),
+                              );
+                            }
                             setState(() {
                               final code = currency.symbol;
                               if (_selectedCurrencies.contains(code)) {
@@ -457,12 +463,19 @@ class _HomeTabState extends State<HomeTab> {
                             ),
                             isLoadingBalance: isLoadingBalance,
                             onTap: () {
-                              context.read<WalletBloc>().add(
-                                BalanceCardIsSelected(
-                                  isSelected: true,
-                                  assetId: currency.id,
-                                ),
-                              );
+                              if (_selectedCurrencies.contains(
+                                currency.symbol,
+                              )) {
+                                context.read<WalletBloc>().add(
+                                  const BalanceCardIsSelected(
+                                    isSelected: false,
+                                  ),
+                                );
+                              } else {
+                                context.read<WalletBloc>().add(
+                                  const BalanceCardIsSelected(isSelected: true),
+                                );
+                              }
                               setState(() {
                                 final code = currency.symbol;
                                 if (_selectedCurrencies.contains(code)) {

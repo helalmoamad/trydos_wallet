@@ -11,14 +11,9 @@ import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/qr_scanner_p
 import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 
 class TransferSendModal extends StatefulWidget {
-  final ScrollController? scrollController;
   final QrTransferPayload? initialPayload;
 
-  const TransferSendModal({
-    super.key,
-    this.scrollController,
-    this.initialPayload,
-  });
+  const TransferSendModal({super.key, this.initialPayload});
 
   @override
   State<TransferSendModal> createState() => _TransferSendModalState();
@@ -193,6 +188,35 @@ class _TransferSendModalState extends State<TransferSendModal> {
     isAmountVerified = false;
   }
 
+  void _resetPhoneRecipientState() {
+    _phoneForEdit = null;
+    isPhoneRegistered = null;
+    isNameVerified = false;
+    isEditingName = true;
+    isIdVerified = false;
+    isEditingId = true;
+    nameErrorMessage = null;
+    idErrorMessage = null;
+    nameController.clear();
+    idController.clear();
+  }
+
+  void _switchRecipientInputType(RecipientInputType inputType) {
+    if (currentInputType == inputType) {
+      return;
+    }
+
+    setState(() {
+      currentInputType = inputType;
+      recipientController.clear();
+      amountErrorMessage = null;
+      isEditingAmount = true;
+      isAmountVerified = false;
+      _resetRecipientLookupState();
+      _resetPhoneRecipientState();
+    });
+  }
+
   double? _parseAmountValue() {
     final normalized = amountController.text.replaceAll(',', '').trim();
     final parsed = double.tryParse(normalized);
@@ -200,6 +224,15 @@ class _TransferSendModalState extends State<TransferSendModal> {
       return null;
     }
     return parsed;
+  }
+
+  double _selectedAvailableBalance(WalletState state) {
+    return state.balances[state.selectedAssetId ?? '']?.available ?? 0;
+  }
+
+  bool _isAmountWithinSelectedBalance(double amount, WalletState state) {
+    final available = _selectedAvailableBalance(state);
+    return amount > 0 && amount <= available;
   }
 
   Future<void> _verifyTransferByAmount() async {
@@ -221,6 +254,15 @@ class _TransferSendModalState extends State<TransferSendModal> {
         isAmountVerified = false;
         isEditingAmount = true;
         amountErrorMessage = AppStrings.get(lang, 'invalid_amount');
+      });
+      return;
+    }
+
+    if (!_isAmountWithinSelectedBalance(amount, state)) {
+      setState(() {
+        isAmountVerified = false;
+        isEditingAmount = true;
+        amountErrorMessage = AppStrings.get(lang, 'insufficient_balance');
       });
       return;
     }
@@ -248,9 +290,15 @@ class _TransferSendModalState extends State<TransferSendModal> {
       });
       return;
     }
-
-    final currencySymbol =
-        state.balances[state.selectedAssetId ?? '']?.assetSymbol ?? 'SYP';
+    Currency? currency;
+    final selectedId = state.selectedAssetId ?? '';
+    for (final c in state.currencies) {
+      if (c.id == selectedId) {
+        currency = c;
+        break;
+      }
+    }
+    final currencySymbol = currency?.symbol ?? r'$';
 
     setState(() {
       isTransferVerifyLoading = true;
@@ -372,7 +420,9 @@ class _TransferSendModalState extends State<TransferSendModal> {
 
     setState(() {
       _resetRecipientLookupState();
-      recipientController.clear();
+      recipientErrorMessage = result.isSuccess
+          ? AppStrings.get(state.languageCode, 'account_not_found_msg')
+          : AppStrings.get(state.languageCode, 'account_lookup_failed_msg');
     });
 
     showMessage(
@@ -484,12 +534,28 @@ class _TransferSendModalState extends State<TransferSendModal> {
     final amount = _parseAmountValue();
     final toAccountNumber = recipientController.text.trim();
     final purposeId = _resolvePurposeIdForSend(state);
-    final currencySymbol =
-        state.balances[state.selectedAssetId ?? '']?.assetSymbol ?? 'SYP';
+    Currency? currency;
+    final selectedId = state.selectedAssetId ?? '';
+    for (final c in state.currencies) {
+      if (c.id == selectedId) {
+        currency = c;
+        break;
+      }
+    }
+    final currencySymbol = currency?.symbol ?? r'$';
 
     if (amount == null || amount <= 0) {
       showMessage(
         AppStrings.get(lang, 'invalid_amount'),
+        context: context,
+        type: MessageType.error,
+      );
+      return;
+    }
+
+    if (!_isAmountWithinSelectedBalance(amount, state)) {
+      showMessage(
+        AppStrings.get(lang, 'insufficient_balance'),
         context: context,
         type: MessageType.error,
       );
@@ -547,9 +613,17 @@ class _TransferSendModalState extends State<TransferSendModal> {
     );
   }
 
+  void _syncSuccessBackButton(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setWalletModalBackButton(context, visible: false);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (currentTransferState == TransferState.success) {
+      _syncSuccessBackButton(context);
       final state = context.read<WalletBloc>().state;
       final sendResult = _lastSendResult!;
       final maskedSenderName = _maskNameIfNeeded(sendResult.sender.name);
@@ -573,354 +647,377 @@ class _TransferSendModalState extends State<TransferSendModal> {
       final purpose = sendResult.purpose;
       final isCompleted = sendResult.isCompleted;
 
-      return SingleChildScrollView(
-        controller: widget.scrollController,
-        physics: const BouncingScrollPhysics(),
-        child: SuccessfulPage(
-          senderAccount: senderAccount,
-          recipientAccount: recipientAccount,
-          amount: amount,
-          currencySymbol: currencySymbol,
-          reference: reference,
-          dateAndTimeString: dateAndTimeString,
-          type: AppStrings.get(state.languageCode, 'transfer_send'),
-          purpose: purpose,
-          isSuccess: isCompleted,
-          onDone: () => Navigator.pop(context),
-          onDownload: () {},
-          onShare: () {},
-          isFromQr: isFromQr,
-          // Only pass phone fields when phone is unregistered
-          recipientPhoneNumber:
-              (currentInputType == RecipientInputType.phone &&
-                  isPhoneRegistered == false)
-              ? '+ ${_phoneForEdit ?? recipientController.text}'
-              : null,
-          recipientName:
-              (currentInputType == RecipientInputType.phone &&
-                  isPhoneRegistered == false)
-              ? nameController.text
-              : null,
-          recipientId:
-              (currentInputType == RecipientInputType.phone &&
-                  isPhoneRegistered == false)
-              ? idController.text
-              : null,
-        ),
+      return SuccessfulPage(
+        senderAccount: senderAccount,
+        recipientAccount: recipientAccount,
+        amount: amount,
+        currencySymbol: currencySymbol,
+        reference: reference,
+        dateAndTimeString: dateAndTimeString,
+        type: AppStrings.get(state.languageCode, 'transfer_send'),
+        purpose: purpose,
+        isSuccess: isCompleted,
+        onDone: () => Navigator.pop(context),
+        onDownload: () {},
+        onShare: () {},
+        isFromQr: isFromQr,
+        // Only pass phone fields when phone is unregistered
+        recipientPhoneNumber:
+            (currentInputType == RecipientInputType.phone &&
+                isPhoneRegistered == false)
+            ? '+ ${_phoneForEdit ?? recipientController.text}'
+            : null,
+        recipientName:
+            (currentInputType == RecipientInputType.phone &&
+                isPhoneRegistered == false)
+            ? nameController.text
+            : null,
+        recipientId:
+            (currentInputType == RecipientInputType.phone &&
+                isPhoneRegistered == false)
+            ? idController.text
+            : null,
       );
     }
 
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
+        Currency? currency;
+        final selectedId = state.selectedAssetId ?? '';
+        for (final c in state.currencies) {
+          if (c.id == selectedId) {
+            currency = c;
+            break;
+          }
+        }
+        final currencySymbol = currency?.symbol ?? r'$';
         return SizedBox(
           height: MediaQuery.of(context).size.height * 0.9,
-          child: SingleChildScrollView(
-            controller: widget.scrollController,
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Back Button & Icon
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            width: double.infinity,
-                            child: Center(
-                              child: Container(
-                                width: 40,
-                                height: 2,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xffC4C2C2),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 30),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Back Button & Icon
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Column(
+                      children: [
+                        SvgPicture.asset(
+                          TrydosWalletAssets.transferSend,
+                          height: 40,
+                          package: TrydosWalletStyles.packageName,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              AppStrings.get(
+                                state.languageCode,
+                                'transfer_send',
+                              ).toUpperCase(),
+                              style: TrydosWalletStyles.bodyMedium.copyWith(
+                                color: const Color(0xff1D1D1D),
+                                fontSize: 13,
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 10),
-                          SvgPicture.asset(
-                            TrydosWalletAssets.transferSend,
-                            height: 40,
-                            package: TrydosWalletStyles.packageName,
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                AppStrings.get(
-                                  state.languageCode,
-                                  'transfer_send',
-                                ).toUpperCase(),
-                                style: TrydosWalletStyles.bodyMedium.copyWith(
-                                  color: const Color(0xff1D1D1D),
-                                  fontSize: 13,
-                                ),
-                              ),
-                              isRequestFlow
-                                  ? Text(
-                                      ' ${AppStrings.get(state.languageCode, 'request').toUpperCase()}',
-                                      style: TrydosWalletStyles.bodyMedium
-                                          .copyWith(
-                                            color: const Color(0xff1D1D1D),
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    )
-                                  : const SizedBox.shrink(),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Sender Account Card
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xff3C3C3C),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Color(0xffD3D3D3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _buildBalanceSection(state),
-                            isTransferVerifyLoading
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
+                            isRequestFlow
+                                ? Text(
+                                    ' ${AppStrings.get(state.languageCode, 'request').toUpperCase()}',
+                                    style: TrydosWalletStyles.bodyMedium
+                                        .copyWith(
+                                          color: const Color(0xff1D1D1D),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                   )
-                                : SvgPicture.asset(
-                                    TrydosWalletAssets.reload,
-                                    colorFilter: const ColorFilter.mode(
-                                      Colors.white,
-                                      BlendMode.srcIn,
-                                    ),
-                                    height: 20,
-                                    package: TrydosWalletStyles.packageName,
-                                  ),
+                                : const SizedBox.shrink(),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          AppStrings.get(state.languageCode, 'sender_account'),
-                          style: TrydosWalletStyles.bodyMedium.copyWith(
-                            color: Colors.white,
-                            fontSize: 11,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _getSenderAccountDisplay(state),
-                          style: TrydosWalletStyles.bodyMedium.copyWith(
-                            color: Colors.white,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        _buildAmountRow(state),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 15),
-                  Text(
-                    AppStrings.get(state.languageCode, 'send_to'),
-                    style: TrydosWalletStyles.bodyMedium.copyWith(
-                      color: const Color(0xff1D1D1D),
-                      fontSize: 11,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  _buildRecipientInputSection(state),
-                  const SizedBox(height: 5),
-
-                  if (currentInputType == RecipientInputType.phone &&
-                      isPhoneRegistered == false &&
-                      isRecipientVerified) ...[
-                    _buildInputField(
-                      state: state,
-                      label: AppStrings.get(
-                        state.languageCode,
-                        'recipient_name_id',
-                      ),
-                      controller: nameController,
-                      hint: AppStrings.get(
-                        state.languageCode,
-                        'recipient_name_hint',
-                      ),
-                      focusNode: nameFocus,
-                      isVerified: isNameVerified,
-                      errorMessage: nameErrorMessage,
-                      onEdit: () => setState(() => isNameVerified = false),
-                    ),
-                    const SizedBox(height: 5),
-                    _buildInputField(
-                      state: state,
-                      label: AppStrings.get(
-                        state.languageCode,
-                        'recipient_id_num',
-                      ),
-                      controller: idController,
-                      hint: AppStrings.get(
-                        state.languageCode,
-                        'recipient_id_hint',
-                      ),
-                      focusNode: idFocus,
-                      isVerified: isIdVerified,
-                      errorMessage: idErrorMessage,
-                      onEdit: () => setState(() => isIdVerified = false),
-                    ),
-                    const SizedBox(height: 5),
                   ],
+                ),
+                const SizedBox(height: 20),
 
-                  _buildInputField(
-                    state: state,
-                    label:
-                        "${AppStrings.get(state.languageCode, 'enter')}${AppStrings.get(state.languageCode, 'amount_to_be_sent')}",
-                    controller: amountController,
-                    hint: '000,000',
-                    focusNode: amountFocus,
-                    isVerified: isAmountVerified,
-                    isFromQr: isFromQr,
-                    errorMessage: amountErrorMessage,
-                    keyboardType: TextInputType.number,
-                    onEdit: isRequestFlow
-                        ? null
-                        : () => setState(() {
-                            isAmountVerified = false;
-                            isEditingAmount = true;
-                            amountErrorMessage = null;
-                          }),
-                    suffixFollowsText: true,
-                    suffix: Text(
-                      ' ${state.balances[state.selectedAssetId ?? '']?.assetSymbol ?? r'$'}',
-                      style: TrydosWalletStyles.bodyMedium.copyWith(
-                        color: const Color(0xff1D1D1D),
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                // Sender Account Card
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xff3C3C3C),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Color(0xffD3D3D3)),
                   ),
-                  const SizedBox(height: 5),
-
-                  // Purpose Section
-                  if (!isRequestFlow) ...[
-                    AbsorbPointer(
-                      absorbing: currentInputType == RecipientInputType.phone
-                          ? (isPhoneRegistered == false
-                                ? !(isIdVerified && isAmountVerified)
-                                : !(isRecipientVerified && isAmountVerified))
-                          : !(isRecipientVerified && isAmountVerified),
-                      child: _buildPurposeSection(state),
-                    ),
-                  ],
-
-                  if (isRequestFlow) ...[
-                    _buildInputField(
-                      state: state,
-                      label: AppStrings.get(state.languageCode, 'reference_id'),
-                      controller: TextEditingController(text: referenceId),
-                      hint: '',
-                      focusNode: FocusNode(),
-                      isVerified: true,
-                      showMaskedName: false,
-                      enabled: false,
-                    ),
-                    const SizedBox(height: 5),
-                    _buildInputField(
-                      state: state,
-                      label: AppStrings.get(
-                        state.languageCode,
-                        'purpose_of_request',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildBalanceSection(state),
+                          isTransferVerifyLoading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : SvgPicture.asset(
+                                  TrydosWalletAssets.reload,
+                                  colorFilter: const ColorFilter.mode(
+                                    Colors.white,
+                                    BlendMode.srcIn,
+                                  ),
+                                  height: 20,
+                                  package: TrydosWalletStyles.packageName,
+                                ),
+                        ],
                       ),
-                      controller: TextEditingController(
-                        text: AppStrings.get(
-                          state.languageCode,
-                          qrPurpose ?? 'work_partnership',
-                        ),
-                      ),
-                      hint: '',
-                      focusNode: FocusNode(),
-                      isVerified: true,
-                      showMaskedName: false,
-                      enabled: false,
-                    ),
-                    const SizedBox(height: 5),
-                    _buildInputField(
-                      state: state,
-                      label: AppStrings.get(state.languageCode, 'type'),
-                      controller: TextEditingController(text: requestType),
-                      hint: '',
-                      focusNode: FocusNode(),
-                      isVerified: true,
-                      showMaskedName: false,
-                      enabled: false,
-                    ),
-                    const SizedBox(height: 5),
-                    _buildInputField(
-                      state: state,
-                      label: AppStrings.get(state.languageCode, 'valid_until'),
-                      controller: TextEditingController(
-                        text: expiryTime == null
-                            ? '-'
-                            : '${expiryTime!.difference(DateTime.now()).inMinutes < 0 ? 0 : expiryTime!.difference(DateTime.now()).inMinutes}${AppStrings.get(state.languageCode, 'minutes_until')}${expiryTime!.hour.toString().padLeft(2, '0')}:${expiryTime!.minute.toString().padLeft(2, '0')} | ${expiryTime!.day} ${AppStrings.get(state.languageCode, months[expiryTime!.month - 1])} ${expiryTime!.year}',
-                      ),
-                      hint: '',
-                      focusNode: FocusNode(),
-                      isVerified: true,
-                      showMaskedName: false,
-                      enabled: false,
-                      showTimeNote: true,
-                    ),
-                  ],
-
-                  isRequestFlow
-                      ? const SizedBox(height: 10)
-                      : const SizedBox(height: 30),
-
-                  if (isRequestFlow && isExpired)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xffFF5F60),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        AppStrings.get(state.languageCode, 'expired_code'),
+                      const SizedBox(height: 6),
+                      Text(
+                        AppStrings.get(state.languageCode, 'sender_account'),
                         style: TrydosWalletStyles.bodyMedium.copyWith(
                           color: Colors.white,
                           fontSize: 11,
-                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    )
-                  else ...[
-                    SizedBox(height: 75),
-                    _buildSendButton(state),
-                  ],
+                      const SizedBox(height: 6),
+                      Text(
+                        _getSenderAccountDisplay(state),
+                        style: TrydosWalletStyles.bodyMedium.copyWith(
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      _buildAmountRow(state),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Text(
+                  AppStrings.get(state.languageCode, 'send_to'),
+                  style: TrydosWalletStyles.bodyMedium.copyWith(
+                    color: const Color(0xff1D1D1D),
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 10),
 
-                  const SizedBox(height: 125),
-                ],
-              ),
+                SizedBox(
+                  height: (MediaQuery.of(context).size.height * 0.9) - 370,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        _buildRecipientInputSection(state),
+                        const SizedBox(height: 5),
+
+                        if (currentInputType == RecipientInputType.phone &&
+                            isPhoneRegistered == false &&
+                            isRecipientVerified) ...[
+                          _buildInputField(
+                            state: state,
+                            label: AppStrings.get(
+                              state.languageCode,
+                              'recipient_name_id',
+                            ),
+                            controller: nameController,
+                            hint: AppStrings.get(
+                              state.languageCode,
+                              'recipient_name_hint',
+                            ),
+                            focusNode: nameFocus,
+                            isVerified: isNameVerified,
+                            errorMessage: nameErrorMessage,
+                            onEdit: () =>
+                                setState(() => isNameVerified = false),
+                          ),
+                          const SizedBox(height: 5),
+                          _buildInputField(
+                            state: state,
+                            label: AppStrings.get(
+                              state.languageCode,
+                              'recipient_id_num',
+                            ),
+                            controller: idController,
+                            hint: AppStrings.get(
+                              state.languageCode,
+                              'recipient_id_hint',
+                            ),
+                            focusNode: idFocus,
+                            isVerified: isIdVerified,
+                            errorMessage: idErrorMessage,
+                            onEdit: () => setState(() => isIdVerified = false),
+                          ),
+                          const SizedBox(height: 5),
+                        ],
+
+                        _buildInputField(
+                          state: state,
+                          label:
+                              "${AppStrings.get(state.languageCode, 'enter')}${AppStrings.get(state.languageCode, 'amount_to_be_sent')}",
+                          controller: amountController,
+                          hint: '000,000',
+                          focusNode: amountFocus,
+                          isVerified: isAmountVerified,
+                          isFromQr: isFromQr,
+                          errorMessage: amountErrorMessage,
+                          keyboardType: TextInputType.number,
+                          enabled: isRequestFlow
+                              ? false
+                              : (currentInputType == RecipientInputType.account
+                                    ? isRecipientVerified
+                                    : (isPhoneRegistered == true
+                                          ? isRecipientVerified
+                                          : (isRecipientVerified &&
+                                                isNameVerified &&
+                                                isIdVerified))),
+                          onEdit: isRequestFlow
+                              ? null
+                              : () => setState(() {
+                                  isAmountVerified = false;
+                                  isEditingAmount = true;
+                                  amountErrorMessage = null;
+                                }),
+                          suffixFollowsText: true,
+                          suffix: Text(
+                            ' $currencySymbol',
+                            style: TrydosWalletStyles.bodyMedium.copyWith(
+                              color: const Color(0xff1D1D1D),
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+
+                        // Purpose Section
+                        if (!isRequestFlow) ...[
+                          AbsorbPointer(
+                            absorbing:
+                                currentInputType == RecipientInputType.phone
+                                ? (isPhoneRegistered == false
+                                      ? !(isIdVerified && isAmountVerified)
+                                      : !(isRecipientVerified &&
+                                            isAmountVerified))
+                                : !(isRecipientVerified && isAmountVerified),
+                            child: _buildPurposeSection(state),
+                          ),
+                        ],
+
+                        if (isRequestFlow) ...[
+                          _buildInputField(
+                            state: state,
+                            label: AppStrings.get(
+                              state.languageCode,
+                              'reference_id',
+                            ),
+                            controller: TextEditingController(
+                              text: referenceId,
+                            ),
+                            hint: '',
+                            focusNode: FocusNode(),
+                            isVerified: true,
+                            showMaskedName: false,
+                            enabled: false,
+                          ),
+                          const SizedBox(height: 5),
+                          _buildInputField(
+                            state: state,
+                            label: AppStrings.get(
+                              state.languageCode,
+                              'purpose_of_request',
+                            ),
+                            controller: TextEditingController(
+                              text: AppStrings.get(
+                                state.languageCode,
+                                qrPurpose ?? 'work_partnership',
+                              ),
+                            ),
+                            hint: '',
+                            focusNode: FocusNode(),
+                            isVerified: true,
+                            showMaskedName: false,
+                            enabled: false,
+                          ),
+                          const SizedBox(height: 5),
+                          _buildInputField(
+                            state: state,
+                            label: AppStrings.get(state.languageCode, 'type'),
+                            controller: TextEditingController(
+                              text: requestType,
+                            ),
+                            hint: '',
+                            focusNode: FocusNode(),
+                            isVerified: true,
+                            showMaskedName: false,
+                            enabled: false,
+                          ),
+                          const SizedBox(height: 5),
+                          _buildInputField(
+                            state: state,
+                            label: AppStrings.get(
+                              state.languageCode,
+                              'valid_until',
+                            ),
+                            controller: TextEditingController(
+                              text: expiryTime == null
+                                  ? '-'
+                                  : '${expiryTime!.difference(DateTime.now()).inMinutes < 0 ? 0 : expiryTime!.difference(DateTime.now()).inMinutes}${AppStrings.get(state.languageCode, 'minutes_until')}${expiryTime!.hour.toString().padLeft(2, '0')}:${expiryTime!.minute.toString().padLeft(2, '0')} | ${expiryTime!.day} ${AppStrings.get(state.languageCode, months[expiryTime!.month - 1])} ${expiryTime!.year}',
+                            ),
+                            hint: '',
+                            focusNode: FocusNode(),
+                            isVerified: true,
+                            showMaskedName: false,
+                            enabled: false,
+                            showTimeNote: true,
+                          ),
+                        ],
+
+                        isRequestFlow
+                            ? const SizedBox(height: 10)
+                            : const SizedBox(height: 30),
+
+                        if (isRequestFlow && isExpired)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xffFF5F60),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              AppStrings.get(
+                                state.languageCode,
+                                'expired_code',
+                              ),
+                              style: TrydosWalletStyles.bodyMedium.copyWith(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                        else
+                          ...[],
+                      ],
+                    ),
+                  ),
+                ),
+                Spacer(),
+                (isRequestFlow && isExpired)
+                    ? SizedBox.shrink()
+                    : Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: _buildSendButton(state),
+                      ),
+              ],
             ),
           ),
         );
@@ -1481,8 +1578,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
       customTopLabelWidget: Row(
         children: [
           GestureDetector(
-            onTap: () =>
-                setState(() => currentInputType = RecipientInputType.account),
+            onTap: () => _switchRecipientInputType(RecipientInputType.account),
             child: Text(
               '${AppStrings.get(state.languageCode, 'enter')}${AppStrings.get(state.languageCode, 'recipient_account')}${AppStrings.get(state.languageCode, 'or')}',
               style: TrydosWalletStyles.bodyMedium.copyWith(
@@ -1496,8 +1592,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
           ),
 
           GestureDetector(
-            onTap: () =>
-                setState(() => currentInputType = RecipientInputType.phone),
+            onTap: () => _switchRecipientInputType(RecipientInputType.phone),
             child: Text(
               'phone number  ',
               style: TrydosWalletStyles.bodyMedium.copyWith(
@@ -1577,7 +1672,8 @@ class _TransferSendModalState extends State<TransferSendModal> {
               onTap: () async {
                 final result = await showWalletModal<String>(
                   context: context,
-                  builder: (context, sc) => QRScannerPage(scrollController: sc),
+                  builder: (context, sc) =>
+                      QRScannerPage(fromQR: true, appairBack: true),
                 );
                 if (result == null) {
                   return;
