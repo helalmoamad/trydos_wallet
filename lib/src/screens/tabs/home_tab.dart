@@ -384,11 +384,17 @@ class _HomeTabState extends State<HomeTab> {
                           onTap: () {
                             if (_selectedCurrencies.contains(currency.symbol)) {
                               context.read<WalletBloc>().add(
-                                const BalanceCardIsSelected(isSelected: false),
+                                BalanceCardIsSelected(
+                                  isSelected: false,
+                                  assetId: currency.id,
+                                ),
                               );
                             } else {
                               context.read<WalletBloc>().add(
-                                const BalanceCardIsSelected(isSelected: true),
+                                BalanceCardIsSelected(
+                                  isSelected: true,
+                                  assetId: currency.id,
+                                ),
                               );
                             }
                             setState(() {
@@ -467,13 +473,17 @@ class _HomeTabState extends State<HomeTab> {
                                 currency.symbol,
                               )) {
                                 context.read<WalletBloc>().add(
-                                  const BalanceCardIsSelected(
+                                  BalanceCardIsSelected(
                                     isSelected: false,
+                                    assetId: currency.id,
                                   ),
                                 );
                               } else {
                                 context.read<WalletBloc>().add(
-                                  const BalanceCardIsSelected(isSelected: true),
+                                  BalanceCardIsSelected(
+                                    isSelected: true,
+                                    assetId: currency.id,
+                                  ),
                                 );
                               }
                               setState(() {
