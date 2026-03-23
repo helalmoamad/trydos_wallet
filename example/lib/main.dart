@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,8 +15,15 @@ void main() {
       isKurdish: false,
       applicationVersion: '1.0.0',
       debug: kDebugMode,
-      firstName: "helal",
-      lastName: "mohamad",
+      firstName: 'هلال',
+      lastName: 'محمد',
+      email: 'phone_963934330889@trydos-otp.local',
+      phoneNumber: '963934330889',
+      userSubtitle: 'registered',
+      isPhoneVerified: true,
+      isAccountActive: true,
+      isTwoFactorEnabled: false,
+      memberSince: DateTime(2026, 1, 27),
       allowBadCertificate: true,
     ),
   );
@@ -23,8 +31,38 @@ void main() {
 }
 
 /// Example app for the wallet library.
-class TrydosWalletExampleApp extends StatelessWidget {
+class TrydosWalletExampleApp extends StatefulWidget {
   const TrydosWalletExampleApp({super.key});
+
+  @override
+  State<TrydosWalletExampleApp> createState() => _TrydosWalletExampleAppState();
+}
+
+class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp> {
+  StreamSubscription? _logoutSubscription;
+  StreamSubscription? _languageSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Listen to logout events emitted by the library.
+    _logoutSubscription = logoutEvents.listen((event) {
+      debugPrint('[App] Logout event received: ${event.reason}');
+    });
+
+    // Listen to language change events emitted by the library.
+    _languageSubscription = languageChangeEvents.listen((event) {
+      debugPrint('[App] Language change event: ${event.languageCode}');
+    });
+  }
+
+  @override
+  void dispose() {
+    _logoutSubscription?.cancel();
+    _languageSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -13,12 +13,13 @@ class ApiErrorListener extends StatefulWidget {
 }
 
 class _ApiErrorListenerState extends State<ApiErrorListener> {
-  StreamSubscription? _subscription;
+  StreamSubscription? _errorSubscription;
 
   @override
   void initState() {
     super.initState();
-    _subscription = errorEvents.listen((event) {
+
+    _errorSubscription = errorEvents.listen((event) {
       debugPrint('[ApiErrorListener] 400 error detected: ${event.message}');
       if (mounted) {
         _showErrorSnackBar(context, event.message);
@@ -28,7 +29,7 @@ class _ApiErrorListenerState extends State<ApiErrorListener> {
 
   @override
   void dispose() {
-    _subscription?.cancel();
+    _errorSubscription?.cancel();
     super.dispose();
   }
 

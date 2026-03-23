@@ -120,6 +120,27 @@ class _RequestQRModalState extends State<RequestQRModal> {
     return state.balances[state.selectedAssetId ?? '']?.assetSymbol ?? 'SYP';
   }
 
+  String _currencyDisplayName(WalletState state) {
+    final selectedId = state.selectedAssetId;
+    if (selectedId != null) {
+      for (final currency in state.currencies) {
+        if (currency.id == selectedId) {
+          if (currency.displayName.isNotEmpty) return currency.displayName;
+          if (currency.name.isNotEmpty) return currency.name;
+          if (currency.symbol.isNotEmpty) return currency.symbol;
+        }
+      }
+    }
+
+    final balance = state.balances[state.selectedAssetId ?? ''];
+    final assetName = balance?.asset?.name ?? '';
+    if (assetName.isNotEmpty) return assetName;
+    final symbol = balance?.assetSymbol ?? '';
+    if (symbol.isNotEmpty) return symbol;
+
+    return AppStrings.get(state.languageCode, 'american_dollars');
+  }
+
   String _monthKey(int month) {
     const months = [
       'jan',
@@ -262,60 +283,65 @@ class _RequestQRModalState extends State<RequestQRModal> {
       builder: (context, state) {
         final qrPayload = _requestQrPayload(state);
         final validUntilText = _validUntilText(state);
-        return SizedBox(
-          height: MediaQuery.of(context).size.height * 0.9,
-          child: Stack(
-            children: [
-              // Hidden card for screen capture
-              Positioned(
-                left: -4000,
-                top: -4000,
-                child: RepaintBoundary(
-                  key: _cardKey,
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: _CleanRequestQRCard(
-                      accountName: _accountName,
-                      accountNumber: _accountNumber,
-                      qrPayload: qrPayload,
-                      amount: _amountController.text,
-                      currencySymbol: _currencySymbol(state),
-                      reference: _referenceController.text,
-                      purpose: _purposeName(state, _selectedPurpose),
-                      validUntilText: validUntilText,
-                      requestType: AppStrings.get(
-                        state.languageCode,
-                        'deposit_request',
+        final currencyDisplayName = _currencyDisplayName(state);
+        return Directionality(
+          textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.9,
+            child: Stack(
+              children: [
+                // Hidden card for screen capture
+                PositionedDirectional(
+                  start: -4000,
+                  top: -4000,
+                  child: RepaintBoundary(
+                    key: _cardKey,
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: _CleanRequestQRCard(
+                        accountName: _accountName,
+                        accountNumber: _accountNumber,
+                        currencyDisplayName: currencyDisplayName,
+                        qrPayload: qrPayload,
+                        amount: _amountController.text,
+                        currencySymbol: _currencySymbol(state),
+                        reference: _referenceController.text,
+                        purpose: _purposeName(state, _selectedPurpose),
+                        validUntilText: validUntilText,
+                        requestType: AppStrings.get(
+                          state.languageCode,
+                          'deposit_request',
+                        ),
+                        note: _noteController.text,
+                        languageCode: state.languageCode,
                       ),
-                      note: _noteController.text,
-                      languageCode: state.languageCode,
                     ),
                   ),
                 ),
-              ),
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.9,
-                child: Column(
-                  children: [
-                    // Trydos Logo
-                    SvgPicture.asset(
-                      TrydosWalletAssets.trydos,
-                      height: 30,
-                      package: TrydosWalletStyles.packageName,
-                    ),
-                    const SizedBox(height: 20),
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.9,
+                  child: Column(
+                    children: [
+                      // Trydos Logo
+                      SvgPicture.asset(
+                        TrydosWalletAssets.trydos,
+                        height: 30,
+                        package: TrydosWalletStyles.packageName,
+                      ),
+                      const SizedBox(height: 20),
 
-                    if (_state == RequestQRState.finalQR) ...[
-                      // Final QR View
-                      _buildFinalQRView(state, qrPayload, validUntilText),
-                    ] else ...[
-                      // Filling Form (including generating state)
-                      _buildFormView(state),
+                      if (_state == RequestQRState.finalQR) ...[
+                        // Final QR View
+                        _buildFinalQRView(state, qrPayload, validUntilText),
+                      ] else ...[
+                        // Filling Form (including generating state)
+                        _buildFormView(state),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -370,7 +396,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                 const SizedBox(height: 5),
                 _buildInfoBox(
                   AppStrings.get(state.languageCode, 'account_number'),
-                  '$_accountNumber  ${AppStrings.get(state.languageCode, 'american_dollars')}',
+                  '$_accountNumber  ${_currencyDisplayName(state)}',
                 ),
                 const SizedBox(height: 5),
                 // Amount and Reference
@@ -488,7 +514,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
         const SizedBox(height: 5),
         _buildSummaryBox(
           AppStrings.get(state.languageCode, 'account_number'),
-          '$_accountNumber  ${AppStrings.get(state.languageCode, 'american_dollars')}',
+          '$_accountNumber  ${_currencyDisplayName(state)}',
         ),
         const SizedBox(height: 5),
         // Transaction Details
@@ -762,7 +788,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                     setState(() => _selectedPurpose = option.id);
                   },
                   child: Container(
-                    margin: const EdgeInsets.only(right: 3),
+                    margin: const EdgeInsetsDirectional.only(end: 3),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
@@ -880,7 +906,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            padding: const EdgeInsetsDirectional.only(start: 4, bottom: 8),
             child: Text(
               label,
               style: TrydosWalletStyles.bodySmall.copyWith(
@@ -897,7 +923,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                 return GestureDetector(
                   onTap: () => onSelected(option),
                   child: Container(
-                    margin: const EdgeInsets.only(right: 3),
+                    margin: const EdgeInsetsDirectional.only(end: 3),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
@@ -1091,6 +1117,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
 class _CleanRequestQRCard extends StatelessWidget {
   final String accountName;
   final String accountNumber;
+  final String currencyDisplayName;
   final String qrPayload;
   final String amount;
   final String currencySymbol;
@@ -1104,6 +1131,7 @@ class _CleanRequestQRCard extends StatelessWidget {
   const _CleanRequestQRCard({
     required this.accountName,
     required this.accountNumber,
+    required this.currencyDisplayName,
     required this.qrPayload,
     required this.amount,
     required this.currencySymbol,
@@ -1117,107 +1145,112 @@ class _CleanRequestQRCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 400,
-      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
-      decoration: const BoxDecoration(color: Colors.white),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          SvgPicture.asset(
-            TrydosWalletAssets.trydos,
-            height: 40,
-            package: TrydosWalletStyles.packageName,
-          ),
-          const SizedBox(height: 20),
-          SizedBox.square(
-            dimension: 300,
-            child: PrettyQrView.data(
-              data: qrPayload,
-              errorCorrectLevel: QrErrorCorrectLevel.M,
-              decoration: const PrettyQrDecoration(
-                shape: PrettyQrSmoothSymbol(
-                  color: Color(0xff1D1D1D),
-                  roundFactor: 0.9,
+    final isRtl = languageCode == 'ar' || languageCode == 'ku';
+
+    return Directionality(
+      textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+      child: Container(
+        width: 400,
+        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
+        decoration: const BoxDecoration(color: Colors.white),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            SvgPicture.asset(
+              TrydosWalletAssets.trydos,
+              height: 40,
+              package: TrydosWalletStyles.packageName,
+            ),
+            const SizedBox(height: 20),
+            SizedBox.square(
+              dimension: 300,
+              child: PrettyQrView.data(
+                data: qrPayload,
+                errorCorrectLevel: QrErrorCorrectLevel.M,
+                decoration: const PrettyQrDecoration(
+                  shape: PrettyQrSmoothSymbol(
+                    color: Color(0xff1D1D1D),
+                    roundFactor: 0.9,
+                  ),
+                  quietZone: PrettyQrQuietZone.modules(0),
                 ),
-                quietZone: PrettyQrQuietZone.modules(0),
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            accountNumber,
-            style: TrydosWalletStyles.bodyMedium.copyWith(
-              color: const Color(0xff1D1D1D),
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            const SizedBox(height: 10),
+            Text(
+              accountNumber,
+              style: TrydosWalletStyles.bodyMedium.copyWith(
+                color: const Color(0xff1D1D1D),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          _buildInfoBox(
-            AppStrings.get(languageCode, 'account_name'),
-            accountName,
-          ),
-          const SizedBox(height: 5),
-          _buildInfoBox(
-            AppStrings.get(languageCode, 'account_number'),
-            '$accountNumber  ${AppStrings.get(languageCode, 'american_dollars')}',
-          ),
-          const SizedBox(height: 5),
-          Row(
-            children: [
-              Expanded(
-                child: _buildInfoBox(
-                  AppStrings.get(languageCode, 'amount'),
-                  '$amount $currencySymbol',
-                ),
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: _buildInfoBox(
-                  AppStrings.get(languageCode, 'id'),
-                  reference,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Row(
-            children: [
-              Expanded(
-                child: _buildInfoBox(
-                  AppStrings.get(languageCode, 'purpose_of_request'),
-                  purpose,
-                ),
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: _buildInfoBox(
-                  AppStrings.get(languageCode, 'type'),
-                  requestType,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          _buildInfoBox(
-            AppStrings.get(languageCode, 'valid_until'),
-            validUntilText,
-          ),
-          if (note.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            _buildInfoBox(
+              AppStrings.get(languageCode, 'account_name'),
+              accountName,
+            ),
             const SizedBox(height: 5),
-            _buildInfoBox(AppStrings.get(languageCode, 'note'), note),
-          ],
-          const SizedBox(height: 5),
-          Text(
-            AppStrings.get(languageCode, 'cannot_use_after_expiry'),
-            style: TrydosWalletStyles.bodySmall.copyWith(
-              color: const Color(0xff8D8D8D),
-              fontSize: 10,
+            _buildInfoBox(
+              AppStrings.get(languageCode, 'account_number'),
+              '$accountNumber  $currencyDisplayName',
             ),
-          ),
-        ],
+            const SizedBox(height: 5),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildInfoBox(
+                    AppStrings.get(languageCode, 'amount'),
+                    '$amount $currencySymbol',
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: _buildInfoBox(
+                    AppStrings.get(languageCode, 'id'),
+                    reference,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildInfoBox(
+                    AppStrings.get(languageCode, 'purpose_of_request'),
+                    purpose,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: _buildInfoBox(
+                    AppStrings.get(languageCode, 'type'),
+                    requestType,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            _buildInfoBox(
+              AppStrings.get(languageCode, 'valid_until'),
+              validUntilText,
+            ),
+            if (note.isNotEmpty) ...[
+              const SizedBox(height: 5),
+              _buildInfoBox(AppStrings.get(languageCode, 'note'), note),
+            ],
+            const SizedBox(height: 5),
+            Text(
+              AppStrings.get(languageCode, 'cannot_use_after_expiry'),
+              style: TrydosWalletStyles.bodySmall.copyWith(
+                color: const Color(0xff8D8D8D),
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

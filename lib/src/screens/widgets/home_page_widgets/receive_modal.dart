@@ -103,6 +103,27 @@ class _ReceiveModalState extends State<ReceiveModal> {
     return symbol;
   }
 
+  String _currencyDisplayNameFromState(WalletState state) {
+    final selectedId = state.selectedAssetId;
+    if (selectedId != null) {
+      for (final currency in state.currencies) {
+        if (currency.id == selectedId) {
+          if (currency.displayName.isNotEmpty) return currency.displayName;
+          if (currency.name.isNotEmpty) return currency.name;
+          if (currency.symbol.isNotEmpty) return currency.symbol;
+        }
+      }
+    }
+
+    final balance = _resolveReceiveBalance(state);
+    final assetName = balance?.asset?.name ?? '';
+    if (assetName.isNotEmpty) return assetName;
+    final symbol = balance?.assetSymbol ?? '';
+    if (symbol.isNotEmpty) return symbol;
+
+    return AppStrings.get(state.languageCode, 'american_dollars');
+  }
+
   String _buildReceiveQrPayload(
     WalletState state,
     String accountName,
@@ -218,6 +239,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
   @override
   Widget build(BuildContext context) {
     _syncModalBackButton();
+    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
         if (!mounted) return false;
@@ -228,52 +250,58 @@ class _ReceiveModalState extends State<ReceiveModal> {
         builder: (context, state) {
           final accountName = _accountNameFromState(state);
           final accountNumber = _accountNumberFromState(state);
+          final currencyDisplayName = _currencyDisplayNameFromState(state);
           final qrPayload = _buildReceiveQrPayload(
             state,
             accountName,
             accountNumber,
           );
-          return Stack(
-            children: [
-              // Hidden card for screen capture
-              Positioned(
-                left: -4000,
-                top: -4000,
-                child: RepaintBoundary(
-                  key: _cardKey,
-                  child: _CleanQRCard(
-                    accountName: _isMasked ? _maskedName : accountName,
-                    accountNumber: accountNumber,
-                    qrPayload: qrPayload,
-                    languageCode: state.languageCode,
+          return Directionality(
+            textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
+            child: Stack(
+              children: [
+                // Hidden card for screen capture
+                PositionedDirectional(
+                  start: -4000,
+                  top: -4000,
+                  child: RepaintBoundary(
+                    key: _cardKey,
+                    child: _CleanQRCard(
+                      accountName: _isMasked ? _maskedName : accountName,
+                      accountNumber: accountNumber,
+                      currencyDisplayName: currencyDisplayName,
+                      qrPayload: qrPayload,
+                      languageCode: state.languageCode,
+                    ),
                   ),
                 ),
-              ),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: _currentView == ReceiveModalView.main
-                        ? _buildReceiveView(
-                            context,
-                            state,
-                            accountName,
-                            accountNumber,
-                            qrPayload,
-                          )
-                        : RequestQRModal(
-                            accountName: accountName,
-                            accountNumber: accountNumber,
-                            onBack: () {
-                              setState(() {
-                                _currentView = ReceiveModalView.main;
-                              });
-                            },
-                          ),
-                  );
-                },
-              ),
-            ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: _currentView == ReceiveModalView.main
+                          ? _buildReceiveView(
+                              context,
+                              state,
+                              accountName,
+                              accountNumber,
+                              currencyDisplayName,
+                              qrPayload,
+                            )
+                          : RequestQRModal(
+                              accountName: accountName,
+                              accountNumber: accountNumber,
+                              onBack: () {
+                                setState(() {
+                                  _currentView = ReceiveModalView.main;
+                                });
+                              },
+                            ),
+                    );
+                  },
+                ),
+              ],
+            ),
           );
         },
       ),
@@ -285,6 +313,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
     WalletState state,
     String accountName,
     String accountNumber,
+    String currencyDisplayName,
     String qrPayload,
   ) {
     return Column(
@@ -357,7 +386,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
         const SizedBox(height: 5),
         _buildInfoSection(
           AppStrings.get(state.languageCode, 'account_number'),
-          '$accountNumber  ${AppStrings.get(state.languageCode, 'american_dollars')}',
+          '$accountNumber  $currencyDisplayName',
         ),
 
         Spacer(),
@@ -486,67 +515,74 @@ class _ReceiveModalState extends State<ReceiveModal> {
 class _CleanQRCard extends StatelessWidget {
   final String accountName;
   final String accountNumber;
+  final String currencyDisplayName;
   final String qrPayload;
   final String languageCode;
 
   const _CleanQRCard({
     required this.accountName,
     required this.accountNumber,
+    required this.currencyDisplayName,
     required this.qrPayload,
     required this.languageCode,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height,
-      width: MediaQuery.of(context).size.width,
-      padding: const EdgeInsets.all(30),
-      decoration: const BoxDecoration(color: Colors.white),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SvgPicture.asset(
-            TrydosWalletAssets.trydos,
-            height: 40,
-            package: TrydosWalletStyles.packageName,
-          ),
-          const SizedBox(height: 20),
-          SizedBox.square(
-            dimension: 300,
-            child: PrettyQrView.data(
-              data: qrPayload,
-              errorCorrectLevel: QrErrorCorrectLevel.M,
-              decoration: const PrettyQrDecoration(
-                shape: PrettyQrSmoothSymbol(
-                  color: Color(0xff1D1D1D),
-                  roundFactor: 0.9,
+    final isRtl = languageCode == 'ar' || languageCode == 'ku';
+
+    return Directionality(
+      textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+      child: Container(
+        height: MediaQuery.of(context).size.height,
+        width: MediaQuery.of(context).size.width,
+        padding: const EdgeInsets.all(30),
+        decoration: const BoxDecoration(color: Colors.white),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SvgPicture.asset(
+              TrydosWalletAssets.trydos,
+              height: 40,
+              package: TrydosWalletStyles.packageName,
+            ),
+            const SizedBox(height: 20),
+            SizedBox.square(
+              dimension: 300,
+              child: PrettyQrView.data(
+                data: qrPayload,
+                errorCorrectLevel: QrErrorCorrectLevel.M,
+                decoration: const PrettyQrDecoration(
+                  shape: PrettyQrSmoothSymbol(
+                    color: Color(0xff1D1D1D),
+                    roundFactor: 0.9,
+                  ),
+                  quietZone: PrettyQrQuietZone.modules(0),
                 ),
-                quietZone: PrettyQrQuietZone.modules(0),
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            accountNumber,
-            style: TrydosWalletStyles.bodyMedium.copyWith(
-              color: const Color(0xff404040),
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            const SizedBox(height: 10),
+            Text(
+              accountNumber,
+              style: TrydosWalletStyles.bodyMedium.copyWith(
+                color: const Color(0xff404040),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          _buildInfoBox(
-            AppStrings.get(languageCode, 'account_name'),
-            accountName,
-          ),
-          const SizedBox(height: 5),
-          _buildInfoBox(
-            AppStrings.get(languageCode, 'account_number'),
-            '$accountNumber  ${AppStrings.get(languageCode, 'american_dollars')}',
-          ),
-        ],
+            const SizedBox(height: 20),
+            _buildInfoBox(
+              AppStrings.get(languageCode, 'account_name'),
+              accountName,
+            ),
+            const SizedBox(height: 5),
+            _buildInfoBox(
+              AppStrings.get(languageCode, 'account_number'),
+              '$accountNumber  $currencyDisplayName',
+            ),
+          ],
+        ),
       ),
     );
   }

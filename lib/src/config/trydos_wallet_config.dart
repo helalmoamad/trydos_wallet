@@ -1,8 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'dart:io' show Platform;
 
 import '../api/api_client.dart';
 import '../api/api_headers.dart';
+import '../api/api_interceptors.dart';
 
 /// Library config - passed when initializing from the consuming app.
 ///
@@ -17,10 +17,16 @@ class TrydosWalletConfig {
     this.debug = false,
     this.firstName = 'M*****',
     this.lastName = 'A*****',
+    this.email,
+    this.phoneNumber,
+    this.profileImageUrl,
+    this.userSubtitle,
+    this.isPhoneVerified = false,
+    this.isAccountActive = true,
+    this.isTwoFactorEnabled = false,
+    this.memberSince,
     this.allowBadCertificate = false,
     this.skipSplash = false,
-    this.onLogout,
-    this.onLanguageChanged,
   });
 
   final String baseUrl;
@@ -31,10 +37,16 @@ class TrydosWalletConfig {
   final bool debug;
   final String firstName;
   final String lastName;
+  final String? email;
+  final String? phoneNumber;
+  final String? profileImageUrl;
+  final String? userSubtitle;
+  final bool isPhoneVerified;
+  final bool isAccountActive;
+  final bool isTwoFactorEnabled;
+  final DateTime? memberSince;
   final bool allowBadCertificate;
   final bool skipSplash;
-  final VoidCallback? onLogout;
-  final void Function(String languageCode, bool isKurdish)? onLanguageChanged;
 
   ApiHeadersConfig get headersConfig => ApiHeadersConfig(
     languageCode: languageCode,
@@ -83,7 +95,7 @@ class TrydosWallet {
 
   /// Trigger logout event for the host app.
   static void logout() {
-    _config?.onLogout?.call();
+    emitLogoutEvent(LogoutEvent('user_logout'));
   }
 
   /// Update the token later (e.g. after login).
@@ -98,10 +110,16 @@ class TrydosWallet {
       debug: _config!.debug,
       firstName: _config!.firstName,
       lastName: _config!.lastName,
+      email: _config!.email,
+      phoneNumber: _config!.phoneNumber,
+      profileImageUrl: _config!.profileImageUrl,
+      userSubtitle: _config!.userSubtitle,
+      isPhoneVerified: _config!.isPhoneVerified,
+      isAccountActive: _config!.isAccountActive,
+      isTwoFactorEnabled: _config!.isTwoFactorEnabled,
+      memberSince: _config!.memberSince,
       allowBadCertificate: _config!.allowBadCertificate,
       skipSplash: _config!.skipSplash,
-      onLogout: _config!.onLogout,
-      onLanguageChanged: _config!.onLanguageChanged,
     );
     _apiClient?.updateHeaders(_config!.headersConfig);
   }
@@ -119,17 +137,46 @@ class TrydosWallet {
       debug: _config!.debug,
       firstName: _config!.firstName,
       lastName: _config!.lastName,
+      email: _config!.email,
+      phoneNumber: _config!.phoneNumber,
+      profileImageUrl: _config!.profileImageUrl,
+      userSubtitle: _config!.userSubtitle,
+      isPhoneVerified: _config!.isPhoneVerified,
+      isAccountActive: _config!.isAccountActive,
+      isTwoFactorEnabled: _config!.isTwoFactorEnabled,
+      memberSince: _config!.memberSince,
       allowBadCertificate: _config!.allowBadCertificate,
       skipSplash: _config!.skipSplash,
-      onLogout: _config!.onLogout,
-      onLanguageChanged: _config!.onLanguageChanged,
     );
     _apiClient?.updateHeaders(_config!.headersConfig);
-    _config!.onLanguageChanged?.call(languageCode, kurdish);
+    emitLanguageChangeEvent(
+      LanguageChangeEvent(
+        languageCode,
+        languageName:
+            const {
+              'en': 'English',
+              'ar': 'Arabic',
+              'ku': 'Kurdish',
+              'tr': 'Turkish',
+            }[languageCode] ??
+            languageCode,
+      ),
+    );
   }
 
   /// Update user info later.
-  static void updateUserInfo({String? firstName, String? lastName}) {
+  static void updateUserInfo({
+    String? firstName,
+    String? lastName,
+    String? email,
+    String? phoneNumber,
+    String? profileImageUrl,
+    String? userSubtitle,
+    bool? isPhoneVerified,
+    bool? isAccountActive,
+    bool? isTwoFactorEnabled,
+    DateTime? memberSince,
+  }) {
     if (_config == null) return;
     _config = TrydosWalletConfig(
       baseUrl: _config!.baseUrl,
@@ -140,10 +187,16 @@ class TrydosWallet {
       debug: _config!.debug,
       firstName: firstName ?? _config!.firstName,
       lastName: lastName ?? _config!.lastName,
+      email: email ?? _config!.email,
+      phoneNumber: phoneNumber ?? _config!.phoneNumber,
+      profileImageUrl: profileImageUrl ?? _config!.profileImageUrl,
+      userSubtitle: userSubtitle ?? _config!.userSubtitle,
+      isPhoneVerified: isPhoneVerified ?? _config!.isPhoneVerified,
+      isAccountActive: isAccountActive ?? _config!.isAccountActive,
+      isTwoFactorEnabled: isTwoFactorEnabled ?? _config!.isTwoFactorEnabled,
+      memberSince: memberSince ?? _config!.memberSince,
       allowBadCertificate: _config!.allowBadCertificate,
       skipSplash: _config!.skipSplash,
-      onLogout: _config!.onLogout,
-      onLanguageChanged: _config!.onLanguageChanged,
     );
   }
 }

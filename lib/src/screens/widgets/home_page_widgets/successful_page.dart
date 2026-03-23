@@ -206,298 +206,304 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
   Widget build(BuildContext context) {
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Hidden receipt for screen capture
-            Positioned(
-              left: -4000,
-              top: -4000,
-              child: RepaintBoundary(
-                key: _receiptKey,
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: ReceiptWidget(
-                    senderAccount: widget.senderAccount,
-                    recipientAccount: widget.recipientAccount,
-                    amount: widget.amount,
-                    currencySymbol: widget.currencySymbol,
-                    reference: widget.reference,
-                    dateAndTimeString: widget.dateAndTimeString,
-                    type: widget.type,
-                    purpose: widget.purpose,
-                    isSuccess: widget.isSuccess,
-                    isFromQr: widget.isFromQr,
-                    recipientPhoneNumber: widget.recipientPhoneNumber,
-                    recipientName: widget.recipientName,
-                    recipientId: widget.recipientId,
-                    languageCode: state.languageCode,
+        return Directionality(
+          textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Hidden receipt for screen capture
+              PositionedDirectional(
+                start: -4000,
+                top: -4000,
+                child: RepaintBoundary(
+                  key: _receiptKey,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: ReceiptWidget(
+                      senderAccount: widget.senderAccount,
+                      recipientAccount: widget.recipientAccount,
+                      amount: widget.amount,
+                      currencySymbol: widget.currencySymbol,
+                      reference: widget.reference,
+                      dateAndTimeString: widget.dateAndTimeString,
+                      type: widget.type,
+                      purpose: widget.purpose,
+                      isSuccess: widget.isSuccess,
+                      isFromQr: widget.isFromQr,
+                      recipientPhoneNumber: widget.recipientPhoneNumber,
+                      recipientName: widget.recipientName,
+                      recipientId: widget.recipientId,
+                      languageCode: state.languageCode,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            // Visible UI
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              decoration: const BoxDecoration(
-                color: Color(0xffF4FFFA),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-              ),
-              child: Column(
-                children: [
-                  SvgPicture.asset(
-                    TrydosWalletAssets.sendSuccess,
-                    height: 40,
-                    package: TrydosWalletStyles.packageName,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    widget.isSuccess
-                        ? AppStrings.get(
-                            state.languageCode,
-                            'money_sent_success',
-                          ).toUpperCase()
-                        : AppStrings.get(
-                            state.languageCode,
-                            'transaction_failed',
-                          ).toUpperCase(),
-                    style: TrydosWalletStyles.bodyMedium.copyWith(
-                      color: const Color(0xff1D1D1D),
-                      fontSize: 13,
+              // Visible UI
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 30),
+                decoration: const BoxDecoration(
+                  color: Color(0xffF4FFFA),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+                ),
+                child: Column(
+                  children: [
+                    SvgPicture.asset(
+                      TrydosWalletAssets.sendSuccess,
+                      height: 40,
+                      package: TrydosWalletStyles.packageName,
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    color: const Color(0xffF4FFFA),
-                    child: SizedBox.square(
-                      dimension: 120,
-                      child: PrettyQrView.data(
-                        data: _successQrPayload(),
-                        errorCorrectLevel: QrErrorCorrectLevel.M,
-                        decoration: const PrettyQrDecoration(
-                          shape: PrettyQrSmoothSymbol(
-                            color: Color(0xff1D1D1D),
-                            roundFactor: 0.9,
+                    const SizedBox(height: 10),
+                    Text(
+                      widget.isSuccess
+                          ? AppStrings.get(
+                              state.languageCode,
+                              'money_sent_success',
+                            ).toUpperCase()
+                          : AppStrings.get(
+                              state.languageCode,
+                              'transaction_failed',
+                            ).toUpperCase(),
+                      style: TrydosWalletStyles.bodyMedium.copyWith(
+                        color: const Color(0xff1D1D1D),
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      color: const Color(0xffF4FFFA),
+                      child: SizedBox.square(
+                        dimension: 120,
+                        child: PrettyQrView.data(
+                          data: _successQrPayload(),
+                          errorCorrectLevel: QrErrorCorrectLevel.M,
+                          decoration: const PrettyQrDecoration(
+                            shape: PrettyQrSmoothSymbol(
+                              color: Color(0xff1D1D1D),
+                              roundFactor: 0.9,
+                            ),
+                            quietZone: PrettyQrQuietZone.modules(0),
                           ),
-                          quietZone: PrettyQrQuietZone.modules(0),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    widget.reference,
-                    style: TrydosWalletStyles.bodyMedium.copyWith(
-                      color: const Color(0xff1D1D1D),
-                      fontSize: 11,
+                    const SizedBox(height: 10),
+                    Text(
+                      widget.reference,
+                      style: TrydosWalletStyles.bodyMedium.copyWith(
+                        color: const Color(0xff1D1D1D),
+                        fontSize: 11,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    height: (MediaQuery.of(context).size.height * 0.9) - 350,
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.max,
-                        children: [
-                          _buildInfoRow(
-                            AppStrings.get(
-                              state.languageCode,
-                              'sender_account',
-                            ),
-                            widget.senderAccount,
-                          ),
-                          const SizedBox(height: 15),
-                          if (widget.recipientPhoneNumber != null &&
-                              widget.recipientName != null &&
-                              widget.recipientId != null) ...[
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      height: (MediaQuery.of(context).size.height * 0.9) - 350,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.max,
+                          children: [
                             _buildInfoRow(
                               AppStrings.get(
                                 state.languageCode,
-                                'recipient_phone',
+                                'sender_account',
                               ),
-                              widget.recipientPhoneNumber!,
+                              widget.senderAccount,
                             ),
                             const SizedBox(height: 15),
-                            _buildInfoRow(
-                              AppStrings.get(
-                                state.languageCode,
-                                'recipient_name_id',
+                            if (widget.recipientPhoneNumber != null &&
+                                widget.recipientName != null &&
+                                widget.recipientId != null) ...[
+                              _buildInfoRow(
+                                AppStrings.get(
+                                  state.languageCode,
+                                  'recipient_phone',
+                                ),
+                                widget.recipientPhoneNumber!,
                               ),
-                              widget.recipientName!,
-                            ),
+                              const SizedBox(height: 15),
+                              _buildInfoRow(
+                                AppStrings.get(
+                                  state.languageCode,
+                                  'recipient_name_id',
+                                ),
+                                widget.recipientName!,
+                              ),
+                              const SizedBox(height: 15),
+                              _buildInfoRow(
+                                AppStrings.get(
+                                  state.languageCode,
+                                  'recipient_id_num',
+                                ),
+                                widget.recipientId!,
+                              ),
+                            ] else
+                              _buildInfoRow(
+                                AppStrings.get(
+                                  state.languageCode,
+                                  'recipient_account',
+                                ),
+                                widget.recipientAccount,
+                                qrData: widget.isFromQr
+                                    ? _successQrPayload()
+                                    : null,
+                              ),
                             const SizedBox(height: 15),
-                            _buildInfoRow(
-                              AppStrings.get(
-                                state.languageCode,
-                                'recipient_id_num',
-                              ),
-                              widget.recipientId!,
-                            ),
-                          ] else
-                            _buildInfoRow(
-                              AppStrings.get(
-                                state.languageCode,
-                                'recipient_account',
-                              ),
-                              widget.recipientAccount,
-                              qrData: widget.isFromQr
-                                  ? _successQrPayload()
-                                  : null,
-                            ),
-                          const SizedBox(height: 15),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildInfoRow(
-                                  AppStrings.get(
-                                    state.languageCode,
-                                    'amount_to_be_sent',
-                                  ),
-                                  '${widget.amount} ${widget.currencySymbol}',
-                                  isBold: true,
-                                ),
-                              ),
-                              Expanded(
-                                child: _buildInfoRow(
-                                  AppStrings.get(
-                                    state.languageCode,
-                                    'reference',
-                                  ),
-                                  widget.reference,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 15),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildInfoRow(
-                                  AppStrings.get(
-                                    state.languageCode,
-                                    'date_time',
-                                  ),
-                                  widget.dateAndTimeString,
-                                ),
-                              ),
-                              Expanded(
-                                child: _buildInfoRow(
-                                  AppStrings.get(state.languageCode, 'type'),
-                                  widget.type,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 15),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildInfoRow(
-                                  AppStrings.get(
-                                    state.languageCode,
-                                    'purpose_of_send',
-                                  ),
-                                  widget.purpose,
-                                ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      AppStrings.get(
-                                        state.languageCode,
-                                        'status',
-                                      ),
-                                      style: TrydosWalletStyles.bodyMedium
-                                          .copyWith(
-                                            color: const Color(0xff8D8D8D),
-                                            fontSize: 9,
-                                          ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildInfoRow(
+                                    AppStrings.get(
+                                      state.languageCode,
+                                      'amount_to_be_sent',
                                     ),
-                                    const SizedBox(height: 5),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          widget.isSuccess
-                                              ? AppStrings.get(
-                                                  state.languageCode,
-                                                  'succeeded',
-                                                )
-                                              : AppStrings.get(
-                                                  state.languageCode,
-                                                  'failed',
-                                                ),
-                                          style: TrydosWalletStyles.bodyMedium
-                                              .copyWith(
-                                                color: const Color(0xff1D1D1D),
-                                                fontSize: 11,
-                                              ),
+                                    '${widget.amount} ${widget.currencySymbol}',
+                                    isBold: true,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _buildInfoRow(
+                                    AppStrings.get(
+                                      state.languageCode,
+                                      'reference',
+                                    ),
+                                    widget.reference,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 15),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildInfoRow(
+                                    AppStrings.get(
+                                      state.languageCode,
+                                      'date_time',
+                                    ),
+                                    widget.dateAndTimeString,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _buildInfoRow(
+                                    AppStrings.get(state.languageCode, 'type'),
+                                    widget.type,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 15),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildInfoRow(
+                                    AppStrings.get(
+                                      state.languageCode,
+                                      'purpose_of_send',
+                                    ),
+                                    widget.purpose,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        AppStrings.get(
+                                          state.languageCode,
+                                          'status',
                                         ),
-                                        if (widget.isSuccess) ...[
-                                          const SizedBox(width: 12),
-                                          SvgPicture.asset(
-                                            TrydosWalletAssets.successed,
-                                            height: 12,
-                                            package:
-                                                TrydosWalletStyles.packageName,
+                                        style: TrydosWalletStyles.bodyMedium
+                                            .copyWith(
+                                              color: const Color(0xff8D8D8D),
+                                              fontSize: 9,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            widget.isSuccess
+                                                ? AppStrings.get(
+                                                    state.languageCode,
+                                                    'succeeded',
+                                                  )
+                                                : AppStrings.get(
+                                                    state.languageCode,
+                                                    'failed',
+                                                  ),
+                                            style: TrydosWalletStyles.bodyMedium
+                                                .copyWith(
+                                                  color: const Color(
+                                                    0xff1D1D1D,
+                                                  ),
+                                                  fontSize: 11,
+                                                ),
                                           ),
+                                          if (widget.isSuccess) ...[
+                                            const SizedBox(width: 12),
+                                            SvgPicture.asset(
+                                              TrydosWalletAssets.successed,
+                                              height: 12,
+                                              package: TrydosWalletStyles
+                                                  .packageName,
+                                            ),
+                                          ],
                                         ],
-                                      ],
-                                    ),
-                                  ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 30),
-                          (widget.recipientPhoneNumber != null &&
-                                  widget.recipientName != null &&
-                                  widget.recipientId != null)
-                              ? const SizedBox.shrink()
-                              : SvgPicture.asset(
-                                  TrydosWalletAssets.trydos,
-                                  height: 25,
-                                  package: TrydosWalletStyles.packageName,
-                                ),
-                          (widget.recipientPhoneNumber != null &&
-                                  widget.recipientName != null &&
-                                  widget.recipientId != null)
-                              ? const SizedBox.shrink()
-                              : const SizedBox(height: 70),
-                        ],
+                              ],
+                            ),
+                            const SizedBox(height: 30),
+                            (widget.recipientPhoneNumber != null &&
+                                    widget.recipientName != null &&
+                                    widget.recipientId != null)
+                                ? const SizedBox.shrink()
+                                : SvgPicture.asset(
+                                    TrydosWalletAssets.trydos,
+                                    height: 25,
+                                    package: TrydosWalletStyles.packageName,
+                                  ),
+                            (widget.recipientPhoneNumber != null &&
+                                    widget.recipientName != null &&
+                                    widget.recipientId != null)
+                                ? const SizedBox.shrink()
+                                : const SizedBox(height: 70),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  Spacer(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildActionIcon(
-                        TrydosWalletAssets.done,
-                        AppStrings.get(state.languageCode, 'done'),
-                        widget.onDone,
-                      ),
-                      _buildActionIcon(
-                        TrydosWalletAssets.download,
-                        AppStrings.get(state.languageCode, 'download'),
-                        _handleDownload,
-                        isLoading: _isDownloading,
-                      ),
-                      _buildActionIcon(
-                        TrydosWalletAssets.share,
-                        AppStrings.get(state.languageCode, 'share'),
-                        _handleShare,
-                        isLoading: _isSharing,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                ],
+                    Spacer(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildActionIcon(
+                          TrydosWalletAssets.done,
+                          AppStrings.get(state.languageCode, 'done'),
+                          widget.onDone,
+                        ),
+                        _buildActionIcon(
+                          TrydosWalletAssets.download,
+                          AppStrings.get(state.languageCode, 'download'),
+                          _handleDownload,
+                          isLoading: _isDownloading,
+                        ),
+                        _buildActionIcon(
+                          TrydosWalletAssets.share,
+                          AppStrings.get(state.languageCode, 'share'),
+                          _handleShare,
+                          isLoading: _isSharing,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );

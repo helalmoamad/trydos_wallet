@@ -44,7 +44,11 @@ class BalanceCard extends StatelessWidget {
               ? Container(
                   height: 120,
                   width: MediaQuery.of(context).size.width,
-                  padding: const EdgeInsets.only(top: 12, left: 7, right: 15),
+                  padding: const EdgeInsetsDirectional.only(
+                    top: 12,
+                    start: 7,
+                    end: 15,
+                  ),
                   decoration: BoxDecoration(
                     color: color,
                     borderRadius: BorderRadius.circular(15),
@@ -60,7 +64,9 @@ class BalanceCard extends StatelessWidget {
                           if (symbolImageUrl != null &&
                               symbolImageUrl!.isNotEmpty)
                             Padding(
-                              padding: const EdgeInsets.only(left: 5),
+                              padding: const EdgeInsetsDirectional.only(
+                                start: 5,
+                              ),
                               child: Image.network(
                                 symbolImageUrl!,
                                 height: 20,
@@ -184,7 +190,11 @@ class BalanceCard extends StatelessWidget {
               : Container(
                   height: 120,
                   width: 200,
-                  padding: const EdgeInsets.only(top: 12, left: 13, right: 15),
+                  padding: const EdgeInsetsDirectional.only(
+                    top: 12,
+                    start: 13,
+                    end: 15,
+                  ),
                   decoration: BoxDecoration(
                     color: color,
                     borderRadius: BorderRadius.circular(15),

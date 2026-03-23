@@ -116,135 +116,141 @@ class _QRScannerPageState extends State<QRScannerPage> {
       return ReceiveModal(onBack: _showScannerRoot);
     }
 
+    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: _handleWillPop,
       child: BlocBuilder<WalletBloc, WalletState>(
         builder: (context, state) {
-          return SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.9,
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      height: 350,
-                      width: 400,
-                      margin: const EdgeInsets.symmetric(horizontal: 25),
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(30),
-                        child: Stack(
-                          children: [
-                            MobileScanner(
-                              controller: _scannerController,
-                              onDetect: _onDetect,
-                            ),
-                            Align(
-                              alignment: Alignment.bottomCenter,
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.only(bottom: 10),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.black.withValues(alpha: 0.0),
-                                      Colors.black.withValues(alpha: 0.75),
+          return Directionality(
+            textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height * 0.9,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(25),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        height: 350,
+                        width: 400,
+                        margin: const EdgeInsets.symmetric(horizontal: 25),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(30),
+                          child: Stack(
+                            children: [
+                              MobileScanner(
+                                controller: _scannerController,
+                                onDetect: _onDetect,
+                              ),
+                              Align(
+                                alignment: Alignment.bottomCenter,
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.black.withValues(alpha: 0.0),
+                                        Colors.black.withValues(alpha: 0.75),
+                                      ],
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SvgPicture.asset(
+                                        TrydosWalletAssets.qr,
+                                        height: 16,
+                                        width: 16,
+                                        colorFilter: const ColorFilter.mode(
+                                          Color(0xffFCFCFC),
+                                          BlendMode.srcIn,
+                                        ),
+                                        package: TrydosWalletStyles.packageName,
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        AppStrings.get(
+                                          state.languageCode,
+                                          'scan_qr_msg',
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        style: TrydosWalletStyles.bodyMedium
+                                            .copyWith(
+                                              color: const Color(0xffFCFCFC),
+                                              fontSize: 11,
+                                              height: 1.3,
+                                            ),
+                                      ),
                                     ],
                                   ),
                                 ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    SvgPicture.asset(
-                                      TrydosWalletAssets.qr,
-                                      height: 16,
-                                      width: 16,
-                                      colorFilter: const ColorFilter.mode(
-                                        Color(0xffFCFCFC),
-                                        BlendMode.srcIn,
-                                      ),
-                                      package: TrydosWalletStyles.packageName,
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      AppStrings.get(
-                                        state.languageCode,
-                                        'scan_qr_msg',
-                                      ),
-                                      textAlign: TextAlign.center,
-                                      style: TrydosWalletStyles.bodyMedium
-                                          .copyWith(
-                                            color: const Color(0xffFCFCFC),
-                                            fontSize: 11,
-                                            height: 1.3,
-                                          ),
-                                    ),
-                                  ],
-                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 150),
-                    if (!widget.fromQR) ...[
-                      Text(
-                        AppStrings.get(state.languageCode, 'or_choose'),
-                        style: TrydosWalletStyles.bodyMedium.copyWith(
-                          color: const Color(0xff1D1D1D),
-                          fontSize: 13,
-                          height: 1.3,
+                      const SizedBox(height: 150),
+                      if (!widget.fromQR) ...[
+                        Text(
+                          AppStrings.get(state.languageCode, 'or_choose'),
+                          style: TrydosWalletStyles.bodyMedium.copyWith(
+                            color: const Color(0xff1D1D1D),
+                            fontSize: 13,
+                            height: 1.3,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      _buildOption(
-                        icon: TrydosWalletAssets.send,
-                        title: AppStrings.get(
-                          state.languageCode,
-                          'send_pay_cash',
+                        const SizedBox(height: 10),
+                        _buildOption(
+                          icon: TrydosWalletAssets.send,
+                          title: AppStrings.get(
+                            state.languageCode,
+                            'send_pay_cash',
+                          ),
+                          subtitle: AppStrings.get(
+                            state.languageCode,
+                            'send_money_pay',
+                          ),
+                          onTap: () {
+                            setState(() {
+                              _contentView = QRScannerContentView.send;
+                            });
+                          },
                         ),
-                        subtitle: AppStrings.get(
-                          state.languageCode,
-                          'send_money_pay',
+                        const SizedBox(height: 5),
+                        _buildOption(
+                          icon: TrydosWalletAssets.receive,
+                          title: AppStrings.get(
+                            state.languageCode,
+                            'receive_charge_request',
+                          ),
+                          subtitle: AppStrings.get(
+                            state.languageCode,
+                            'charge_wallet_msg',
+                          ),
+                          onTap: () {
+                            setState(() {
+                              _contentView = QRScannerContentView.receive;
+                            });
+                          },
                         ),
-                        onTap: () {
-                          setState(() {
-                            _contentView = QRScannerContentView.send;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 5),
-                      _buildOption(
-                        icon: TrydosWalletAssets.receive,
-                        title: AppStrings.get(
-                          state.languageCode,
-                          'receive_charge_request',
-                        ),
-                        subtitle: AppStrings.get(
-                          state.languageCode,
-                          'charge_wallet_msg',
-                        ),
-                        onTap: () {
-                          setState(() {
-                            _contentView = QRScannerContentView.receive;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 30),
+                        const SizedBox(height: 30),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),

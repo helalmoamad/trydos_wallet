@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trydos_wallet/src/api/api_interceptors.dart';
+import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
+import 'package:trydos_wallet/src/bloc/wallet_state.dart';
+import 'package:trydos_wallet/src/localization/app_strings.dart';
 
 /// أنواع الرسائل للتنبيهات.
 enum MessageType { success, error, info }
@@ -102,9 +106,9 @@ class _WalletModalBackButtonState {
 class _WalletModalBackButtonScope
     extends InheritedNotifier<ValueNotifier<_WalletModalBackButtonState>> {
   const _WalletModalBackButtonScope({
-    required ValueNotifier<_WalletModalBackButtonState> notifier,
-    required Widget child,
-  }) : super(notifier: notifier, child: child);
+    required ValueNotifier<_WalletModalBackButtonState> super.notifier,
+    required super.child,
+  });
 
   static ValueNotifier<_WalletModalBackButtonState>? maybeNotifierOf(
     BuildContext context,
@@ -154,17 +158,20 @@ Future<T?> showWalletModal<T>({
     barrierLabel: 'Wallet Modal',
     barrierColor: Colors.black54,
     transitionDuration: const Duration(milliseconds: 900),
-    pageBuilder: (context, animation, secondaryAnimation) {
-      return _WalletModalContainer(
-        builder: builder,
-        backgroundColor: backgroundColor,
-        enableDrag: enableDrag,
-        onDismiss: () {
-          if (!isPopping && context.mounted) {
-            isPopping = true;
-            Navigator.of(context).pop();
-          }
-        },
+    pageBuilder: (dialogContext, animation, secondaryAnimation) {
+      return BlocProvider.value(
+        value: context.read<WalletBloc>(),
+        child: _WalletModalContainer(
+          builder: builder,
+          backgroundColor: backgroundColor,
+          enableDrag: enableDrag,
+          onDismiss: () {
+            if (!isPopping && context.mounted) {
+              isPopping = true;
+              Navigator.of(context).pop();
+            }
+          },
+        ),
       );
     },
     transitionBuilder: (context, animation, secondaryAnimation, child) {
@@ -276,135 +283,163 @@ class _WalletModalContainerState extends State<_WalletModalContainer> {
                         ValueListenableBuilder<_WalletModalBackButtonState>(
                           valueListenable: _backButtonNotifier,
                           builder: (context, backState, _) {
-                            return SizedBox(
-                              height: 36,
-                              child: Stack(
-                                children: [
-                                  if (backState.visible)
-                                    Positioned(
-                                      left: 10,
-                                      top: 15,
-                                      bottom: 0,
-                                      child: InkWell(
-                                        onTap: backState.onPressed,
-                                        child: SizedBox(
-                                          height: 30,
-                                          width: 60,
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.center,
-                                            children: [
-                                              Padding(
-                                                padding: const EdgeInsets.only(
-                                                  left: 10,
-                                                ),
-                                                child: const Icon(
-                                                  Icons.arrow_back_ios_new,
-                                                  size: 13,
-                                                  color: Color(0xff1D1D1D),
+                            return BlocBuilder<WalletBloc, WalletState>(
+                              builder: (context, walletState) {
+                                final isRtl = walletState.isRtl;
+                                final languageCode = walletState.languageCode;
+                                return Directionality(
+                                  textDirection: isRtl
+                                      ? TextDirection.rtl
+                                      : TextDirection.ltr,
+                                  child: SizedBox(
+                                    height: 36,
+                                    child: Stack(
+                                      children: [
+                                        if (backState.visible)
+                                          PositionedDirectional(
+                                            start: 10,
+                                            top: 15,
+                                            bottom: 0,
+                                            child: InkWell(
+                                              onTap: backState.onPressed,
+                                              child: SizedBox(
+                                                height: 30,
+                                                width: 60,
+                                                child: Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.center,
+                                                  children: [
+                                                    Padding(
+                                                      padding:
+                                                          const EdgeInsetsDirectional.only(
+                                                            start: 10,
+                                                          ),
+                                                      child: Icon(
+                                                        Icons
+                                                            .arrow_back_ios_new,
+                                                        size: 13,
+                                                        color: const Color(
+                                                          0xff1D1D1D,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      ' ${AppStrings.get(languageCode, 'back')}',
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: const TextStyle(
+                                                        color: Color(
+                                                          0xff1D1D1D,
+                                                        ),
+                                                        fontSize: 11,
+                                                        fontFamily: 'Quicksand',
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
-                                              Text(
-                                                " Back",
-                                                textAlign: TextAlign.center,
-                                                style: const TextStyle(
-                                                  color: Color(0xff1D1D1D),
-                                                  fontSize: 11,
-
-                                                  fontFamily: 'Quicksand',
-                                                ),
-                                              ),
-                                            ],
+                                            ),
                                           ),
-                                        ),
-                                      ),
-                                    ),
-                                  Center(
-                                    child: GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onVerticalDragStart: (_) {
-                                        _handleDragDistance = 0;
-                                      },
-                                      onVerticalDragUpdate: (details) {
-                                        if (!widget.enableDrag ||
-                                            !_dragController.isAttached) {
-                                          return;
-                                        }
+                                        // end back button
+                                        Center(
+                                          child: GestureDetector(
+                                            behavior: HitTestBehavior.opaque,
+                                            onVerticalDragStart: (_) {
+                                              _handleDragDistance = 0;
+                                            },
+                                            onVerticalDragUpdate: (details) {
+                                              if (!widget.enableDrag ||
+                                                  !_dragController.isAttached) {
+                                                return;
+                                              }
 
-                                        final dy = details.primaryDelta ?? 0;
-                                        if (dy > 0) {
-                                          _handleDragDistance += dy;
-                                        }
+                                              final dy =
+                                                  details.primaryDelta ?? 0;
+                                              if (dy > 0) {
+                                                _handleDragDistance += dy;
+                                              }
 
-                                        final currentSize =
-                                            _dragController.size;
-                                        final delta =
-                                            dy /
-                                            MediaQuery.of(context).size.height;
-                                        _dragController.jumpTo(
-                                          (currentSize - delta).clamp(0.0, 0.9),
-                                        );
-                                      },
-                                      onVerticalDragEnd: (details) {
-                                        if (!widget.enableDrag ||
-                                            !_dragController.isAttached) {
-                                          return;
-                                        }
+                                              final currentSize =
+                                                  _dragController.size;
+                                              final delta =
+                                                  dy /
+                                                  MediaQuery.of(
+                                                    context,
+                                                  ).size.height;
+                                              _dragController.jumpTo(
+                                                (currentSize - delta).clamp(
+                                                  0.0,
+                                                  0.9,
+                                                ),
+                                              );
+                                            },
+                                            onVerticalDragEnd: (details) {
+                                              if (!widget.enableDrag ||
+                                                  !_dragController.isAttached) {
+                                                return;
+                                              }
 
-                                        final velocity =
-                                            details.primaryVelocity ?? 0;
-                                        final shouldClose =
-                                            _handleDragDistance > 24 ||
-                                            velocity > 600;
+                                              final velocity =
+                                                  details.primaryVelocity ?? 0;
+                                              final shouldClose =
+                                                  _handleDragDistance > 24 ||
+                                                  velocity > 600;
 
-                                        if (shouldClose) {
-                                          _dragController
-                                              .animateTo(
-                                                0,
+                                              if (shouldClose) {
+                                                _dragController
+                                                    .animateTo(
+                                                      0,
+                                                      duration: const Duration(
+                                                        milliseconds: 220,
+                                                      ),
+                                                      curve: Curves.easeOut,
+                                                    )
+                                                    .then((_) {
+                                                      if (mounted) {
+                                                        widget.onDismiss();
+                                                      }
+                                                    });
+                                                return;
+                                              }
+
+                                              _dragController.animateTo(
+                                                0.9,
                                                 duration: const Duration(
                                                   milliseconds: 220,
                                                 ),
                                                 curve: Curves.easeOut,
-                                              )
-                                              .then((_) {
-                                                if (mounted) {
-                                                  widget.onDismiss();
-                                                }
-                                              });
-                                          return;
-                                        }
-
-                                        _dragController.animateTo(
-                                          0.9,
-                                          duration: const Duration(
-                                            milliseconds: 220,
-                                          ),
-                                          curve: Curves.easeOut,
-                                        );
-                                      },
-                                      child: Container(
-                                        width: 60,
-                                        height: 35,
-                                        alignment: Alignment.topCenter,
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 10,
-                                          ),
-                                          child: Container(
-                                            width: 40,
-                                            height: 2,
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xffC4C2C2),
-                                              borderRadius:
-                                                  BorderRadius.circular(2),
+                                              );
+                                            },
+                                            child: Container(
+                                              width: 60,
+                                              height: 35,
+                                              alignment: Alignment.topCenter,
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(
+                                                  top: 10,
+                                                ),
+                                                child: Container(
+                                                  width: 40,
+                                                  height: 2,
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xffC4C2C2,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          2,
+                                                        ),
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
+                                      ],
                                     ),
                                   ),
-                                ],
-                              ),
+                                );
+                              },
                             );
                           },
                         ),

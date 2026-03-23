@@ -70,81 +70,86 @@ class _TrydosWalletHomePageContentState
       AppStrings.get(state.languageCode, 'settings'),
     ];
 
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: const Color(0xFFF5F5F5),
-      currentIndex: _selectedIndex,
-      onTap: (index) => setState(() => _selectedIndex = index),
-      selectedItemColor: Colors.black87,
-      unselectedItemColor: Colors.grey,
-      selectedLabelStyle: TrydosWalletStyles.bodySmall.copyWith(fontSize: 10),
-      unselectedLabelStyle: TrydosWalletStyles.bodySmall.copyWith(fontSize: 10),
-      items: [
-        BottomNavigationBarItem(
-          icon: Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: SvgPicture.asset(
-              TrydosWalletAssets.home,
-              package: TrydosWalletStyles.packageName,
-              colorFilter: ColorFilter.mode(
-                _selectedIndex == 0
-                    ? const Color(0xff404040)
-                    : const Color(0xffA2A0A0),
-                BlendMode.srcIn,
+    return Directionality(
+      textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
+      child: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: const Color(0xFFF5F5F5),
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() => _selectedIndex = index),
+        selectedItemColor: Colors.black87,
+        unselectedItemColor: Colors.grey,
+        selectedLabelStyle: TrydosWalletStyles.bodySmall.copyWith(fontSize: 10),
+        unselectedLabelStyle: TrydosWalletStyles.bodySmall.copyWith(
+          fontSize: 10,
+        ),
+        items: [
+          BottomNavigationBarItem(
+            icon: Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: SvgPicture.asset(
+                TrydosWalletAssets.home,
+                package: TrydosWalletStyles.packageName,
+                colorFilter: ColorFilter.mode(
+                  _selectedIndex == 0
+                      ? const Color(0xff404040)
+                      : const Color(0xffA2A0A0),
+                  BlendMode.srcIn,
+                ),
               ),
             ),
+            label: labels[0],
           ),
-          label: labels[0],
-        ),
-        BottomNavigationBarItem(
-          icon: Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: SvgPicture.asset(
-              TrydosWalletAssets.transactions,
-              package: TrydosWalletStyles.packageName,
-              colorFilter: ColorFilter.mode(
-                _selectedIndex == 1
-                    ? const Color(0xff404040)
-                    : const Color(0xffA2A0A0),
-                BlendMode.srcIn,
+          BottomNavigationBarItem(
+            icon: Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: SvgPicture.asset(
+                TrydosWalletAssets.transactions,
+                package: TrydosWalletStyles.packageName,
+                colorFilter: ColorFilter.mode(
+                  _selectedIndex == 1
+                      ? const Color(0xff404040)
+                      : const Color(0xffA2A0A0),
+                  BlendMode.srcIn,
+                ),
               ),
             ),
+            label: labels[1],
           ),
-          label: labels[1],
-        ),
-        BottomNavigationBarItem(
-          icon: Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: SvgPicture.asset(
-              TrydosWalletAssets.addresses,
-              package: TrydosWalletStyles.packageName,
-              colorFilter: ColorFilter.mode(
-                _selectedIndex == 2
-                    ? const Color(0xff404040)
-                    : const Color(0xffA2A0A0),
-                BlendMode.srcIn,
+          BottomNavigationBarItem(
+            icon: Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: SvgPicture.asset(
+                TrydosWalletAssets.addresses,
+                package: TrydosWalletStyles.packageName,
+                colorFilter: ColorFilter.mode(
+                  _selectedIndex == 2
+                      ? const Color(0xff404040)
+                      : const Color(0xffA2A0A0),
+                  BlendMode.srcIn,
+                ),
               ),
             ),
+            label: labels[2],
           ),
-          label: labels[2],
-        ),
-        BottomNavigationBarItem(
-          icon: Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: SvgPicture.asset(
-              TrydosWalletAssets.setting,
-              package: TrydosWalletStyles.packageName,
-              colorFilter: ColorFilter.mode(
-                _selectedIndex == 3
-                    ? const Color(0xff404040)
-                    : const Color(0xffA2A0A0),
-                BlendMode.srcIn,
+          BottomNavigationBarItem(
+            icon: Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: SvgPicture.asset(
+                TrydosWalletAssets.setting,
+                package: TrydosWalletStyles.packageName,
+                colorFilter: ColorFilter.mode(
+                  _selectedIndex == 3
+                      ? const Color(0xff404040)
+                      : const Color(0xffA2A0A0),
+                  BlendMode.srcIn,
+                ),
               ),
             ),
+            label: labels[3],
           ),
-          label: labels[3],
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

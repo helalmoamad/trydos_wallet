@@ -21,7 +21,11 @@ class WalletHeader extends StatelessWidget {
           previous.selectedAssetId != current.selectedAssetId,
       builder: (context, state) {
         return Padding(
-          padding: EdgeInsets.only(left: 24, right: 24, top: 20),
+          padding: const EdgeInsetsDirectional.only(
+            start: 24,
+            end: 24,
+            top: 20,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.start,

@@ -53,6 +53,14 @@ class WalletState {
     this.depositRequestsErrorMessage,
     this.firstName = 'M*****',
     this.lastName = 'A*****',
+    this.email,
+    this.phoneNumber,
+    this.profileImageUrl,
+    this.userSubtitle,
+    this.isPhoneVerified = false,
+    this.isAccountActive = true,
+    this.isTwoFactorEnabled = false,
+    this.memberSince,
   });
 
   final String languageCode;
@@ -71,6 +79,14 @@ class WalletState {
   final String? selectedAssetId;
   final String firstName;
   final String lastName;
+  final String? email;
+  final String? phoneNumber;
+  final String? profileImageUrl;
+  final String? userSubtitle;
+  final bool isPhoneVerified;
+  final bool isAccountActive;
+  final bool isTwoFactorEnabled;
+  final DateTime? memberSince;
 
   // Transactions (Cursor Paginated)
   final List<Transaction> transactions;
@@ -163,6 +179,14 @@ class WalletState {
     String? selectedAssetId,
     String? firstName,
     String? lastName,
+    String? email,
+    String? phoneNumber,
+    String? profileImageUrl,
+    String? userSubtitle,
+    bool? isPhoneVerified,
+    bool? isAccountActive,
+    bool? isTwoFactorEnabled,
+    DateTime? memberSince,
     String? depositRequestsErrorMessage,
   }) {
     return WalletState(
@@ -212,6 +236,14 @@ class WalletState {
       selectedAssetId: selectedAssetId ?? this.selectedAssetId,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
+      email: email ?? this.email,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      userSubtitle: userSubtitle ?? this.userSubtitle,
+      isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
+      isAccountActive: isAccountActive ?? this.isAccountActive,
+      isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
+      memberSince: memberSince ?? this.memberSince,
       depositRequestsErrorMessage:
           depositRequestsErrorMessage ?? this.depositRequestsErrorMessage,
     );

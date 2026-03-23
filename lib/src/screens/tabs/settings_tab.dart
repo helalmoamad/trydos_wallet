@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
-/// تبويب الإعدادات مع اختيار اللغة.
+import '../widgets/widgets.dart';
+
+/// Scrollable settings tab with readonly user information.
 class SettingsTab extends StatelessWidget {
   const SettingsTab({super.key});
 
@@ -11,202 +13,650 @@ class SettingsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
-        return SingleChildScrollView(
-          child: Padding(
-            padding: ResponsivePadding.only(
-              start: 24,
-              end: 24,
-              top: 20,
-              isRtl: state.isRtl,
+        final isRtl = state.isRtl;
+
+        return ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            const WalletHeader(),
+            Padding(
+              padding: ResponsivePadding.only(
+                start: 24,
+                end: 24,
+                top: 1,
+                isRtl: isRtl,
+              ),
+              child: const Divider(height: 0.5, color: Color(0xffD3D3D3)),
             ),
-            child: Column(
-              crossAxisAlignment: state.isRtl
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppStrings.get(state.languageCode, 'settings'),
-                  style: TrydosWalletStyles.headlineMedium.copyWith(
-                    color: const Color(0xff1D1D1D),
-                  ),
+            Padding(
+              padding: ResponsivePadding.only(
+                start: 16,
+                end: 16,
+                top: 14,
+                bottom: 24,
+                isRtl: isRtl,
+              ),
+              child: Column(
+                crossAxisAlignment: ResponsiveAlignment.crossAxisAlignment(
+                  isRtl,
                 ),
-                const SizedBox(height: 20),
-
-                // Language Selection Card
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F5),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xffE0E0E0)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: state.isRtl
-                        ? CrossAxisAlignment.end
-                        : CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppStrings.get(state.languageCode, 'language'),
-                        style: TrydosWalletStyles.bodyMedium.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xff1D1D1D),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildLanguageOption(
-                        context,
-                        state,
-                        'en',
-                        AppStrings.get(state.languageCode, 'english'),
-                      ),
-                      const SizedBox(height: 8),
-                      _buildLanguageOption(
-                        context,
-                        state,
-                        'ar',
-                        AppStrings.get(state.languageCode, 'arabic'),
-                      ),
-                      const SizedBox(height: 8),
-                      _buildLanguageOption(
-                        context,
-                        state,
-                        'ku',
-                        AppStrings.get(state.languageCode, 'kurdish'),
-                      ),
-                      const SizedBox(height: 8),
-                      _buildLanguageOption(
-                        context,
-                        state,
-                        'tr',
-                        AppStrings.get(state.languageCode, 'turkish'),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Information Card
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F5),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xffE0E0E0)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: state.isRtl
-                        ? CrossAxisAlignment.end
-                        : CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppStrings.get(state.languageCode, 'about'),
-                        style: TrydosWalletStyles.bodyMedium.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xff1D1D1D),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            AppStrings.get(state.languageCode, 'version'),
-                            style: TrydosWalletStyles.bodySmall.copyWith(
-                              color: const Color(0xff8D8D8D),
-                            ),
-                          ),
-                          Text(
-                            '1.0.0',
-                            style: TrydosWalletStyles.bodySmall.copyWith(
-                              color: const Color(0xff1D1D1D),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Logout Button
-                GestureDetector(
-                  onTap: () => TrydosWallet.logout(),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xffFFF5F5),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xffFFD6D6)),
+                children: [
+                  _ProfileCard(state: state),
+                  const SizedBox(height: 20),
+                  _SectionTitle(
+                    title: AppStrings.get(
+                      state.languageCode,
+                      'personal_information',
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ),
+                  const SizedBox(height: 10),
+                  _SettingsInfoCard(
+                    icon: Icons.email_outlined,
+                    label: AppStrings.get(state.languageCode, 'email'),
+                    value: _displayValue(
+                      state.email,
+                      fallback: AppStrings.get(
+                        state.languageCode,
+                        'not_provided',
+                      ),
+                    ),
+                    isRtl: isRtl,
+                    forceLtrValue: true,
+                  ),
+                  const SizedBox(height: 10),
+                  _SettingsInfoCard(
+                    icon: Icons.phone_outlined,
+                    label: AppStrings.get(state.languageCode, 'phone_number'),
+                    valueWidget: Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
-                          AppStrings.get(state.languageCode, 'logout'),
-                          style: TrydosWalletStyles.bodyMedium.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xffFF3B3B),
+                          _displayValue(
+                            state.phoneNumber,
+                            fallback: AppStrings.get(
+                              state.languageCode,
+                              'not_provided',
+                            ),
                           ),
+                          textDirection: TextDirection.ltr,
+                          style: _valueTextStyle(),
                         ),
-                        const Icon(
-                          Icons.logout,
-                          color: Color(0xffFF3B3B),
-                          size: 20,
-                        ),
+                        if (state.isPhoneVerified)
+                          Text(
+                            '✓ ${AppStrings.get(state.languageCode, 'verified')}',
+                            style: TrydosWalletStyles.bodyMedium.copyWith(
+                              color: const Color(0xFF25B660),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
                       ],
                     ),
+                    isRtl: isRtl,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  _SettingsInfoCard(
+                    icon: Icons.person_outline,
+                    label: AppStrings.get(state.languageCode, 'first_name'),
+                    value: _displayValue(
+                      state.firstName,
+                      fallback: AppStrings.get(
+                        state.languageCode,
+                        'not_provided',
+                      ),
+                    ),
+                    isRtl: isRtl,
+                  ),
+                  const SizedBox(height: 10),
+                  _SettingsInfoCard(
+                    icon: Icons.person_outline,
+                    label: AppStrings.get(state.languageCode, 'last_name'),
+                    value: _displayValue(
+                      state.lastName,
+                      fallback: AppStrings.get(
+                        state.languageCode,
+                        'not_provided',
+                      ),
+                    ),
+                    isRtl: isRtl,
+                    italicWhenFallback: _isBlank(state.lastName),
+                  ),
+                  const SizedBox(height: 20),
+                  _SectionTitle(
+                    title: AppStrings.get(
+                      state.languageCode,
+                      'account_information',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _SettingsInfoCard(
+                    icon: Icons.shield_outlined,
+                    label: AppStrings.get(state.languageCode, 'account_status'),
+                    value: AppStrings.get(
+                      state.languageCode,
+                      state.isAccountActive ? 'active' : 'disabled',
+                    ),
+                    valueColor: const Color(0xFF25B660),
+                    isRtl: isRtl,
+                  ),
+                  const SizedBox(height: 10),
+                  _SettingsInfoCard(
+                    icon: Icons.visibility_outlined,
+                    label: AppStrings.get(
+                      state.languageCode,
+                      'two_factor_authentication',
+                    ),
+                    value: AppStrings.get(
+                      state.languageCode,
+                      state.isTwoFactorEnabled ? 'enabled' : 'disabled',
+                    ),
+                    isRtl: isRtl,
+                  ),
+                  const SizedBox(height: 10),
+                  _SettingsInfoCard(
+                    icon: Icons.calendar_today_outlined,
+                    label: AppStrings.get(state.languageCode, 'member_since'),
+                    value: _formatMemberSince(
+                      state.memberSince,
+                      AppStrings.get(state.languageCode, 'not_provided'),
+                    ),
+                    isRtl: isRtl,
+                    forceLtrValue: true,
+                  ),
+                  const SizedBox(height: 10),
+                  _LanguageCard(state: state),
+                  const SizedBox(height: 24),
+                  _LogoutButton(languageCode: state.languageCode),
+                ],
+              ),
             ),
-          ),
+          ],
         );
       },
     );
   }
+}
 
-  Widget _buildLanguageOption(
-    BuildContext context,
-    WalletState state,
-    String languageCode,
-    String languageName,
-  ) {
-    final isSelected = state.languageCode == languageCode;
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({required this.state});
 
-    return GestureDetector(
-      onTap: () {
-        context.read<WalletBloc>().add(WalletLanguageChanged(languageCode));
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          // ignore: deprecated_member_use
-          color: isSelected ? const Color(0xFF388CFF).withOpacity(0.1) : null,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF388CFF) : Colors.transparent,
-            width: 2,
+  final WalletState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        children: [
+          _ProfileAvatar(
+            profileImageUrl: state.profileImageUrl,
+            firstName: state.firstName,
+            lastName: state.lastName,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            _displayName(
+              state.firstName,
+              state.lastName,
+              AppStrings.get(state.languageCode, 'not_provided'),
+            ),
+            textAlign: TextAlign.center,
+            style: TrydosWalletStyles.bodyMedium.copyWith(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              color: const Color(0xFF1D1D1D),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _displaySubtitle(state),
+            textAlign: TextAlign.center,
+            style: TrydosWalletStyles.bodyMedium.copyWith(
+              color: const Color(0xFF8D8D8D),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({
+    required this.profileImageUrl,
+    required this.firstName,
+    required this.lastName,
+  });
+
+  final String? profileImageUrl;
+  final String firstName;
+  final String lastName;
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = _buildInitials(firstName, lastName);
+
+    return Container(
+      width: 86,
+      height: 86,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFF2E6AE8), width: 2),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: ClipOval(
+          child: DecoratedBox(
+            decoration: const BoxDecoration(color: Color(0xFF2E6AE8)),
+            child: _hasImage(profileImageUrl)
+                ? Image.network(
+                    profileImageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) =>
+                        _InitialsAvatar(initials: initials),
+                  )
+                : _InitialsAvatar(initials: initials),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _InitialsAvatar extends StatelessWidget {
+  const _InitialsAvatar({required this.initials});
+
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        initials,
+        style: TrydosWalletStyles.headlineMedium.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: TrydosWalletStyles.headlineMedium.copyWith(
+        fontSize: 18,
+        color: const Color(0xFF1D1D1D),
+      ),
+    );
+  }
+}
+
+class _SettingsInfoCard extends StatelessWidget {
+  const _SettingsInfoCard({
+    required this.icon,
+    required this.label,
+    required this.isRtl,
+    this.value,
+    this.valueWidget,
+    this.valueColor = const Color(0xFF1D1D1D),
+    this.forceLtrValue = false,
+    this.italicWhenFallback = false,
+  }) : assert(value != null || valueWidget != null);
+
+  final IconData icon;
+  final String label;
+  final String? value;
+  final Widget? valueWidget;
+  final Color valueColor;
+  final bool isRtl;
+  final bool forceLtrValue;
+  final bool italicWhenFallback;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(icon, color: const Color(0xFF2E6AE8), size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: ResponsiveAlignment.crossAxisAlignment(isRtl),
+              children: [
+                Text(
+                  label,
+                  style: TrydosWalletStyles.bodyMedium.copyWith(
+                    color: const Color(0xFF8D8D8D),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                valueWidget ??
+                    Text(
+                      value ?? '',
+                      textDirection: forceLtrValue ? TextDirection.ltr : null,
+                      style: _valueTextStyle(
+                        color: valueColor,
+                        italic: italicWhenFallback,
+                      ),
+                    ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LanguageCard extends StatelessWidget {
+  const _LanguageCard({required this.state});
+
+  final WalletState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(
+              Icons.language_outlined,
+              color: Color(0xFF2E6AE8),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            AppStrings.get(state.languageCode, 'language'),
+            style: TrydosWalletStyles.bodyMedium.copyWith(
+              color: const Color(0xFF8D8D8D),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: _LanguageSelector(state: state),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LanguageSelector extends StatelessWidget {
+  const _LanguageSelector({required this.state});
+
+  final WalletState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = _languageOptions.firstWhere(
+      (option) => option.code == state.languageCode,
+      orElse: () => _languageOptions.first,
+    );
+
+    return PopupMenuButton<String>(
+      tooltip: AppStrings.get(state.languageCode, 'select_language'),
+      onSelected: (languageCode) {
+        context.read<WalletBloc>().add(WalletLanguageChanged(languageCode));
+      },
+      color: Colors.white,
+      position: PopupMenuPosition.under,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      itemBuilder: (context) => _languageOptions.map((option) {
+        final isSelected = option.code == state.languageCode;
+        return PopupMenuItem<String>(
+          value: option.code,
+          child: Row(
+            children: [
+              Text(option.flag, style: const TextStyle(fontSize: 16)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      AppStrings.get(state.languageCode, option.labelKey),
+                      style: TrydosWalletStyles.bodyMedium.copyWith(
+                        color: const Color(0xFF1D1D1D),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      option.nativeLabel,
+                      style: TrydosWalletStyles.bodySmall.copyWith(
+                        color: const Color(0xFF8D8D8D),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                const Icon(
+                  Icons.check_circle,
+                  color: Color(0xFF2E6AE8),
+                  size: 20,
+                ),
+            ],
+          ),
+        );
+      }).toList(),
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 150, maxWidth: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFD9D9D9)),
+        ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              languageName,
-              style: TrydosWalletStyles.bodySmall.copyWith(
-                color: isSelected
-                    ? const Color(0xFF388CFF)
-                    : const Color(0xff1D1D1D),
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            Text(selected.flag, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                AppStrings.get(state.languageCode, selected.labelKey),
+                overflow: TextOverflow.ellipsis,
+                style: TrydosWalletStyles.bodyMedium.copyWith(
+                  color: const Color(0xFF1D1D1D),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-            if (isSelected)
-              const Icon(Icons.check, color: Color(0xFF388CFF), size: 20),
+            const SizedBox(width: 6),
+            Text(
+              selected.code.toUpperCase(),
+              style: TrydosWalletStyles.bodySmall.copyWith(
+                color: const Color(0xFF8D8D8D),
+                fontSize: 11,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Color(0xFF8D8D8D),
+              size: 20,
+            ),
           ],
         ),
       ),
     );
   }
 }
+
+class _LogoutButton extends StatelessWidget {
+  const _LogoutButton({required this.languageCode});
+
+  final String languageCode;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: TrydosWallet.logout,
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: const Color(0xFFF94141),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        icon: const Icon(Icons.logout_rounded, size: 20),
+        label: Text(
+          AppStrings.get(languageCode, 'logout'),
+          style: TrydosWalletStyles.bodyMedium.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LanguageOptionData {
+  const _LanguageOptionData({
+    required this.code,
+    required this.labelKey,
+    required this.nativeLabel,
+    required this.flag,
+  });
+
+  final String code;
+  final String labelKey;
+  final String nativeLabel;
+  final String flag;
+}
+
+const List<_LanguageOptionData> _languageOptions = [
+  _LanguageOptionData(
+    code: 'en',
+    labelKey: 'english',
+    nativeLabel: 'English',
+    flag: '🇬🇧',
+  ),
+  _LanguageOptionData(
+    code: 'ar',
+    labelKey: 'arabic',
+    nativeLabel: 'العربية',
+    flag: '🇸🇦',
+  ),
+  _LanguageOptionData(
+    code: 'ku',
+    labelKey: 'kurdish',
+    nativeLabel: 'کوردی',
+    flag: '🇮🇶',
+  ),
+  _LanguageOptionData(
+    code: 'tr',
+    labelKey: 'turkish',
+    nativeLabel: 'Türkçe',
+    flag: '🇹🇷',
+  ),
+];
+
+TextStyle _valueTextStyle({Color? color, bool italic = false}) {
+  return TrydosWalletStyles.bodyMedium.copyWith(
+    color: color ?? const Color(0xFF1D1D1D),
+    fontWeight: FontWeight.w600,
+    fontSize: 14,
+    fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+  );
+}
+
+String _displayValue(String? value, {required String fallback}) {
+  if (_isBlank(value)) {
+    return fallback;
+  }
+  return value!.trim();
+}
+
+String _displayName(String firstName, String lastName, String fallback) {
+  final parts = [
+    if (!_isBlank(firstName)) firstName.trim(),
+    if (!_isBlank(lastName)) lastName.trim(),
+  ];
+  if (parts.isEmpty) return fallback;
+  return parts.join(' ');
+}
+
+String _displaySubtitle(WalletState state) {
+  const localizedKeys = {
+    'registered',
+    'active',
+    'disabled',
+    'enabled',
+    'verified',
+  };
+
+  if (_isBlank(state.userSubtitle)) {
+    return AppStrings.get(state.languageCode, 'registered');
+  }
+
+  final subtitle = state.userSubtitle!.trim();
+  if (localizedKeys.contains(subtitle)) {
+    return AppStrings.get(state.languageCode, subtitle);
+  }
+
+  return subtitle;
+}
+
+String _buildInitials(String firstName, String lastName) {
+  final first = !_isBlank(firstName) ? firstName.trim()[0].toUpperCase() : '';
+  final last = !_isBlank(lastName) ? lastName.trim()[0].toUpperCase() : '';
+  final initials = '$first $last';
+  return initials.isEmpty ? '?' : initials;
+}
+
+String _formatMemberSince(DateTime? memberSince, String fallback) {
+  if (memberSince == null) return fallback;
+  return '${memberSince.month}/${memberSince.day}/${memberSince.year}';
+}
+
+bool _hasImage(String? profileImageUrl) => !_isBlank(profileImageUrl);
+
+bool _isBlank(String? value) => value == null || value.trim().isEmpty;

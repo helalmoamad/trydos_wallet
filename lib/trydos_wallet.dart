@@ -6,6 +6,18 @@ library trydos_wallet;
 
 export 'src/screens/welcome_screen.dart';
 export 'src/api/api.dart';
+export 'src/api/api_interceptors.dart'
+    show
+        logoutEvents,
+        languageChangeEvents,
+        errorEvents,
+        authEvents,
+        LogoutEvent,
+        LanguageChangeEvent,
+        ApiErrorEvent,
+        AuthEvent,
+        navigatorKey,
+        scaffoldMessengerKey;
 export 'src/bloc/bloc.dart';
 export 'src/config/trydos_wallet_config.dart';
 export 'src/models/models.dart';

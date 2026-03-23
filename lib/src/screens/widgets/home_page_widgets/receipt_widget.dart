@@ -58,158 +58,163 @@ class ReceiptWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 400, // Fixed width for consistent receipt aspect ratio
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SvgPicture.asset(
-            TrydosWalletAssets.trydos,
-            height: 25,
-            package: TrydosWalletStyles.packageName,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            AppStrings.get(languageCode, 'receipt'),
-            style: TrydosWalletStyles.bodyLarge.copyWith(
-              color: const Color(0xff1D1D1D),
-              fontSize: 40,
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox.square(
-            dimension: 70,
-            child: PrettyQrView.data(
-              data: _receiptQrPayload(),
-              errorCorrectLevel: QrErrorCorrectLevel.M,
-              decoration: const PrettyQrDecoration(
-                shape: PrettyQrSmoothSymbol(
-                  color: Color(0xff1D1D1D),
-                  roundFactor: 0.9,
-                ),
-                quietZone: PrettyQrQuietZone.modules(0),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '${AppStrings.get(languageCode, 'id')} $reference',
-            style: TrydosWalletStyles.bodyMedium.copyWith(
-              color: const Color(0xff1D1D1D),
-              fontSize: 11,
-            ),
-          ),
-          const SizedBox(height: 20),
+    final isRtl = languageCode == 'ar' || languageCode == 'ku';
 
-          _buildFullWidthBox(
-            AppStrings.get(languageCode, 'sender_account'),
-            senderAccount,
-          ),
-          const SizedBox(height: 5),
-
-          if (recipientPhoneNumber != null &&
-              recipientName != null &&
-              recipientId != null) ...[
-            _buildFullWidthBox(
-              AppStrings.get(languageCode, 'recipient_phone'),
-              recipientPhoneNumber!,
+    return Directionality(
+      textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+      child: Container(
+        width: 400, // Fixed width for consistent receipt aspect ratio
+        color: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SvgPicture.asset(
+              TrydosWalletAssets.trydos,
+              height: 25,
+              package: TrydosWalletStyles.packageName,
             ),
-            const SizedBox(height: 5),
-            _buildFullWidthBox(
-              AppStrings.get(languageCode, 'recipient_name_id'),
-              recipientName!,
+            const SizedBox(height: 10),
+            Text(
+              AppStrings.get(languageCode, 'receipt'),
+              style: TrydosWalletStyles.bodyLarge.copyWith(
+                color: const Color(0xff1D1D1D),
+                fontSize: 40,
+              ),
             ),
-            const SizedBox(height: 5),
-            _buildFullWidthBox(
-              AppStrings.get(languageCode, 'recipient_id_num'),
-              recipientId!,
+            const SizedBox(height: 10),
+            SizedBox.square(
+              dimension: 70,
+              child: PrettyQrView.data(
+                data: _receiptQrPayload(),
+                errorCorrectLevel: QrErrorCorrectLevel.M,
+                decoration: const PrettyQrDecoration(
+                  shape: PrettyQrSmoothSymbol(
+                    color: Color(0xff1D1D1D),
+                    roundFactor: 0.9,
+                  ),
+                  quietZone: PrettyQrQuietZone.modules(0),
+                ),
+              ),
             ),
-            const SizedBox(height: 5),
-          ] else ...[
-            _buildFullWidthBox(
-              AppStrings.get(languageCode, 'recipient_account'),
-              recipientAccount,
-              qrData: isFromQr ? _receiptQrPayload() : null,
-            ),
-            const SizedBox(height: 5),
-          ],
-          Row(
-            children: [
-              Expanded(
-                child: _buildHalfWidthBox(
-                  AppStrings.get(languageCode, 'amount_to_be_sent'),
-                  '$amount $currencySymbol',
-                  isBold: true,
-                ),
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: _buildHalfWidthBox(
-                  AppStrings.get(languageCode, 'reference'),
-                  reference,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Row(
-            children: [
-              Expanded(
-                child: _buildHalfWidthBox(
-                  AppStrings.get(languageCode, 'date_time'),
-                  dateAndTimeString,
-                ),
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: _buildHalfWidthBox(
-                  AppStrings.get(languageCode, 'type'),
-                  type,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Row(
-            children: [
-              Expanded(
-                child: _buildHalfWidthBox(
-                  AppStrings.get(languageCode, 'purpose_of_send'),
-                  purpose,
-                ),
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: _buildStatusBox(
-                  AppStrings.get(languageCode, 'status'),
-                  isSuccess
-                      ? AppStrings.get(languageCode, 'succeeded')
-                      : AppStrings.get(languageCode, 'failed'),
-                  isSuccess,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xffF9F9F9),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              AppStrings.get(languageCode, 'receipt_footer_msg'),
+            const SizedBox(height: 10),
+            Text(
+              '${AppStrings.get(languageCode, 'id')} $reference',
               style: TrydosWalletStyles.bodyMedium.copyWith(
-                color: const Color(0xff8D8D8D),
-                fontSize: 9,
+                color: const Color(0xff1D1D1D),
+                fontSize: 11,
               ),
-              textAlign: TextAlign.center,
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+
+            _buildFullWidthBox(
+              AppStrings.get(languageCode, 'sender_account'),
+              senderAccount,
+            ),
+            const SizedBox(height: 5),
+
+            if (recipientPhoneNumber != null &&
+                recipientName != null &&
+                recipientId != null) ...[
+              _buildFullWidthBox(
+                AppStrings.get(languageCode, 'recipient_phone'),
+                recipientPhoneNumber!,
+              ),
+              const SizedBox(height: 5),
+              _buildFullWidthBox(
+                AppStrings.get(languageCode, 'recipient_name_id'),
+                recipientName!,
+              ),
+              const SizedBox(height: 5),
+              _buildFullWidthBox(
+                AppStrings.get(languageCode, 'recipient_id_num'),
+                recipientId!,
+              ),
+              const SizedBox(height: 5),
+            ] else ...[
+              _buildFullWidthBox(
+                AppStrings.get(languageCode, 'recipient_account'),
+                recipientAccount,
+                qrData: isFromQr ? _receiptQrPayload() : null,
+              ),
+              const SizedBox(height: 5),
+            ],
+            Row(
+              children: [
+                Expanded(
+                  child: _buildHalfWidthBox(
+                    AppStrings.get(languageCode, 'amount_to_be_sent'),
+                    '$amount $currencySymbol',
+                    isBold: true,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: _buildHalfWidthBox(
+                    AppStrings.get(languageCode, 'reference'),
+                    reference,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildHalfWidthBox(
+                    AppStrings.get(languageCode, 'date_time'),
+                    dateAndTimeString,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: _buildHalfWidthBox(
+                    AppStrings.get(languageCode, 'type'),
+                    type,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildHalfWidthBox(
+                    AppStrings.get(languageCode, 'purpose_of_send'),
+                    purpose,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: _buildStatusBox(
+                    AppStrings.get(languageCode, 'status'),
+                    isSuccess
+                        ? AppStrings.get(languageCode, 'succeeded')
+                        : AppStrings.get(languageCode, 'failed'),
+                    isSuccess,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xffF9F9F9),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                AppStrings.get(languageCode, 'receipt_footer_msg'),
+                style: TrydosWalletStyles.bodyMedium.copyWith(
+                  color: const Color(0xff8D8D8D),
+                  fontSize: 9,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

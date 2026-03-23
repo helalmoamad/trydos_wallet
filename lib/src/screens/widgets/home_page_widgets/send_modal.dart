@@ -77,6 +77,7 @@ class _SendModalState extends State<SendModal> {
   @override
   Widget build(BuildContext context) {
     _syncModalBackButton();
+    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
         if (!mounted) return false;
@@ -85,15 +86,18 @@ class _SendModalState extends State<SendModal> {
       },
       child: BlocBuilder<WalletBloc, WalletState>(
         builder: (context, state) {
-          return IndexedStack(
-            index: _currentView == SendModalView.main ? 0 : 1,
-            children: [
-              _buildMainMenuView(state, key: const ValueKey('main')),
-              TransferSendModal(
-                key: const ValueKey('transfer'),
-                initialPayload: widget.initialPayload,
-              ),
-            ],
+          return Directionality(
+            textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
+            child: IndexedStack(
+              index: _currentView == SendModalView.main ? 0 : 1,
+              children: [
+                _buildMainMenuView(state, key: const ValueKey('main')),
+                TransferSendModal(
+                  key: const ValueKey('transfer'),
+                  initialPayload: widget.initialPayload,
+                ),
+              ],
+            ),
           );
         },
       ),
@@ -122,7 +126,6 @@ class _SendModalState extends State<SendModal> {
                   style: TrydosWalletStyles.bodyMedium.copyWith(
                     color: const Color(0xff1D1D1D),
                     fontSize: 13,
-                    height: 1.3,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -221,7 +224,6 @@ class _SendModalState extends State<SendModal> {
                         style: TrydosWalletStyles.bodyMedium.copyWith(
                           color: const Color(0xff1D1D1D),
                           fontSize: 13,
-                          height: 1.3,
                         ),
                       ),
                       Row(children: actions1),
@@ -236,7 +238,6 @@ class _SendModalState extends State<SendModal> {
                         style: TrydosWalletStyles.bodyMedium.copyWith(
                           color: const Color(0xff8D8D8D),
                           fontSize: 11,
-                          height: 1.3,
                         ),
                       ),
                       Row(children: actions2),
@@ -264,7 +265,7 @@ class _SendModalState extends State<SendModal> {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      padding: const EdgeInsets.only(top: 15, bottom: 15, left: 15),
+      padding: const EdgeInsetsDirectional.only(top: 15, bottom: 15, start: 15),
       decoration: BoxDecoration(
         color: const Color(0xffF7F7F7),
         borderRadius: BorderRadius.circular(15),
@@ -293,7 +294,6 @@ class _SendModalState extends State<SendModal> {
                           style: TrydosWalletStyles.bodyMedium.copyWith(
                             color: const Color(0xff1D1D1D),
                             fontSize: 13,
-                            height: 1.3,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -302,13 +302,12 @@ class _SendModalState extends State<SendModal> {
                           style: TrydosWalletStyles.bodyMedium.copyWith(
                             color: const Color(0xff8D8D8D),
                             fontSize: 11,
-                            height: 1.3,
                           ),
                         ),
                       ],
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(right: 15.0),
+                      padding: const EdgeInsetsDirectional.only(end: 15.0),
                       child: _buildTextAction(
                         AppStrings.get(state.languageCode, 'history'),
                         11,
@@ -326,7 +325,7 @@ class _SendModalState extends State<SendModal> {
             child: Row(
               children: brands.map((brand) {
                 return Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsetsDirectional.only(end: 8),
                   child: Column(
                     children: [
                       SvgPicture.asset(
@@ -340,7 +339,6 @@ class _SendModalState extends State<SendModal> {
                         style: TrydosWalletStyles.bodyMedium.copyWith(
                           color: const Color(0xff1D1D1D),
                           fontSize: 13,
-                          height: 1.3,
                         ),
                       ),
                     ],
@@ -366,7 +364,7 @@ class _SendModalState extends State<SendModal> {
         style: TrydosWalletStyles.bodyMedium.copyWith(
           color: const Color(0xff8D8D8D),
           fontSize: fontSize,
-          height: 1.3,
+
           decoration: TextDecoration.underline,
           decorationColor: const Color(0xff8D8D8D),
         ),

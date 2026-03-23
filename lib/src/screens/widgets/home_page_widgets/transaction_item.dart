@@ -41,7 +41,12 @@ class TransactionItem extends StatelessWidget {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 5),
-        padding: const EdgeInsets.only(right: 14, bottom: 8, left: 10, top: 8),
+        padding: const EdgeInsetsDirectional.only(
+          start: 10,
+          top: 8,
+          end: 14,
+          bottom: 8,
+        ),
         decoration: BoxDecoration(
           border: isSelected
               ? Border.all(color: const Color(0xFFD3D3D3))

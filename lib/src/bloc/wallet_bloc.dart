@@ -24,6 +24,14 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     String? initialLanguage,
     String? firstName,
     String? lastName,
+    String? email,
+    String? phoneNumber,
+    String? profileImageUrl,
+    String? userSubtitle,
+    bool? isPhoneVerified,
+    bool? isAccountActive,
+    bool? isTwoFactorEnabled,
+    DateTime? memberSince,
   }) : _currenciesApi = currenciesApi ?? CurrenciesApiService(),
        _balancesApi = balancesApi ?? BalancesApiService(),
        _transactionsApi = transactionsApi ?? TransactionsApiService(),
@@ -37,6 +45,18 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
            languageCode: initialLanguage ?? TrydosWallet.config.languageCode,
            firstName: firstName ?? TrydosWallet.config.firstName,
            lastName: lastName ?? TrydosWallet.config.lastName,
+           email: email ?? TrydosWallet.config.email,
+           phoneNumber: phoneNumber ?? TrydosWallet.config.phoneNumber,
+           profileImageUrl:
+               profileImageUrl ?? TrydosWallet.config.profileImageUrl,
+           userSubtitle: userSubtitle ?? TrydosWallet.config.userSubtitle,
+           isPhoneVerified:
+               isPhoneVerified ?? TrydosWallet.config.isPhoneVerified,
+           isAccountActive:
+               isAccountActive ?? TrydosWallet.config.isAccountActive,
+           isTwoFactorEnabled:
+               isTwoFactorEnabled ?? TrydosWallet.config.isTwoFactorEnabled,
+           memberSince: memberSince ?? TrydosWallet.config.memberSince,
          ),
        ) {
     on<WalletLanguageChanged>(_onLanguageChanged);
