@@ -81,6 +81,8 @@ class TransactionItem extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TrydosWalletStyles.bodySmall.copyWith(
                       color: subtitleColor,
                       fontSize: 11,

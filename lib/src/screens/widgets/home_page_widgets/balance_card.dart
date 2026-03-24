@@ -63,17 +63,32 @@ class BalanceCard extends StatelessWidget {
                         children: [
                           if (symbolImageUrl != null &&
                               symbolImageUrl!.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsetsDirectional.only(
-                                start: 5,
-                              ),
-                              child: Image.network(
-                                symbolImageUrl!,
-                                height: 20,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
-                                    _buildFallbackIcon(),
-                              ),
+                            Builder(
+                              builder: (_) {
+                                final isSvg = symbolImageUrl!
+                                    .toLowerCase()
+                                    .endsWith('.svg');
+                                return Padding(
+                                  padding: const EdgeInsetsDirectional.only(
+                                    start: 5,
+                                  ),
+                                  child: isSvg
+                                      ? SvgPicture.network(
+                                          symbolImageUrl!,
+                                          height: 20,
+                                          fit: BoxFit.cover,
+                                          placeholderBuilder: (_) =>
+                                              _buildFallbackIcon(),
+                                        )
+                                      : Image.network(
+                                          symbolImageUrl!,
+                                          height: 20,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              _buildFallbackIcon(),
+                                        ),
+                                );
+                              },
                             )
                           else
                             _buildFallbackIcon(),
@@ -209,12 +224,27 @@ class BalanceCard extends StatelessWidget {
                         children: [
                           if (symbolImageUrl != null &&
                               symbolImageUrl!.isNotEmpty)
-                            Image.network(
-                              symbolImageUrl!,
-                              height: 20,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  _buildFallbackIcon(),
+                            Builder(
+                              builder: (_) {
+                                final isSvg = symbolImageUrl!
+                                    .toLowerCase()
+                                    .endsWith('.svg');
+                                return isSvg
+                                    ? SvgPicture.network(
+                                        symbolImageUrl!,
+                                        height: 20,
+                                        fit: BoxFit.cover,
+                                        placeholderBuilder: (_) =>
+                                            _buildFallbackIcon(),
+                                      )
+                                    : Image.network(
+                                        symbolImageUrl!,
+                                        height: 20,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) =>
+                                            _buildFallbackIcon(),
+                                      );
+                              },
                             )
                           else
                             _buildFallbackIcon(),

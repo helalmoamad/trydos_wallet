@@ -125,8 +125,8 @@ class _RequestQRModalState extends State<RequestQRModal> {
     if (selectedId != null) {
       for (final currency in state.currencies) {
         if (currency.id == selectedId) {
-          if (currency.displayName.isNotEmpty) return currency.displayName;
-          if (currency.name.isNotEmpty) return currency.name;
+          final localized = currency.localizedName(state.languageCode);
+          if (localized.isNotEmpty) return localized;
           if (currency.symbol.isNotEmpty) return currency.symbol;
         }
       }

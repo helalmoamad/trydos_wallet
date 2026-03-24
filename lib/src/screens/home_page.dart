@@ -43,20 +43,23 @@ class _TrydosWalletHomePageContentState
     return BlocBuilder<WalletBloc, WalletState>(
       buildWhen: (prev, curr) => prev.languageCode != curr.languageCode,
       builder: (context, state) {
-        return Scaffold(
-          backgroundColor: Colors.white,
-          body: SafeArea(
-            child: IndexedStack(
-              index: _selectedIndex,
-              children: const [
-                HomeTab(),
-                WalletTab(),
-                AddressesTab(),
-                SettingsTab(),
-              ],
+        return Directionality(
+          textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
+          child: Scaffold(
+            backgroundColor: Colors.white,
+            body: SafeArea(
+              child: IndexedStack(
+                index: _selectedIndex,
+                children: const [
+                  HomeTab(),
+                  WalletTab(),
+                  AddressesTab(),
+                  SettingsTab(),
+                ],
+              ),
             ),
+            bottomNavigationBar: _buildBottomNav(context, state),
           ),
-          bottomNavigationBar: _buildBottomNav(context, state),
         );
       },
     );
@@ -70,85 +73,75 @@ class _TrydosWalletHomePageContentState
       AppStrings.get(state.languageCode, 'settings'),
     ];
 
-    return Directionality(
-      textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
-      child: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFFF5F5F5),
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        selectedItemColor: Colors.black87,
-        unselectedItemColor: Colors.grey,
-        selectedLabelStyle: TrydosWalletStyles.bodySmall.copyWith(fontSize: 10),
-        unselectedLabelStyle: TrydosWalletStyles.bodySmall.copyWith(
-          fontSize: 10,
+    return SizedBox(
+      height: 75,
+      child: Container(
+        color: const Color(0xFFF4F5F5),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            children: [
+              _buildCustomBottomNavItem(
+                index: 0,
+                assetPath: TrydosWalletAssets.home,
+                label: labels[0],
+              ),
+              _buildCustomBottomNavItem(
+                index: 1,
+                assetPath: TrydosWalletAssets.transactions,
+                label: labels[1],
+              ),
+              _buildCustomBottomNavItem(
+                index: 2,
+                assetPath: TrydosWalletAssets.addresses,
+                label: labels[2],
+              ),
+              _buildCustomBottomNavItem(
+                index: 3,
+                assetPath: TrydosWalletAssets.setting,
+                label: labels[3],
+              ),
+            ],
+          ),
         ),
-        items: [
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: SvgPicture.asset(
-                TrydosWalletAssets.home,
-                package: TrydosWalletStyles.packageName,
-                colorFilter: ColorFilter.mode(
-                  _selectedIndex == 0
-                      ? const Color(0xff404040)
-                      : const Color(0xffA2A0A0),
-                  BlendMode.srcIn,
-                ),
-              ),
+      ),
+    );
+  }
+
+  Widget _buildCustomBottomNavItem({
+    required int index,
+    required String assetPath,
+    required String label,
+  }) {
+    final isSelected = _selectedIndex == index;
+    final color = isSelected
+        ? const Color(0xff404040)
+        : const Color(0xffA2A0A0);
+
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _selectedIndex = index),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            SvgPicture.asset(
+              assetPath,
+              package: TrydosWalletStyles.packageName,
+              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
             ),
-            label: labels[0],
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: SvgPicture.asset(
-                TrydosWalletAssets.transactions,
-                package: TrydosWalletStyles.packageName,
-                colorFilter: ColorFilter.mode(
-                  _selectedIndex == 1
-                      ? const Color(0xff404040)
-                      : const Color(0xffA2A0A0),
-                  BlendMode.srcIn,
-                ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TrydosWalletStyles.bodySmall.copyWith(
+                fontSize: isSelected ? 12 : 10,
+                color: color,
               ),
+              textAlign: TextAlign.center,
             ),
-            label: labels[1],
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: SvgPicture.asset(
-                TrydosWalletAssets.addresses,
-                package: TrydosWalletStyles.packageName,
-                colorFilter: ColorFilter.mode(
-                  _selectedIndex == 2
-                      ? const Color(0xff404040)
-                      : const Color(0xffA2A0A0),
-                  BlendMode.srcIn,
-                ),
-              ),
-            ),
-            label: labels[2],
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: SvgPicture.asset(
-                TrydosWalletAssets.setting,
-                package: TrydosWalletStyles.packageName,
-                colorFilter: ColorFilter.mode(
-                  _selectedIndex == 3
-                      ? const Color(0xff404040)
-                      : const Color(0xffA2A0A0),
-                  BlendMode.srcIn,
-                ),
-              ),
-            ),
-            label: labels[3],
-          ),
-        ],
+            const Spacer(),
+          ],
+        ),
       ),
     );
   }

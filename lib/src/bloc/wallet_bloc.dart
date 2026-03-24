@@ -193,9 +193,41 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     WalletBalanceLoadRequested event,
     Emitter<WalletState> emit,
   ) async {
-    // Balances are loaded in one request via _fetchAllBalances.
-    // Tapping a currency should only change UI selection.
-    return;
+    final assetId = event.assetId.trim();
+    if (assetId.isEmpty || state.loadingBalanceIds.contains(assetId)) {
+      return;
+    }
+
+    final loadingIds = <String>{...state.loadingBalanceIds, assetId};
+    emit(state.copyWith(loadingBalanceIds: loadingIds));
+
+    final result = await _balancesApi.getBalances();
+    if (result.isSuccess && result.data != null) {
+      final mergedBalances = <String, Balance>{...state.balances};
+      for (final balance in result.data!) {
+        if (balance.assetId.isNotEmpty) {
+          mergedBalances[balance.assetId] = balance;
+        }
+      }
+
+      final updatedLoadingIds = <String>{...loadingIds}..remove(assetId);
+      emit(
+        state.copyWith(
+          balances: mergedBalances,
+          balancesStatus: WalletStatus.success,
+          loadingBalanceIds: updatedLoadingIds,
+        ),
+      );
+      return;
+    }
+
+    final updatedLoadingIds = <String>{...loadingIds}..remove(assetId);
+    emit(
+      state.copyWith(
+        balancesStatus: WalletStatus.failure,
+        loadingBalanceIds: updatedLoadingIds,
+      ),
+    );
   }
 
   Future<void> _fetchAllBalances(Emitter<WalletState> emit) async {

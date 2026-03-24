@@ -13,8 +13,7 @@ class SettingsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
-        final isRtl = state.isRtl;
-
+        final isRtl = false;
         return ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [

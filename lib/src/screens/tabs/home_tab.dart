@@ -388,9 +388,9 @@ class _HomeTabState extends State<HomeTab> {
                           child: BalanceCard(
                             symbolImageUrl: currency.symbolImageUrl,
                             symbol: currency.symbol,
-                            currencyName: currency.displayName.isNotEmpty
-                                ? currency.displayName
-                                : currency.name,
+                            currencyName: currency.localizedName(
+                              state.languageCode,
+                            ),
                             amount: amountStr,
                             currencyCode: currency.symbol,
                             color: const Color(0xFF404040),
@@ -477,9 +477,9 @@ class _HomeTabState extends State<HomeTab> {
                             child: BalanceCard(
                               symbolImageUrl: currency.symbolImageUrl,
                               symbol: currency.symbol,
-                              currencyName: currency.displayName.isNotEmpty
-                                  ? currency.displayName
-                                  : currency.name,
+                              currencyName: currency.localizedName(
+                                state.languageCode,
+                              ),
                               amount: amountStr,
                               currencyCode: currency.symbol,
                               color:

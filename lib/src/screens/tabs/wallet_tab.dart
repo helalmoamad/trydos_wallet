@@ -196,9 +196,9 @@ class _WalletTabState extends State<WalletTab> {
                               ? EdgeInsets.only(right: index > 0 ? 8 : 0)
                               : EdgeInsets.only(left: index > 0 ? 8 : 0),
                           child: WalletBalanceCard(
-                            currencyName: currency.displayName.isNotEmpty
-                                ? currency.displayName
-                                : currency.name,
+                            currencyName: currency.localizedName(
+                              state.languageCode,
+                            ),
                             currencyCode: currency.symbol,
                             amount: amountStr,
                             isSelected: isSelected,
@@ -232,9 +232,7 @@ class _WalletTabState extends State<WalletTab> {
                       ? currencies.first
                       : null;
                   final currencyLabel = selectedCurrency != null
-                      ? (selectedCurrency.displayName.isNotEmpty
-                            ? selectedCurrency.displayName
-                            : selectedCurrency.name)
+                      ? selectedCurrency.localizedName(state.languageCode)
                       : AppStrings.get(state.languageCode, 'balance');
                   return Padding(
                     padding: ResponsivePadding.horizontal(

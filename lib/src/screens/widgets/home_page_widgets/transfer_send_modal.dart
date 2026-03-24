@@ -185,7 +185,10 @@ class _TransferSendModalState extends State<TransferSendModal> {
     isRecipientLookupLoading = false;
     recipientAccountName = null;
     recipientErrorMessage = null;
+    isEditingAmount = true;
     isAmountVerified = false;
+    isTransferVerifyLoading = false;
+    amountErrorMessage = null;
   }
 
   void _resetPhoneRecipientState() {
@@ -233,6 +236,22 @@ class _TransferSendModalState extends State<TransferSendModal> {
   bool _isAmountWithinSelectedBalance(double amount, WalletState state) {
     final available = _selectedAvailableBalance(state);
     return amount > 0 && amount <= available;
+  }
+
+  bool _isSelectedBalanceLoading(WalletState state) {
+    final selectedId = state.selectedAssetId ?? '';
+    if (selectedId.isEmpty) {
+      return false;
+    }
+    return state.loadingBalanceIds.contains(selectedId);
+  }
+
+  void _refreshSelectedBalance() {
+    final selectedId = context.read<WalletBloc>().state.selectedAssetId ?? '';
+    if (selectedId.isEmpty) {
+      return;
+    }
+    context.read<WalletBloc>().add(WalletBalanceLoadRequested(selectedId));
   }
 
   Future<void> _verifyTransferByAmount() async {
@@ -298,7 +317,12 @@ class _TransferSendModalState extends State<TransferSendModal> {
         break;
       }
     }
-    final currencySymbol = currency?.symbol ?? r'$';
+    final selectedBalance = state.balances[selectedId];
+    final selectedAssetSymbol = selectedBalance?.assetSymbol.isNotEmpty == true
+        ? selectedBalance!.assetSymbol
+        : (currency?.symbol ?? r'$');
+    final selectedAssetType = (selectedBalance?.assetType ?? 'CURRENCY')
+        .toUpperCase();
 
     setState(() {
       isTransferVerifyLoading = true;
@@ -308,7 +332,8 @@ class _TransferSendModalState extends State<TransferSendModal> {
 
     final result = await _transfersApi.verifyTransfer(
       toAccountNumber: toAccount,
-      currencySymbol: currencySymbol,
+      assetSymbol: selectedAssetSymbol,
+      assetType: selectedAssetType,
       amount: amount,
     );
     if (!mounted) return;
@@ -542,7 +567,12 @@ class _TransferSendModalState extends State<TransferSendModal> {
         break;
       }
     }
-    final currencySymbol = currency?.symbol ?? r'$';
+    final selectedBalance = state.balances[selectedId];
+    final selectedAssetSymbol = selectedBalance?.assetSymbol.isNotEmpty == true
+        ? selectedBalance!.assetSymbol
+        : (currency?.symbol ?? r'$');
+    final selectedAssetType = (selectedBalance?.assetType ?? 'CURRENCY')
+        .toUpperCase();
 
     if (amount == null || amount <= 0) {
       showMessage(
@@ -584,7 +614,8 @@ class _TransferSendModalState extends State<TransferSendModal> {
 
     final result = await _transfersApi.sendTransfer(
       toAccountNumber: toAccountNumber,
-      currencySymbol: currencySymbol,
+      assetSymbol: selectedAssetSymbol,
+      assetType: selectedAssetType,
       amount: amount,
       purposeId: purposeId,
       note: noteController.text,
@@ -760,24 +791,25 @@ class _TransferSendModalState extends State<TransferSendModal> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             _buildBalanceSection(state),
-                            isTransferVerifyLoading
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : SvgPicture.asset(
-                                    TrydosWalletAssets.reload,
-                                    colorFilter: const ColorFilter.mode(
-                                      Colors.white,
-                                      BlendMode.srcIn,
-                                    ),
-                                    height: 20,
-                                    package: TrydosWalletStyles.packageName,
+                            GestureDetector(
+                              onTap: _isSelectedBalanceLoading(state)
+                                  ? null
+                                  : _refreshSelectedBalance,
+                              child: Opacity(
+                                opacity: _isSelectedBalanceLoading(state)
+                                    ? 0.6
+                                    : 1,
+                                child: SvgPicture.asset(
+                                  TrydosWalletAssets.reload,
+                                  colorFilter: const ColorFilter.mode(
+                                    Colors.white,
+                                    BlendMode.srcIn,
                                   ),
+                                  height: 20,
+                                  package: TrydosWalletStyles.packageName,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 6),
@@ -812,7 +844,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
                   const SizedBox(height: 10),
 
                   SizedBox(
-                    height: (MediaQuery.of(context).size.height * 0.9) - 378,
+                    height: (MediaQuery.of(context).size.height * 0.9) - 380,
                     child: SingleChildScrollView(
                       child: Column(
                         children: [
@@ -888,6 +920,20 @@ class _TransferSendModalState extends State<TransferSendModal> {
                                     isEditingAmount = true;
                                     amountErrorMessage = null;
                                   }),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                if (isTransferVerifyLoading)
+                                  const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                              ],
+                            ),
                             suffixFollowsText: true,
                             suffix: Text(
                               ' $currencySymbol',
@@ -1484,19 +1530,45 @@ class _TransferSendModalState extends State<TransferSendModal> {
     final symbol = currency?.displayName ?? r'$';
     final symbolImageUrl = currency?.symbolImageUrl;
 
-    return (symbolImageUrl != null && symbolImageUrl.isNotEmpty)
-        ? Padding(
-            padding: const EdgeInsetsDirectional.only(start: 5, top: 5),
-            child: Image.network(symbolImageUrl, height: 20, fit: BoxFit.cover),
-          )
-        : Text(
-            symbol,
-            style: TrydosWalletStyles.bodyMedium.copyWith(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          );
+    if (symbolImageUrl != null && symbolImageUrl.isNotEmpty) {
+      final isSvg = symbolImageUrl.toLowerCase().endsWith('.svg');
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(start: 5, top: 5),
+        child: isSvg
+            ? SvgPicture.network(
+                symbolImageUrl,
+                height: 20,
+                fit: BoxFit.cover,
+                placeholderBuilder: (_) => _buildFallbackSymbol(symbol),
+              )
+            : Image.network(
+                symbolImageUrl,
+                height: 20,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _buildFallbackSymbol(symbol),
+              ),
+      );
+    }
+
+    return Text(
+      symbol,
+      style: TrydosWalletStyles.bodyMedium.copyWith(
+        color: Colors.white,
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
+  Widget _buildFallbackSymbol(String symbol) {
+    return Text(
+      symbol,
+      style: TrydosWalletStyles.bodyMedium.copyWith(
+        color: Colors.white,
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
+    );
   }
 
   String _getSenderAccountDisplay(WalletState state) {
@@ -1511,6 +1583,7 @@ class _TransferSendModalState extends State<TransferSendModal> {
 
   Widget _buildAmountRow(WalletState state) {
     final balance = state.balances[state.selectedAssetId ?? ''];
+    final isBalanceRefreshing = _isSelectedBalanceLoading(state);
     final amountStr = balance != null
         ? balance.available.toStringAsFixed(
             balance.available.truncateToDouble() == balance.available ? 0 : 2,
@@ -1526,46 +1599,60 @@ class _TransferSendModalState extends State<TransferSendModal> {
       }
     }
     final symbol = currency?.symbol ?? r'$';
-    final assetName = (currency?.displayName.isNotEmpty ?? false)
-        ? currency!.displayName
+    final assetName = (currency != null)
+        ? currency.localizedName(state.languageCode)
         : currency?.name ?? balance?.asset?.name ?? '';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.baseline,
       textBaseline: TextBaseline.alphabetic,
       children: [
-        Text(
-          isBalanceHidden ? '****' : amountStr,
-          style: TrydosWalletStyles.bodyMedium.copyWith(
-            color: Colors.white,
-            fontSize: 25,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        isBalanceRefreshing
+            ? Padding(
+                padding: const EdgeInsets.only(top: 20, right: 20, left: 20),
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                  constraints: BoxConstraints.tightFor(width: 16, height: 16),
+                ),
+              )
+            : Text(
+                (isBalanceHidden ? '****' : amountStr),
+                style: TrydosWalletStyles.bodyMedium.copyWith(
+                  color: Colors.white,
+                  fontSize: isBalanceRefreshing ? 16 : 25,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
         const SizedBox(width: 8),
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              '$symbol | $assetName',
-              style: TrydosWalletStyles.bodyMedium.copyWith(
-                color: Colors.white,
-                fontSize: 9,
-              ),
-            ),
+            isBalanceRefreshing
+                ? SizedBox.shrink()
+                : Text(
+                    '$symbol | $assetName',
+                    style: TrydosWalletStyles.bodyMedium.copyWith(
+                      color: Colors.white,
+                      fontSize: 9,
+                    ),
+                  ),
             const SizedBox(width: 15),
-            GestureDetector(
-              onTap: () => setState(() => isBalanceHidden = !isBalanceHidden),
-              child: SvgPicture.asset(
-                TrydosWalletAssets.hide,
-                colorFilter: const ColorFilter.mode(
-                  Color(0xffD3D3D3),
-                  BlendMode.srcIn,
-                ),
-                height: 11,
-                package: TrydosWalletStyles.packageName,
-              ),
-            ),
+            isBalanceRefreshing
+                ? SizedBox.shrink()
+                : GestureDetector(
+                    onTap: () =>
+                        setState(() => isBalanceHidden = !isBalanceHidden),
+                    child: SvgPicture.asset(
+                      TrydosWalletAssets.hide,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xffD3D3D3),
+                        BlendMode.srcIn,
+                      ),
+                      height: 11,
+                      package: TrydosWalletStyles.packageName,
+                    ),
+                  ),
           ],
         ),
       ],

@@ -17,18 +17,23 @@ class TransfersApiService {
 
   Future<ApiResult<TransferVerifyResult>> verifyTransfer({
     required String toAccountNumber,
-    required String currencySymbol,
+    required String assetSymbol,
+    required String assetType,
     required double amount,
   }) {
     final num bodyAmount = amount.truncateToDouble() == amount
         ? amount.toInt()
         : amount;
+    final normalizedAssetType = assetType.toUpperCase() == 'METAL'
+        ? 'METAL'
+        : 'CURRENCY';
 
     return _client.post<TransferVerifyResult>(
       ApiPaths.verifyTransfer,
       data: {
         'toAccountNumber': toAccountNumber,
-        'currencySymbol': currencySymbol,
+        'assetSymbol': assetSymbol,
+        'assetType': normalizedAssetType,
         'amount': bodyAmount,
       },
       fromJson: (d) => TransferVerifyResult.fromJson(d as Map<String, dynamic>),
@@ -37,7 +42,8 @@ class TransfersApiService {
 
   Future<ApiResult<TransferSendResult>> sendTransfer({
     required String toAccountNumber,
-    required String currencySymbol,
+    required String assetSymbol,
+    required String assetType,
     required double amount,
     required String purposeId,
     required String note,
@@ -47,13 +53,17 @@ class TransfersApiService {
     final num bodyAmount = amount.truncateToDouble() == amount
         ? amount.toInt()
         : amount;
+    final normalizedAssetType = assetType.toUpperCase() == 'METAL'
+        ? 'METAL'
+        : 'CURRENCY';
 
     return _client.post<TransferSendResult>(
       ApiPaths.sendTransfer,
       data: {
         'toAccountNumber': toAccountNumber,
-        'currencySymbol': currencySymbol,
+        'assetSymbol': assetSymbol,
         'amount': bodyAmount,
+        'assetType': normalizedAssetType,
         'purposeId': purposeId,
         'note': note,
         'idempotencyKey': idempotencyKey,

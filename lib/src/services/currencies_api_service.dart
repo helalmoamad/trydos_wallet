@@ -37,10 +37,40 @@ class CurrenciesApiService {
     return _client.get<PaginatedResponse<Currency>>(
       ApiPaths.currencies,
       queryParameters: params.toQuery(),
-      fromJson: (d) => PaginatedResponse<Currency>.fromJson(
-        d as Map<String, dynamic>,
-        (e) => Currency.fromJson(e as Map<String, dynamic>),
-      ),
+      fromJson: (d) {
+        final map = d as Map<String, dynamic>;
+
+        // New response shape:
+        // { "currencies": [...], "metals": [...] }
+        if (map.containsKey('currencies') || map.containsKey('metals')) {
+          final currenciesRaw = map['currencies'] as List<dynamic>? ?? const [];
+          final metalsRaw = map['metals'] as List<dynamic>? ?? const [];
+
+          final items = <Currency>[
+            ...currenciesRaw.whereType<Map<String, dynamic>>().map(
+              Currency.fromJson,
+            ),
+            ...metalsRaw.whereType<Map<String, dynamic>>().map(
+              (metal) => Currency.fromJson(metal),
+            ),
+          ];
+
+          return PaginatedResponse<Currency>(
+            items: items,
+            total: items.length,
+            page: map['page'] as int? ?? 0,
+            limit: map['limit'] as int? ?? items.length,
+            totalPages: map['totalPages'] as int? ?? 1,
+            hasNext: map['hasNext'] as bool? ?? false,
+            hasPrevious: map['hasPrevious'] as bool? ?? false,
+          );
+        }
+
+        return PaginatedResponse<Currency>.fromJson(
+          map,
+          (e) => Currency.fromJson(e as Map<String, dynamic>),
+        );
+      },
     );
   }
 }

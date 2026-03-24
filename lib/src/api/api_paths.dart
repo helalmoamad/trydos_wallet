@@ -4,7 +4,7 @@ abstract class ApiPaths {
 
   // ─── Currencies ───
   /// Currencies list with filter and search (GET).
-  static const String currencies = '/currencies';
+  static const String currencies = '/assets/supported';
 
   // ─── Transactions ───
   /// Wallet transactions (cursor pagination).
