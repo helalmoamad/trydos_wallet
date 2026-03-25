@@ -73,13 +73,16 @@ class _TrydosWalletHomePageContentState
       AppStrings.get(state.languageCode, 'settings'),
     ];
 
-    return SizedBox(
-      height: 75,
-      child: Container(
-        color: const Color(0xFFF4F5F5),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: SafeArea(
-          top: false,
+    return SafeArea(
+      top: false,
+      left: false,
+      right: false,
+      bottom: true,
+      child: SizedBox(
+        height: 75,
+        child: Container(
+          color: const Color(0xFFF4F5F5),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
             children: [
               _buildCustomBottomNavItem(
@@ -130,7 +133,7 @@ class _TrydosWalletHomePageContentState
               package: TrydosWalletStyles.packageName,
               colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               label,
               style: TrydosWalletStyles.bodySmall.copyWith(

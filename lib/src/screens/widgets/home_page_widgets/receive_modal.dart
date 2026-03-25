@@ -391,39 +391,45 @@ class _ReceiveModalState extends State<ReceiveModal> {
 
         Spacer(),
         // Action Buttons
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildActionButton(
-              asset: TrydosWalletAssets.generate,
+        SafeArea(
+          top: false,
+          left: false,
+          right: false,
+          bottom: true,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildActionButton(
+                asset: TrydosWalletAssets.generate,
 
-              label: AppStrings.get(state.languageCode, 'request'),
-              onTap: () {
-                setState(() {
-                  _currentView = ReceiveModalView.request;
-                });
-              },
-            ),
-            _buildActionButton(
-              asset: TrydosWalletAssets.copy,
-              label: AppStrings.get(state.languageCode, 'copy'),
-              onTap: _handleCopy,
-            ),
-            _buildActionButton(
-              asset: TrydosWalletAssets.download,
-              label: AppStrings.get(state.languageCode, 'download'),
-              onTap: _handleDownload,
-              isLoading: _isDownloading,
-            ),
-            _buildActionButton(
-              asset: TrydosWalletAssets.share,
-              label: AppStrings.get(state.languageCode, 'share'),
-              onTap: _handleShare,
-              isLoading: _isSharing,
-            ),
-          ],
+                label: AppStrings.get(state.languageCode, 'request'),
+                onTap: () {
+                  setState(() {
+                    _currentView = ReceiveModalView.request;
+                  });
+                },
+              ),
+              _buildActionButton(
+                asset: TrydosWalletAssets.copy,
+                label: AppStrings.get(state.languageCode, 'copy'),
+                onTap: _handleCopy,
+              ),
+              _buildActionButton(
+                asset: TrydosWalletAssets.download,
+                label: AppStrings.get(state.languageCode, 'download'),
+                onTap: _handleDownload,
+                isLoading: _isDownloading,
+              ),
+              _buildActionButton(
+                asset: TrydosWalletAssets.share,
+                label: AppStrings.get(state.languageCode, 'share'),
+                onTap: _handleShare,
+                isLoading: _isSharing,
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 10),
       ],
     );
   }

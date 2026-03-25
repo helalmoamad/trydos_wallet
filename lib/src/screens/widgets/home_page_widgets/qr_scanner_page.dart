@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -26,7 +28,8 @@ class QRScannerPage extends StatefulWidget {
   State<QRScannerPage> createState() => _QRScannerPageState();
 }
 
-class _QRScannerPageState extends State<QRScannerPage> {
+class _QRScannerPageState extends State<QRScannerPage>
+    with WidgetsBindingObserver {
   final MobileScannerController _scannerController = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
     formats: const [BarcodeFormat.qrCode],
@@ -35,11 +38,29 @@ class _QRScannerPageState extends State<QRScannerPage> {
   bool _didReturnResult = false;
   QRScannerContentView _contentView = QRScannerContentView.scanner;
 
+  void _stopScanner() {
+    unawaited(_scannerController.stop());
+  }
+
+  void _startScannerIfNeeded() {
+    if (!mounted) return;
+    if (_didReturnResult) return;
+    if (_contentView != QRScannerContentView.scanner) return;
+    unawaited(_scannerController.start());
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
   void _showScannerRoot() {
     if (!mounted) return;
     setState(() {
       _contentView = QRScannerContentView.scanner;
     });
+    _startScannerIfNeeded();
   }
 
   void _syncScannerBackButton() {
@@ -68,6 +89,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
       return false;
     }
 
+    _stopScanner();
     if (widget.appairBack == true) {
       Navigator.pop(context);
       return false;
@@ -77,7 +99,25 @@ class _QRScannerPageState extends State<QRScannerPage> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _startScannerIfNeeded();
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _stopScanner();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopScanner();
     _scannerController.dispose();
     super.dispose();
   }
@@ -99,6 +139,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
       }
 
       _didReturnResult = true;
+      _stopScanner();
       Navigator.pop(context, raw);
       return;
     }
@@ -119,12 +160,17 @@ class _QRScannerPageState extends State<QRScannerPage> {
     // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: _handleWillPop,
-      child: BlocBuilder<WalletBloc, WalletState>(
-        builder: (context, state) {
-          return Directionality(
-            textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
+      child: SafeArea(
+        top: false,
+        left: false,
+        right: false,
+        bottom: true,
+        child: BlocBuilder<WalletBloc, WalletState>(
+          builder: (context, state) {
+            return Directionality(
+              textDirection: state.isRtl
+                  ? TextDirection.rtl
+                  : TextDirection.ltr,
               child: SizedBox(
                 height: MediaQuery.of(context).size.height * 0.9,
                 child: Container(
@@ -203,8 +249,19 @@ class _QRScannerPageState extends State<QRScannerPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 150),
+                      const Spacer(),
                       if (!widget.fromQR) ...[
+                        Container(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 10,
+                          ),
+                          height: 0.5,
+                          decoration: BoxDecoration(
+                            color: const Color(0xffD3D3D3),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
                         Text(
                           AppStrings.get(state.languageCode, 'or_choose'),
                           style: TrydosWalletStyles.bodyMedium.copyWith(
@@ -225,6 +282,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                             'send_money_pay',
                           ),
                           onTap: () {
+                            _stopScanner();
                             setState(() {
                               _contentView = QRScannerContentView.send;
                             });
@@ -242,6 +300,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                             'charge_wallet_msg',
                           ),
                           onTap: () {
+                            _stopScanner();
                             setState(() {
                               _contentView = QRScannerContentView.receive;
                             });
@@ -253,9 +312,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                   ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

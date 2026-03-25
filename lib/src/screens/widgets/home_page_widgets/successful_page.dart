@@ -297,7 +297,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                     ),
                     const SizedBox(height: 20),
                     SizedBox(
-                      height: (MediaQuery.of(context).size.height * 0.9) - 350,
+                      height: (MediaQuery.of(context).size.height * 0.9) - 375,
                       child: SingleChildScrollView(
                         child: Column(
                           mainAxisSize: MainAxisSize.max,
@@ -476,27 +476,33 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                       ),
                     ),
                     Spacer(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildActionIcon(
-                          TrydosWalletAssets.done,
-                          AppStrings.get(state.languageCode, 'done'),
-                          widget.onDone,
-                        ),
-                        _buildActionIcon(
-                          TrydosWalletAssets.download,
-                          AppStrings.get(state.languageCode, 'download'),
-                          _handleDownload,
-                          isLoading: _isDownloading,
-                        ),
-                        _buildActionIcon(
-                          TrydosWalletAssets.share,
-                          AppStrings.get(state.languageCode, 'share'),
-                          _handleShare,
-                          isLoading: _isSharing,
-                        ),
-                      ],
+                    SafeArea(
+                      top: false,
+                      left: false,
+                      right: false,
+                      bottom: true,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildActionIcon(
+                            TrydosWalletAssets.done,
+                            AppStrings.get(state.languageCode, 'done'),
+                            widget.onDone,
+                          ),
+                          _buildActionIcon(
+                            TrydosWalletAssets.download,
+                            AppStrings.get(state.languageCode, 'download'),
+                            _handleDownload,
+                            isLoading: _isDownloading,
+                          ),
+                          _buildActionIcon(
+                            TrydosWalletAssets.share,
+                            AppStrings.get(state.languageCode, 'share'),
+                            _handleShare,
+                            isLoading: _isSharing,
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 10),
                   ],

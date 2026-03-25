@@ -159,18 +159,24 @@ Future<T?> showWalletModal<T>({
     barrierColor: Colors.black54,
     transitionDuration: const Duration(milliseconds: 900),
     pageBuilder: (dialogContext, animation, secondaryAnimation) {
-      return BlocProvider.value(
-        value: context.read<WalletBloc>(),
-        child: _WalletModalContainer(
-          builder: builder,
-          backgroundColor: backgroundColor,
-          enableDrag: enableDrag,
-          onDismiss: () {
-            if (!isPopping && context.mounted) {
-              isPopping = true;
-              Navigator.of(context).pop();
-            }
-          },
+      return SafeArea(
+        top: false,
+        left: false,
+        right: false,
+        bottom: true,
+        child: BlocProvider.value(
+          value: context.read<WalletBloc>(),
+          child: _WalletModalContainer(
+            builder: builder,
+            backgroundColor: backgroundColor,
+            enableDrag: enableDrag,
+            onDismiss: () {
+              if (!isPopping && context.mounted) {
+                isPopping = true;
+                Navigator.of(context).pop();
+              }
+            },
+          ),
         ),
       );
     },
