@@ -115,3 +115,30 @@ class WalletDepositRequestsRequested extends WalletEvent {
 class WalletTransferPurposesLoadRequested extends WalletEvent {
   const WalletTransferPurposesLoadRequested();
 }
+
+/// Payment Requests
+class WalletPaymentRequestCreated extends WalletEvent {
+  const WalletPaymentRequestCreated({
+    required this.accountNumber,
+    required this.assetType,
+    required this.assetSymbol,
+    required this.amount,
+    required this.purposeId,
+    required this.reference,
+    this.note,
+    this.expiryMinutes,
+    required this.isPermanent,
+    required this.idempotencyKey,
+  });
+
+  final String accountNumber;
+  final String assetType;
+  final String assetSymbol;
+  final double amount;
+  final String purposeId;
+  final String reference;
+  final String? note;
+  final int? expiryMinutes;
+  final bool isPermanent;
+  final String idempotencyKey;
+}

@@ -23,6 +23,7 @@ dependencies:
   gal: ^2.3.2
   pretty_qr_code: ^3.6.0
   shimmer: ^3.0.0
+  pointycastle: ^3.9.1
 
 dev_dependencies:
   flutter_test:

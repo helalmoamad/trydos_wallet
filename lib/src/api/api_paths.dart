@@ -50,4 +50,18 @@ abstract class ApiPaths {
   /// Direct file upload (POST multipart).
   /// Body: file (required), type (required), metadata (optional)
   static const String mediaUploadDirect = '/media/upload/direct';
+
+  // ─── Payment Requests ───
+  /// Create payment request (POST).
+  /// Body: accountNumber, assetType, assetSymbol, amount, purposeId, reference, note?, expiryMinutes?, isPermanent, idempotencyKey
+  static const String paymentRequests = '/payment-requests';
+
+  /// Lookup payment request by request code.
+  static String lookupPaymentRequest(String code) =>
+      '/payment-requests/lookup/${Uri.encodeComponent(code)}';
+
+  /// Fulfill payment request (pay).
+  /// Body: accountNumber, idempotencyKey, note?
+  static String fulfillPaymentRequest(String id) =>
+      '/payment-requests/${Uri.encodeComponent(id)}/fulfill';
 }

@@ -72,15 +72,39 @@ class WalletHeader extends StatelessWidget {
               const SizedBox(width: 20),
               state.balanceCardIsSelected
                   ? InkWell(
-                      onTap: () {
+                      onTap: () async {
                         final walletBloc = context.read<WalletBloc>();
-                        showWalletModal(
-                          context: context,
-                          builder: (context, sc) => BlocProvider.value(
-                            value: walletBloc,
-                            child: QRScannerPage(fromQR: false),
-                          ),
-                        );
+                        final headerContext = context;
+
+                        Future<void> openQRThenSend() async {
+                          if (!headerContext.mounted) return;
+                          final result = await showWalletModal<String>(
+                            context: headerContext,
+                            builder: (ctx, sc) => BlocProvider.value(
+                              value: walletBloc,
+                              child: QRScannerPage(fromQR: false),
+                            ),
+                          );
+                          if (!headerContext.mounted || result == null) return;
+
+                          final payload = QrTransferPayloadCodec.tryParse(
+                            result,
+                          );
+                          // Close the QR scanner modal.
+                          showWalletModal(
+                            context: context,
+                            builder: (ctx, sc) => BlocProvider.value(
+                              value: walletBloc,
+                              child: SendModal(
+                                initialPayload: payload,
+                                initialScanRaw: result,
+                                onBack: openQRThenSend,
+                              ),
+                            ),
+                          );
+                        }
+
+                        await openQRThenSend();
                       },
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.start,
@@ -146,17 +170,6 @@ class WalletHeader extends StatelessWidget {
                     if (!headerContext.mounted || result == null) return;
 
                     final payload = QrTransferPayloadCodec.tryParse(result);
-                    if (payload == null) {
-                      showMessage(
-                        AppStrings.get(
-                          state.languageCode,
-                          'incorrect_account_msg',
-                        ),
-                        context: headerContext,
-                        type: MessageType.error,
-                      );
-                      return;
-                    }
 
                     showWalletModal(
                       context: headerContext,
@@ -164,6 +177,7 @@ class WalletHeader extends StatelessWidget {
                         value: walletBloc,
                         child: SendModal(
                           initialPayload: payload,
+                          initialScanRaw: result,
                           onBack: openQRThenSend,
                         ),
                       ),

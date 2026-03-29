@@ -36,12 +36,18 @@ class _ReceiveModalState extends State<ReceiveModal> {
 
   static const String _maskedName = 'RBTYLS';
 
+  void _resetModalBackgroundToWhite() {
+    if (!mounted) return;
+    setWalletModalBackground(context, Colors.white);
+  }
+
   void _handleBackAction() {
     final canGoBack = _currentView == ReceiveModalView.request;
     if (canGoBack) {
       setState(() {
         _currentView = ReceiveModalView.main;
       });
+      _resetModalBackgroundToWhite();
       return;
     }
 
@@ -248,6 +254,11 @@ class _ReceiveModalState extends State<ReceiveModal> {
       },
       child: BlocBuilder<WalletBloc, WalletState>(
         builder: (context, state) {
+          if (_currentView == ReceiveModalView.main) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _resetModalBackgroundToWhite();
+            });
+          }
           final accountName = _accountNameFromState(state);
           final accountNumber = _accountNumberFromState(state);
           final currencyDisplayName = _currencyDisplayNameFromState(state);

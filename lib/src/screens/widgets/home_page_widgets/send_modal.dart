@@ -15,12 +15,14 @@ enum SendModalView { main, transfer }
 /// ويدجت يعرض الـ Bottom Sheet الخاص بعمليات الإرسال والدفع.
 class SendModal extends StatefulWidget {
   final QrTransferPayload? initialPayload;
+  final String? initialScanRaw;
   final VoidCallback? onBack;
   final bool popOnBack;
 
   const SendModal({
     super.key,
     this.initialPayload,
+    this.initialScanRaw,
     this.onBack,
     this.popOnBack = true,
   });
@@ -57,7 +59,8 @@ class _SendModalState extends State<SendModal> {
   @override
   void initState() {
     super.initState();
-    _hasInitialMainStep = widget.initialPayload == null;
+    final hasInitialRaw = (widget.initialScanRaw ?? '').trim().isNotEmpty;
+    _hasInitialMainStep = widget.initialPayload == null && !hasInitialRaw;
     _currentView = _hasInitialMainStep
         ? SendModalView.main
         : SendModalView.transfer;
@@ -95,6 +98,7 @@ class _SendModalState extends State<SendModal> {
                 TransferSendModal(
                   key: const ValueKey('transfer'),
                   initialPayload: widget.initialPayload,
+                  initialScanRaw: widget.initialScanRaw,
                 ),
               ],
             ),

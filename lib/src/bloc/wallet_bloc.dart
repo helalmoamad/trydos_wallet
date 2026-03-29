@@ -5,6 +5,7 @@ import 'package:trydos_wallet/src/services/bank_deposits_api_service.dart';
 import 'package:trydos_wallet/src/services/banks_api_service.dart';
 import 'package:trydos_wallet/src/services/currencies_api_service.dart';
 import 'package:trydos_wallet/src/services/media_api_service.dart';
+import 'package:trydos_wallet/src/services/payment_requests_api_service.dart';
 import 'package:trydos_wallet/src/services/transfer_purposes_api_service.dart';
 import 'package:trydos_wallet/src/services/transactions_api_service.dart';
 
@@ -21,6 +22,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     BankDepositsApiService? depositApi,
     MediaApiService? mediaApi,
     TransferPurposesApiService? transferPurposesApi,
+    PaymentRequestsApiService? paymentRequestsApi,
     String? initialLanguage,
     String? firstName,
     String? lastName,
@@ -40,6 +42,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
        _mediaApi = mediaApi ?? MediaApiService(),
        _transferPurposesApi =
            transferPurposesApi ?? TransferPurposesApiService(),
+       _paymentRequestsApi = paymentRequestsApi ?? PaymentRequestsApiService(),
        super(
          WalletState(
            languageCode: initialLanguage ?? TrydosWallet.config.languageCode,
@@ -77,6 +80,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletDepositFeesRequested>(_onDepositFeesRequested);
     on<WalletDepositRequestsRequested>(_onDepositRequestsRequested);
     on<WalletTransferPurposesLoadRequested>(_onTransferPurposesLoadRequested);
+    on<WalletPaymentRequestCreated>(_onPaymentRequestCreated);
   }
 
   final CurrenciesApiService _currenciesApi;
@@ -86,6 +90,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   final BankDepositsApiService _depositApi;
   final MediaApiService _mediaApi;
   final TransferPurposesApiService _transferPurposesApi;
+  final PaymentRequestsApiService _paymentRequestsApi;
 
   int _currenciesPage = 0;
   int _banksPage = 0;
@@ -530,6 +535,47 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         state.copyWith(
           transferPurposesStatus: WalletStatus.failure,
           transferPurposesErrorMessage: result.errorMessage,
+        ),
+      );
+    }
+  }
+
+  /// Payment Requests
+  Future<void> _onPaymentRequestCreated(
+    WalletPaymentRequestCreated event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(state.copyWith(paymentRequestStatus: WalletStatus.loading));
+    final result = await _paymentRequestsApi.createPaymentRequest(
+      accountNumber: event.accountNumber,
+      assetType: event.assetType,
+      assetSymbol: event.assetSymbol,
+      amount: event.amount,
+      purposeId: event.purposeId,
+      reference: event.reference,
+      note: event.note,
+      expiryMinutes: event.expiryMinutes,
+      isPermanent: event.isPermanent,
+      idempotencyKey: event.idempotencyKey,
+    );
+
+    if (result.isSuccess && result.data != null) {
+      emit(
+        state.copyWith(
+          paymentRequestResponse: result.data,
+          paymentRequestStatus: WalletStatus.success,
+          paymentRequestErrorMessage: null,
+        ),
+      );
+
+      // Keep financial ledger in sync after creating a payment request.
+      emit(state.copyWith(transactionsStatus: WalletStatus.loading));
+      await _fetchTransactions(emit, cursor: null, append: false);
+    } else {
+      emit(
+        state.copyWith(
+          paymentRequestStatus: WalletStatus.failure,
+          paymentRequestErrorMessage: result.errorMessage,
         ),
       );
     }

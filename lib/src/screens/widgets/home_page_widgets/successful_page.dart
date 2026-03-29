@@ -458,8 +458,9 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                             ),
                             const SizedBox(height: 30),
                             (widget.recipientPhoneNumber != null &&
-                                    widget.recipientName != null &&
-                                    widget.recipientId != null)
+                                        widget.recipientName != null &&
+                                        widget.recipientId != null) ||
+                                    widget.isFromQr
                                 ? const SizedBox.shrink()
                                 : SvgPicture.asset(
                                     TrydosWalletAssets.trydos,

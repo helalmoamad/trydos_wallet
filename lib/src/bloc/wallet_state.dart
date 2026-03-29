@@ -51,6 +51,10 @@ class WalletState {
     this.balanceCardIsSelected = false,
     this.selectedAssetId,
     this.depositRequestsErrorMessage,
+    // Payment Requests
+    this.paymentRequestResponse,
+    this.paymentRequestStatus = WalletStatus.initial,
+    this.paymentRequestErrorMessage,
     this.firstName = 'M*****',
     this.lastName = 'A*****',
     this.email,
@@ -128,6 +132,11 @@ class WalletState {
   final int depositRequestsTotalPages;
   final String? depositRequestsErrorMessage;
 
+  // Payment Requests
+  final PaymentRequestResponse? paymentRequestResponse;
+  final WalletStatus paymentRequestStatus;
+  final String? paymentRequestErrorMessage;
+
   /// RTL helper
   bool get isRtl => languageCode == 'ar' || languageCode == 'ku';
 
@@ -188,6 +197,10 @@ class WalletState {
     bool? isTwoFactorEnabled,
     DateTime? memberSince,
     String? depositRequestsErrorMessage,
+    // Payment Requests
+    PaymentRequestResponse? paymentRequestResponse,
+    WalletStatus? paymentRequestStatus,
+    String? paymentRequestErrorMessage,
   }) {
     return WalletState(
       languageCode: languageCode ?? this.languageCode,
@@ -246,6 +259,11 @@ class WalletState {
       memberSince: memberSince ?? this.memberSince,
       depositRequestsErrorMessage:
           depositRequestsErrorMessage ?? this.depositRequestsErrorMessage,
+      paymentRequestResponse:
+          paymentRequestResponse ?? this.paymentRequestResponse,
+      paymentRequestStatus: paymentRequestStatus ?? this.paymentRequestStatus,
+      paymentRequestErrorMessage:
+          paymentRequestErrorMessage ?? this.paymentRequestErrorMessage,
     );
   }
 }

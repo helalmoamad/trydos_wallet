@@ -15,7 +15,9 @@ class TrydosWalletHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => WalletBloc()..add(const WalletRefreshAllRequested()),
+      create: (context) => WalletBloc()
+        ..add(const WalletRefreshAllRequested())
+        ..add(const WalletTransferPurposesLoadRequested()),
       child: BlocBuilder<WalletBloc, WalletState>(
         buildWhen: (prev, curr) => prev.languageCode != curr.languageCode,
         builder: (context, state) {

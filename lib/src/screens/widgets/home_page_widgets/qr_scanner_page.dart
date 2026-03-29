@@ -9,7 +9,6 @@ import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/receive_modal.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/send_modal.dart';
 import 'package:trydos_wallet/src/screens/widgets/widgets.dart';
-import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
 enum QRScannerContentView { scanner, send, receive }
@@ -130,11 +129,6 @@ class _QRScannerPageState extends State<QRScannerPage>
     for (final barcode in capture.barcodes) {
       final raw = barcode.rawValue?.trim();
       if (raw == null || raw.isEmpty) {
-        continue;
-      }
-
-      final parsed = QrTransferPayloadCodec.tryParse(raw);
-      if (parsed == null || parsed.accountNumber.trim().isEmpty) {
         continue;
       }
 

@@ -1,5 +1,6 @@
 // ignore_for_file: use_build_context_synchronously
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/utils/payment_request_crypto.dart';
 import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
@@ -56,8 +58,11 @@ class _RequestQRModalState extends State<RequestQRModal> {
 
   bool _isDownloading = false;
   bool _isSharing = false;
+  Timer? _expiryTicker;
+  DateTime? _responseExpiryTime;
+  String? _encryptedRequestQrPayload;
 
-  final String _maskedName = 'RBTYLS';
+  final String _maskedName = '*******';
   bool _isNameMasked = false;
 
   String get _accountName => widget.accountName?.trim() ?? '';
@@ -100,6 +105,48 @@ class _RequestQRModalState extends State<RequestQRModal> {
     });
   }
 
+  DateTime? _parseResponseExpiry(dynamic value) {
+    if (value == null) return null;
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value)?.toLocal();
+    }
+    return null;
+  }
+
+  bool get _isFinalQrExpired =>
+      _state == RequestQRState.finalQR &&
+      _responseExpiryTime != null &&
+      DateTime.now().isAfter(_responseExpiryTime!);
+
+  void _restartExpiryWatcher() {
+    _expiryTicker?.cancel();
+    if (_responseExpiryTime == null) return;
+
+    _expiryTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+      if (_isFinalQrExpired) {
+        _expiryTicker?.cancel();
+      }
+    });
+  }
+
+  void _syncModalBackground() {
+    final backgroundColor = _isFinalQrExpired
+        ? const Color(0xffFDF3F3)
+        : Colors.white;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setWalletModalBackground(context, backgroundColor);
+    });
+  }
+
+  void _resetModalBackground() {
+    if (!mounted) return;
+    setWalletModalBackground(context, Colors.white);
+  }
+
   void _scrollFieldIntoView(GlobalKey fieldKey) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 120), () {
@@ -119,6 +166,9 @@ class _RequestQRModalState extends State<RequestQRModal> {
 
   @override
   void dispose() {
+    // Ensure parent modal returns to default background when this page closes.
+    setWalletModalBackground(context, Colors.white);
+    _expiryTicker?.cancel();
     _formScrollController.dispose();
     _amountFocusNode.dispose();
     _referenceFocusNode.dispose();
@@ -218,6 +268,10 @@ class _RequestQRModalState extends State<RequestQRModal> {
     return months[month - 1];
   }
 
+  String _monthName(WalletState state, int month) {
+    return AppStrings.get(state.languageCode, _monthKey(month));
+  }
+
   String _validUntilText(WalletState state) {
     final expiry = _expiryDateTime();
     if (expiry == null) {
@@ -245,7 +299,55 @@ class _RequestQRModalState extends State<RequestQRModal> {
 
   void _generateRequest() async {
     if (!_isFormValid) return;
-    setState(() => _state = RequestQRState.finalQR);
+
+    // Generate idempotency key
+    final idempotencyKey = DateTime.now().millisecondsSinceEpoch.toString();
+
+    // Get expiry minutes from selected expiry
+    int? expiryMinutes;
+    if (_selectedExpiry != 'always') {
+      switch (_selectedExpiry) {
+        case 'minutes_3':
+          expiryMinutes = 3;
+          break;
+        case 'minutes_15':
+          expiryMinutes = 15;
+          break;
+        case 'hour_1':
+          expiryMinutes = 60;
+          break;
+        case 'hours_24':
+          expiryMinutes = 1440;
+          break;
+      }
+    }
+
+    // Emit the event to create payment request
+    if (mounted) {
+      context.read<WalletBloc>().add(
+        WalletPaymentRequestCreated(
+          accountNumber: _accountNumber,
+          assetType: 'CURRENCY',
+          assetSymbol:
+              context
+                  .read<WalletBloc>()
+                  .state
+                  .balances[context.read<WalletBloc>().state.selectedAssetId ??
+                      '']
+                  ?.assetSymbol ??
+              'USD',
+          amount: double.parse(_amountController.text),
+          purposeId: _selectedPurpose,
+          reference: _referenceController.text,
+          note: _noteController.text.isNotEmpty ? _noteController.text : null,
+          expiryMinutes: expiryMinutes,
+          isPermanent: _selectedExpiry == 'always',
+          idempotencyKey: idempotencyKey,
+        ),
+      );
+
+      setState(() => _state = RequestQRState.generating);
+    }
   }
 
   Future<Uint8List?> _captureCard() async {
@@ -336,98 +438,140 @@ class _RequestQRModalState extends State<RequestQRModal> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<WalletBloc, WalletState>(
-      builder: (context, state) {
-        final qrPayload = _requestQrPayload(state);
-        final validUntilText = _validUntilText(state);
-        final currencyDisplayName = _currencyDisplayName(state);
-        return Directionality(
-          textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.9,
-            child: Stack(
-              children: [
-                // Hidden card for screen capture
-                PositionedDirectional(
-                  start: -4000,
-                  top: -4000,
-                  child: RepaintBoundary(
-                    key: _cardKey,
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: _CleanRequestQRCard(
-                        accountName: _accountName,
-                        accountNumber: _accountNumber,
-                        currencyDisplayName: currencyDisplayName,
-                        qrPayload: qrPayload,
-                        amount: _amountController.text,
-                        currencySymbol: _currencySymbol(state),
-                        reference: _referenceController.text,
-                        purpose: _purposeName(state, _selectedPurpose),
-                        validUntilText: validUntilText,
-                        requestType: AppStrings.get(
-                          state.languageCode,
-                          'deposit_request',
+    return BlocListener<WalletBloc, WalletState>(
+      listener: (context, state) {
+        // Handle payment request response
+        if (state.paymentRequestStatus == WalletStatus.success &&
+            state.paymentRequestResponse != null) {
+          // Update state to show final QR view with response data
+          if (mounted) {
+            setState(() {
+              _state = RequestQRState.finalQR;
+              _responseExpiryTime = _parseResponseExpiry(
+                state.paymentRequestResponse!.expiresAt,
+              );
+              _encryptedRequestQrPayload = PaymentRequestCrypto.encrypt(
+                state.paymentRequestResponse!.qrData.code,
+                _accountNumber,
+              );
+            });
+            _restartExpiryWatcher();
+          }
+        } else if (state.paymentRequestStatus == WalletStatus.failure) {
+          // Show error message
+          showMessage(
+            state.paymentRequestErrorMessage ??
+                AppStrings.get(state.languageCode, 'failed'),
+            context: context,
+            type: MessageType.error,
+          );
+          if (mounted) {
+            setState(() {
+              _state = RequestQRState.filling;
+              _responseExpiryTime = null;
+              _encryptedRequestQrPayload = null;
+            });
+          }
+        }
+      },
+      child: BlocBuilder<WalletBloc, WalletState>(
+        builder: (context, state) {
+          _syncModalBackground();
+          final qrPayload = _requestQrPayload(state);
+          final effectiveQrPayload =
+              (_state == RequestQRState.finalQR &&
+                  state.paymentRequestResponse != null)
+              ? (_encryptedRequestQrPayload ??
+                    PaymentRequestCrypto.encrypt(
+                      state.paymentRequestResponse!.qrData.code,
+                      _accountNumber,
+                    ))
+              : qrPayload;
+          final validUntilText = _validUntilText(state);
+          final currencyDisplayName = _currencyDisplayName(state);
+          return Directionality(
+            textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * 0.9,
+              child: Stack(
+                children: [
+                  // Hidden card for screen capture
+                  PositionedDirectional(
+                    start: -4000,
+                    top: -4000,
+                    child: RepaintBoundary(
+                      key: _cardKey,
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: _CleanRequestQRCard(
+                          accountName: _isNameMasked
+                              ? _maskedName
+                              : _accountName,
+                          accountNumber: _accountNumber,
+                          currencyDisplayName: currencyDisplayName,
+                          qrPayload: effectiveQrPayload,
+                          amount: _amountController.text,
+                          currencySymbol: _currencySymbol(state),
+                          reference: _referenceController.text,
+                          purpose: _purposeName(state, _selectedPurpose),
+                          validUntilText: validUntilText,
+                          requestType: AppStrings.get(
+                            state.languageCode,
+                            'deposit_request',
+                          ),
+                          note: _noteController.text,
+                          languageCode: state.languageCode,
                         ),
-                        note: _noteController.text,
-                        languageCode: state.languageCode,
                       ),
                     ),
                   ),
-                ),
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.9,
-                  child: Column(
-                    children: [
-                      // Trydos Logo
-                      SvgPicture.asset(
-                        TrydosWalletAssets.trydos,
-                        height: 30,
-                        package: TrydosWalletStyles.packageName,
-                      ),
-                      const SizedBox(height: 20),
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.9,
+                    child: Container(
+                      color: _isFinalQrExpired
+                          ? const Color(0xffFDF3F3)
+                          : Colors.transparent,
+                      child: Column(
+                        children: [
+                          // Trydos Logo
+                          SvgPicture.asset(
+                            TrydosWalletAssets.trydos,
+                            height: 30,
+                            package: TrydosWalletStyles.packageName,
+                          ),
+                          const SizedBox(height: 20),
 
-                      if (_state == RequestQRState.finalQR) ...[
-                        // Final QR View
-                        _buildFinalQRView(state, qrPayload, validUntilText),
-                      ] else ...[
-                        // Filling Form (including generating state)
-                        _buildFormView(state),
-                      ],
-                    ],
+                          if (_state == RequestQRState.finalQR &&
+                              state.paymentRequestResponse != null) ...[
+                            // Final QR View with Response Data
+                            _buildFinalQRView(state),
+                          ] else ...[
+                            // Filling Form (with loading state only on button)
+                            _buildFormView(state),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
   Widget _buildFormView(WalletState state) {
-    final qrPayload = _requestQrPayload(state);
     return Column(
       children: [
         // Faded QR Placeholder
         Column(
           children: [
-            Opacity(
-              opacity: 0.1,
-              child: SizedBox.square(
-                dimension: 250,
-                child: PrettyQrView.data(
-                  data: qrPayload,
-                  errorCorrectLevel: QrErrorCorrectLevel.M,
-                  decoration: const PrettyQrDecoration(
-                    shape: PrettyQrSmoothSymbol(
-                      color: Color(0xff1D1D1D),
-                      roundFactor: 0.9,
-                    ),
-                    quietZone: PrettyQrQuietZone.modules(0),
-                  ),
-                ),
-              ),
+            SvgPicture.asset(
+              TrydosWalletAssets.hideQr,
+              height: 250,
+              package: TrydosWalletStyles.packageName,
             ),
             const SizedBox(height: 5),
             Text(
@@ -523,18 +667,24 @@ class _RequestQRModalState extends State<RequestQRModal> {
     );
   }
 
-  Widget _buildFinalQRView(
-    WalletState state,
-    String qrPayload,
-    String validUntilText,
-  ) {
+  Widget _buildFinalQRView(WalletState state) {
+    final response = state.paymentRequestResponse;
+    if (response == null) return const SizedBox.shrink();
+    final isPermanent = response.isPermanent && _responseExpiryTime == null;
+    final expiryText = isPermanent
+        ? AppStrings.get(state.languageCode, 'always')
+        : _finalValidUntilText(state);
+    final fieldBackground = _isFinalQrExpired
+        ? const Color(0xffFDF3F3)
+        : const Color(0xffFCFCFC);
+
     return Column(
       children: [
         // Vibrant QR Code
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: _isFinalQrExpired ? const Color(0xffFDF3F3) : Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -549,7 +699,12 @@ class _RequestQRModalState extends State<RequestQRModal> {
               SizedBox.square(
                 dimension: 250,
                 child: PrettyQrView.data(
-                  data: qrPayload,
+                  data:
+                      _encryptedRequestQrPayload ??
+                      PaymentRequestCrypto.encrypt(
+                        response.qrData.code,
+                        _accountNumber,
+                      ),
                   errorCorrectLevel: QrErrorCorrectLevel.M,
                   decoration: const PrettyQrDecoration(
                     shape: PrettyQrSmoothSymbol(
@@ -562,11 +717,12 @@ class _RequestQRModalState extends State<RequestQRModal> {
               ),
               const SizedBox(height: 5),
               Text(
-                _accountNumber,
+                _isFinalQrExpired
+                    ? AppStrings.get(state.languageCode, 'expired_code')
+                    : _accountNumber,
                 style: TrydosWalletStyles.bodyMedium.copyWith(
                   color: const Color(0xff1D1D1D),
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
@@ -579,14 +735,20 @@ class _RequestQRModalState extends State<RequestQRModal> {
               children: [
                 const SizedBox(height: 15),
                 // Account Details
-                _buildSummaryBox(
+                _buildInfoBox(
                   AppStrings.get(state.languageCode, 'account_name'),
-                  _accountName,
+                  _isNameMasked ? _maskedName : _accountName,
+                  isMasked: true,
+                  onMaskToggle: () =>
+                      setState(() => _isNameMasked = !_isNameMasked),
+                  isMaskedNow: _isNameMasked,
+                  backgroundColor: fieldBackground,
                 ),
                 const SizedBox(height: 5),
                 _buildSummaryBox(
                   AppStrings.get(state.languageCode, 'account_number'),
-                  '$_accountNumber  ${_currencyDisplayName(state)}',
+                  '${response.requesterAccountNumber}  ${_currencyDisplayName(state)}',
+                  backgroundColor: fieldBackground,
                 ),
                 const SizedBox(height: 5),
                 // Transaction Details
@@ -595,14 +757,16 @@ class _RequestQRModalState extends State<RequestQRModal> {
                     Expanded(
                       child: _buildSummaryBox(
                         AppStrings.get(state.languageCode, 'amount'),
-                        '${_amountController.text} ${_currencySymbol(state)}',
+                        '${response.amount} ${response.assetSymbol}',
+                        backgroundColor: fieldBackground,
                       ),
                     ),
                     const SizedBox(width: 5),
                     Expanded(
                       child: _buildSummaryBox(
-                        AppStrings.get(state.languageCode, 'id'),
+                        AppStrings.get(state.languageCode, 'reference'),
                         _referenceController.text,
+                        backgroundColor: fieldBackground,
                       ),
                     ),
                   ],
@@ -617,89 +781,70 @@ class _RequestQRModalState extends State<RequestQRModal> {
                           'purpose_of_request',
                         ),
                         _purposeName(state, _selectedPurpose),
+                        backgroundColor: fieldBackground,
                       ),
                     ),
                     const SizedBox(width: 5),
                     Expanded(
                       child: _buildSummaryBox(
                         AppStrings.get(state.languageCode, 'type'),
-                        AppStrings.get(state.languageCode, 'deposit_request'),
+                        response.assetType,
+                        backgroundColor: fieldBackground,
                       ),
                     ),
                   ],
                 ),
 
-                // Expiry and Note Summary
+                // Expiry Summary
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 12,
                   ),
+                  decoration: BoxDecoration(
+                    color: fieldBackground,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                AppStrings.get(
-                                  state.languageCode,
-                                  'valid_until',
-                                ),
-                                style: TrydosWalletStyles.bodySmall.copyWith(
-                                  color: const Color(0xff8D8D8D),
-                                  fontSize: 11,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                validUntilText,
-                                style: TrydosWalletStyles.bodyMedium.copyWith(
-                                  color: const Color(0xff1D1D1D),
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
+                      Text(
+                        AppStrings.get(state.languageCode, 'valid_until'),
+                        style: TrydosWalletStyles.bodySmall.copyWith(
+                          color: const Color(0xff8D8D8D),
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 9,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: _isFinalQrExpired
+                                ? const Color(0xffFDF3F3)
+                                : const Color(0xffD3D3D3),
                           ),
-                          if (_noteController.text.isNotEmpty)
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    AppStrings.get(state.languageCode, 'note'),
-                                    style: TrydosWalletStyles.bodySmall
-                                        .copyWith(
-                                          color: const Color(0xff8D8D8D),
-                                          fontSize: 10,
-                                        ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    _noteController.text,
-                                    style: TrydosWalletStyles.bodyMedium
-                                        .copyWith(
-                                          color: const Color(0xff1D1D1D),
-                                          fontSize: 12,
-                                        ),
-                                    textAlign: TextAlign.end,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
+                          borderRadius: BorderRadius.circular(15),
+                          color: fieldBackground,
+                        ),
+                        child: Text(
+                          expiryText,
+                          style: TrydosWalletStyles.bodyMedium.copyWith(
+                            color: const Color(0xff1D1D1D),
+                            fontSize: 11,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 5),
-                (_selectedExpiry == 'always')
+                (isPermanent || _isFinalQrExpired)
                     ? const SizedBox.shrink()
                     : Center(
                         child: Text(
@@ -713,18 +858,58 @@ class _RequestQRModalState extends State<RequestQRModal> {
                           ),
                         ),
                       ),
-
-                // Action Buttons
               ],
             ),
           ),
         ),
         Padding(
           padding: const EdgeInsets.only(top: 10.0),
-          child: _buildActionRow(state),
+          child: _isFinalQrExpired
+              ? _buildExpiredBar(state)
+              : _buildActionRow(state),
         ),
         const SizedBox(height: 10),
       ],
+    );
+  }
+
+  String _finalValidUntilText(WalletState state) {
+    final expiry = _responseExpiryTime;
+    if (expiry == null) {
+      return '--';
+    }
+
+    final remainingSeconds = expiry.difference(DateTime.now()).inSeconds;
+    final safeSeconds = remainingSeconds < 0 ? 0 : remainingSeconds;
+    final mins = safeSeconds ~/ 60;
+    final secs = safeSeconds % 60;
+    final mmss =
+        '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    final timeStr =
+        '${expiry.hour.toString().padLeft(2, '0')}:${expiry.minute.toString().padLeft(2, '0')}';
+    final dateStr =
+        '$mmss ${AppStrings.get(state.languageCode, 'minutes_until')}$timeStr | ${expiry.day} ${_monthName(state, expiry.month)} ${expiry.year}';
+    return dateStr;
+  }
+
+  Widget _buildExpiredBar(WalletState state) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xffFF5F61),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        AppStrings.get(state.languageCode, 'expired_code'),
+        style: TrydosWalletStyles.bodyMedium.copyWith(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
@@ -799,12 +984,13 @@ class _RequestQRModalState extends State<RequestQRModal> {
     bool isMasked = false,
     VoidCallback? onMaskToggle,
     bool isMaskedNow = false,
+    Color backgroundColor = const Color(0xffFCFCFC),
   }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xffFCFCFC),
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -817,6 +1003,8 @@ class _RequestQRModalState extends State<RequestQRModal> {
               color: const Color(0xff8D8D8D),
               fontSize: 11,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
 
           SizedBox(
@@ -953,13 +1141,18 @@ class _RequestQRModalState extends State<RequestQRModal> {
     );
   }
 
-  Widget _buildSummaryBox(String label, String value, {bool isBold = false}) {
+  Widget _buildSummaryBox(
+    String label,
+    String value, {
+    bool isBold = false,
+    int maxLines = 1,
+    Color backgroundColor = const Color(0xffFCFCFC),
+  }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xffFCFCFC),
-
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -971,6 +1164,8 @@ class _RequestQRModalState extends State<RequestQRModal> {
               color: const Color(0xff8D8D8D),
               fontSize: 11,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 6),
           Text(
@@ -980,6 +1175,8 @@ class _RequestQRModalState extends State<RequestQRModal> {
               fontSize: 13,
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             ),
+            maxLines: maxLines,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -1055,16 +1252,13 @@ class _RequestQRModalState extends State<RequestQRModal> {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 5),
               width: double.infinity,
-              decoration: BoxDecoration(
-                color: const Color(0xffFFFEFA),
-                borderRadius: BorderRadius.circular(8),
-              ),
+
               child: Center(
                 child: Text(
                   AppStrings.get(state.languageCode, 'cannot_use_after_expiry'),
                   style: TrydosWalletStyles.bodySmall.copyWith(
                     color: const Color(0xff1D1D1D),
-                    fontSize: 10,
+                    fontSize: 11,
                   ),
                 ),
               ),
@@ -1077,8 +1271,9 @@ class _RequestQRModalState extends State<RequestQRModal> {
 
   Widget _buildGenerateButton(WalletState state) {
     final isValid = _isFormValid;
+    final isLoading = _state == RequestQRState.generating;
     return GestureDetector(
-      onTap: isValid ? _generateRequest : null,
+      onTap: (isValid && !isLoading) ? _generateRequest : null,
       child: Column(
         children: [
           Container(
@@ -1093,8 +1288,8 @@ class _RequestQRModalState extends State<RequestQRModal> {
             ),
           ),
           Text(
-            _state == RequestQRState.generating
-                ? AppStrings.get(state.languageCode, 'requesting')
+            isLoading
+                ? '${AppStrings.get(state.languageCode, 'generate_request')}...'
                 : AppStrings.get(state.languageCode, 'generate_request'),
             style: TrydosWalletStyles.bodySmall.copyWith(
               color: isValid
@@ -1112,6 +1307,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
     if (_state == RequestQRState.generating) return const SizedBox.shrink();
     return GestureDetector(
       onTap: () {
+        _resetModalBackground();
         if (widget.onBack != null) {
           widget.onBack!();
         } else {
@@ -1245,6 +1441,7 @@ class _CleanRequestQRCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isRtl = languageCode == 'ar' || languageCode == 'ku';
+    final isAlways = validUntilText == AppStrings.get(languageCode, 'always');
 
     return Directionality(
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
@@ -1307,7 +1504,7 @@ class _CleanRequestQRCard extends StatelessWidget {
                 const SizedBox(width: 5),
                 Expanded(
                   child: _buildInfoBox(
-                    AppStrings.get(languageCode, 'id'),
+                    AppStrings.get(languageCode, 'reference'),
                     reference,
                   ),
                 ),
@@ -1332,20 +1529,67 @@ class _CleanRequestQRCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 5),
-            _buildInfoBox(
-              AppStrings.get(languageCode, 'valid_until'),
-              validUntilText,
-            ),
-            if (note.isNotEmpty) ...[
-              const SizedBox(height: 5),
-              _buildInfoBox(AppStrings.get(languageCode, 'note'), note),
-            ],
-            const SizedBox(height: 5),
-            Text(
-              AppStrings.get(languageCode, 'cannot_use_after_expiry'),
-              style: TrydosWalletStyles.bodySmall.copyWith(
-                color: const Color(0xff8D8D8D),
-                fontSize: 10,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xffF9F9F9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppStrings.get(languageCode, 'valid_until'),
+                    style: TrydosWalletStyles.bodySmall.copyWith(
+                      color: const Color(0xff8D8D8D),
+                      fontSize: 10,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xffD3D3D3)),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      validUntilText,
+                      style: TrydosWalletStyles.bodyMedium.copyWith(
+                        color: const Color(0xff1D1D1D),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                  if (!isAlways) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xffFCFCFC),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        AppStrings.get(languageCode, 'cannot_use_after_expiry'),
+                        textAlign: TextAlign.center,
+                        style: TrydosWalletStyles.bodySmall.copyWith(
+                          color: const Color(0xff1D1D1D),
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
@@ -1371,6 +1615,8 @@ class _CleanRequestQRCard extends StatelessWidget {
               color: const Color(0xff8D8D8D),
               fontSize: 10,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 6),
           Text(

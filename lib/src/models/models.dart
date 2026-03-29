@@ -15,3 +15,5 @@ export 'transaction/transaction.dart';
 export 'transfer_purpose/transfer_purpose.dart';
 export 'transfer_send_result/transfer_send_result.dart';
 export 'transfer_verify_result/transfer_verify_result.dart';
+export 'payment_request/payment_request_models.dart';
+export 'enums/payment_request_status.dart';
