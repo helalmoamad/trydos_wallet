@@ -65,9 +65,17 @@ class _RequestQRModalState extends State<RequestQRModal> {
   final String _maskedName = '*******';
   bool _isNameMasked = false;
 
-  String get _accountName => widget.accountName?.trim() ?? '';
+  String get _accountName {
+    final fromWidget = widget.accountName?.trim() ?? '';
+    if (fromWidget.isNotEmpty) return fromWidget;
+    return Balance.lastMyAccountsPrimaryWallet?.accountName ?? '';
+  }
 
-  String get _accountNumber => widget.accountNumber?.trim() ?? '';
+  String get _accountNumber {
+    final fromWidget = widget.accountNumber?.trim() ?? '';
+    if (fromWidget.isNotEmpty) return fromWidget;
+    return Balance.lastMyAccountsPrimaryWallet?.accountNumber ?? '';
+  }
 
   final List<String> _expiryOptions = [
     'always',
@@ -250,6 +258,13 @@ class _RequestQRModalState extends State<RequestQRModal> {
     return AppStrings.get(state.languageCode, 'american_dollars');
   }
 
+  String _selectedAssetType(WalletState state) {
+    final selectedId = state.selectedAssetId ?? '';
+    final type = (state.balances[selectedId]?.assetType ?? 'CURRENCY')
+        .toUpperCase();
+    return type == 'METAL' ? 'METAL' : 'CURRENCY';
+  }
+
   String _monthKey(int month) {
     const months = [
       'jan',
@@ -327,7 +342,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
       context.read<WalletBloc>().add(
         WalletPaymentRequestCreated(
           accountNumber: _accountNumber,
-          assetType: 'CURRENCY',
+          assetType: _selectedAssetType(context.read<WalletBloc>().state),
           assetSymbol:
               context
                   .read<WalletBloc>()
@@ -729,7 +744,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
           ),
         ),
         SizedBox(
-          height: (MediaQuery.of(context).size.height * 0.9) - 465,
+          height: (MediaQuery.of(context).size.height * 0.9) - 468,
           child: SingleChildScrollView(
             child: Column(
               children: [

@@ -89,6 +89,7 @@ class _TransferSendModalState extends State<TransferSendModal>
   String? maskedAccountName;
   String? qrPurpose;
   Timer? _expiryTicker;
+  bool _wasKeyboardVisible = false;
 
   bool get isExpired =>
       isRequestFlow &&
@@ -140,6 +141,11 @@ class _TransferSendModalState extends State<TransferSendModal>
   }
 
   Future<void> _applyScannedPayload(QrTransferPayload payload) async {
+    _syncSelectedAssetWithRequest(
+      assetType: null,
+      assetSymbol: payload.currencySymbol,
+    );
+
     setState(() {
       isFromQr = true;
       currentInputType = RecipientInputType.account;
@@ -215,6 +221,67 @@ class _TransferSendModalState extends State<TransferSendModal>
       return amount.toInt().toString();
     }
     return amount.toStringAsFixed(2);
+  }
+
+  String _normalizeAssetType(String? value) {
+    final upper = (value ?? '').trim().toUpperCase();
+    return upper == 'METAL' ? 'METAL' : 'CURRENCY';
+  }
+
+  String _normalizeSymbol(String? value) {
+    return (value ?? '').trim().toUpperCase();
+  }
+
+  String? _findAssetIdForRequest(
+    WalletState state, {
+    required String assetType,
+    required String assetSymbol,
+  }) {
+    final normalizedType = _normalizeAssetType(assetType);
+    final normalizedSymbol = _normalizeSymbol(assetSymbol);
+
+    if (normalizedSymbol.isNotEmpty) {
+      for (final entry in state.balances.entries) {
+        final balance = entry.value;
+        if (_normalizeAssetType(balance.assetType) == normalizedType &&
+            _normalizeSymbol(balance.assetSymbol) == normalizedSymbol) {
+          return entry.key;
+        }
+      }
+    }
+
+    if (normalizedSymbol.isNotEmpty) {
+      for (final currency in state.currencies) {
+        if (_normalizeSymbol(currency.symbol) == normalizedSymbol) {
+          return currency.id;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  void _syncSelectedAssetWithRequest({
+    required String? assetType,
+    required String? assetSymbol,
+  }) {
+    final state = context.read<WalletBloc>().state;
+    final matchedAssetId = _findAssetIdForRequest(
+      state,
+      assetType: assetType ?? '',
+      assetSymbol: assetSymbol ?? '',
+    );
+    if (matchedAssetId == null || matchedAssetId.isEmpty) {
+      return;
+    }
+    if (state.selectedAssetId == matchedAssetId) {
+      return;
+    }
+
+    context.read<WalletBloc>().add(
+      BalanceCardIsSelected(isSelected: true, assetId: matchedAssetId),
+    );
+    context.read<WalletBloc>().add(WalletBalanceLoadRequested(matchedAssetId));
   }
 
   Future<void> _applyScannedRaw(String raw) async {
@@ -294,6 +361,11 @@ class _TransferSendModalState extends State<TransferSendModal>
       final referenceValue = (data.reference ?? '').trim().isNotEmpty
           ? data.reference!
           : data.requestCode;
+
+      _syncSelectedAssetWithRequest(
+        assetType: data.assetType,
+        assetSymbol: data.assetSymbol,
+      );
 
       setState(() {
         isRequestLookupLoading = false;
@@ -415,10 +487,34 @@ class _TransferSendModalState extends State<TransferSendModal>
   @override
   void didChangeMetrics() {
     super.didChangeMetrics();
-    if (!mounted || !noteFocus.hasFocus) {
+    if (!mounted) return;
+
+    final isKeyboardVisible = View.of(context).viewInsets.bottom > 0;
+    if (_wasKeyboardVisible && !isKeyboardVisible) {
+      _validateInputsOnKeyboardDismiss();
+    }
+    _wasKeyboardVisible = isKeyboardVisible;
+
+    if (!noteFocus.hasFocus) return;
+    _scrollNoteFieldIntoView();
+  }
+
+  void _validateInputsOnKeyboardDismiss() {
+    if (currentTransferState != TransferState.input) {
       return;
     }
-    _scrollNoteFieldIntoView();
+
+    if (recipientFocus.hasFocus &&
+        isEditingRecipient &&
+        recipientController.text.trim().isNotEmpty) {
+      _verifyRecipient();
+    }
+
+    if (amountFocus.hasFocus &&
+        isEditingAmount &&
+        amountController.text.trim().isNotEmpty) {
+      _verifyTransferByAmount();
+    }
   }
 
   void _resetRecipientLookupState() {
@@ -863,6 +959,25 @@ class _TransferSendModalState extends State<TransferSendModal>
     return _dynamicAsNonEmptyString(response.fulfilledAt) ?? response.updatedAt;
   }
 
+  WalletIdentity? _senderWalletIdentity(WalletState state) {
+    final selected = state.balances[state.selectedAssetId ?? ''];
+    final accountNumber = (selected?.accountNumber ?? '').trim();
+    if (accountNumber.isNotEmpty) {
+      return WalletIdentity(
+        accountNumber: accountNumber,
+        accountName: (selected?.accountName ?? '').trim(),
+        accountSubtype: (selected?.accountSubtype ?? 'MAIN').trim().isEmpty
+            ? 'MAIN'
+            : (selected?.accountSubtype ?? 'MAIN').trim(),
+      );
+    }
+    return Balance.lastMyAccountsPrimaryWallet;
+  }
+
+  String _senderAccountNumberFromState(WalletState state) {
+    return _senderWalletIdentity(state)?.accountNumber.trim() ?? '';
+  }
+
   Future<void> _submitTransfer(WalletState state) async {
     final lang = state.languageCode;
 
@@ -941,8 +1056,7 @@ class _TransferSendModalState extends State<TransferSendModal>
     });
 
     if (isRequestFlow) {
-      final selectedBalance = state.balances[selectedId];
-      final senderAccountNumber = selectedBalance?.accountNumber.trim() ?? '';
+      final senderAccountNumber = _senderAccountNumberFromState(state);
 
       if (senderAccountNumber.isEmpty) {
         setState(() {
@@ -1341,7 +1455,7 @@ class _TransferSendModalState extends State<TransferSendModal>
                             (isRequestFlow &&
                                 (isExpired || isRequestStatusNotActive))
                             ? (MediaQuery.of(context).size.height * 0.9 - 302)
-                            : (MediaQuery.of(context).size.height * 0.9) - 380,
+                            : (MediaQuery.of(context).size.height * 0.9) - 395,
                         child: SingleChildScrollView(
                           controller: _formScrollController,
                           padding: EdgeInsets.only(
@@ -2120,9 +2234,11 @@ class _TransferSendModalState extends State<TransferSendModal>
   }
 
   String _getSenderAccountDisplay(WalletState state) {
-    final balance = state.balances[state.selectedAssetId ?? ''];
-    final accountId = balance?.accountId ?? '----';
-    final subtypeRaw = balance?.accountSubtype ?? 'MAIN';
+    final identity = _senderWalletIdentity(state);
+    final accountId = (identity?.accountNumber ?? '').trim().isNotEmpty
+        ? identity!.accountNumber
+        : '----';
+    final subtypeRaw = identity?.accountSubtype ?? 'MAIN';
     final subtype = subtypeRaw.toUpperCase() == 'MAIN'
         ? AppStrings.get(state.languageCode, 'main_sub_account')
         : subtypeRaw;

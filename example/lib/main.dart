@@ -10,7 +10,7 @@ void main() {
     TrydosWalletConfig(
       baseUrl: 'https://trydos_wallet_develop.ramaaz.dev/',
       token:
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Nzg3OTBiODVjNGVlZWEyYWUxMzhkNSIsImVtYWlsIjoicGhvbmVfOTYzOTM0MzMwODg5QHRyeWRvcy1vdHAubG9jYWwiLCJ0eXBlIjoidXNlciIsImxhbmciOiJlbiIsImt5Y1N0YXR1cyI6Im5vdF9zdWJtaXR0ZWQiLCJ1c2VyVHlwZSI6InJlZ2lzdGVyZWQiLCJpYXQiOjE3NzMxMzc3NjQsImV4cCI6MTc3NTcyOTc2NH0.cig6iFl90gDYteCyWUCHA_cmvGhsTXesCLWEsTOQu-s",
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5N2RkNTBlODVjNGVlZWEyYWU0NmU3NiIsImVtYWlsIjoicGhvbmVfOTYzOTExMTExMTExQHRyeWRvcy1vdHAubG9jYWwiLCJ0eXBlIjoidXNlciIsImxhbmciOiJlbiIsImt5Y1N0YXR1cyI6Im5vdF9zdWJtaXR0ZWQiLCJ1c2VyVHlwZSI6InJlZ2lzdGVyZWQiLCJpYXQiOjE3NzQ4NTUwODIsImV4cCI6MTc3NzQ0NzA4Mn0.LYhFZeF76c1vL2t9Xh7pSLFuw_a7PkR3TzfXkn2a8ZQ",
       languageCode: 'ar',
       isKurdish: false,
       applicationVersion: '1.0.0',

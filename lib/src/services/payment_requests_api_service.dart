@@ -41,9 +41,13 @@ class PaymentRequestsApiService {
     bool isPermanent = false,
     required String idempotencyKey,
   }) async {
+    final normalizedAssetType = assetType.toUpperCase() == 'METAL'
+        ? 'METAL'
+        : 'CURRENCY';
+
     final data = <String, dynamic>{
       'accountNumber': accountNumber,
-      'assetType': assetType,
+      'assetType': normalizedAssetType,
       'assetSymbol': assetSymbol,
       'amount': amount,
       'purposeId': purposeId,

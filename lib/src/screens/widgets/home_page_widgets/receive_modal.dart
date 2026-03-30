@@ -95,17 +95,42 @@ class _ReceiveModalState extends State<ReceiveModal> {
   }
 
   String _accountNameFromState(WalletState state) {
-    final accountName = _resolveReceiveBalance(state)?.accountName ?? '';
+    final balanceName = (_resolveReceiveBalance(state)?.accountName ?? '')
+        .trim();
+    final accountName = balanceName.isNotEmpty
+        ? balanceName
+        : (Balance.lastMyAccountsPrimaryWallet?.accountName ?? '');
     return accountName;
   }
 
   String _accountNumberFromState(WalletState state) {
-    final accountNumber = _resolveReceiveBalance(state)?.accountNumber ?? '';
+    final balanceNumber = (_resolveReceiveBalance(state)?.accountNumber ?? '')
+        .trim();
+    final accountNumber = balanceNumber.isNotEmpty
+        ? balanceNumber
+        : (Balance.lastMyAccountsPrimaryWallet?.accountNumber ?? '');
     return accountNumber;
   }
 
   String _currencySymbolFromState(WalletState state) {
-    final symbol = _resolveReceiveBalance(state)?.assetSymbol ?? '';
+    final balanceSymbol = (_resolveReceiveBalance(state)?.assetSymbol ?? '')
+        .trim();
+    if (balanceSymbol.isNotEmpty) {
+      return balanceSymbol;
+    }
+
+    final selectedId = state.selectedAssetId;
+    if (selectedId != null) {
+      for (final currency in state.currencies) {
+        if (currency.id == selectedId && currency.symbol.trim().isNotEmpty) {
+          return currency.symbol;
+        }
+      }
+    }
+
+    final symbol = state.currencies.isNotEmpty
+        ? state.currencies.first.symbol
+        : '';
     return symbol;
   }
 

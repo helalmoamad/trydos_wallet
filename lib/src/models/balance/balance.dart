@@ -1,5 +1,10 @@
 /// نموذج رصيد المحفظة لعملة محددة.
 class Balance {
+  static WalletIdentity? _lastMyAccountsPrimaryWallet;
+
+  static WalletIdentity? get lastMyAccountsPrimaryWallet =>
+      _lastMyAccountsPrimaryWallet;
+
   const Balance({
     required this.id,
     required this.accountId,
@@ -102,10 +107,19 @@ class Balance {
   static List<Balance> listFromMyAccountsJson(Map<String, dynamic> json) {
     final wallets = (json['wallets'] as List?)?.cast<dynamic>() ?? const [];
     final result = <Balance>[];
+    _lastMyAccountsPrimaryWallet = null;
 
     for (final rawWallet in wallets) {
       final wallet = rawWallet as Map<String, dynamic>?;
       if (wallet == null) continue;
+
+      _lastMyAccountsPrimaryWallet ??= WalletIdentity(
+        accountNumber: (wallet['accountNumber'] ?? '').toString(),
+        accountName: (wallet['name'] ?? '').toString(),
+        accountSubtype: ((wallet['subtype'] ?? 'MAIN').toString()).isEmpty
+            ? 'MAIN'
+            : (wallet['subtype'] ?? 'MAIN').toString(),
+      );
 
       final balances =
           (wallet['balances'] as List?)?.cast<dynamic>() ?? const [];
@@ -162,4 +176,16 @@ class BalanceAsset {
   final String id;
   final String symbol;
   final String name;
+}
+
+class WalletIdentity {
+  const WalletIdentity({
+    required this.accountNumber,
+    required this.accountName,
+    this.accountSubtype = 'MAIN',
+  });
+
+  final String accountNumber;
+  final String accountName;
+  final String accountSubtype;
 }
