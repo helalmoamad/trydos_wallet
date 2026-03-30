@@ -8,7 +8,7 @@ import 'package:trydos_wallet/src/services/media_api_service.dart';
 import 'package:trydos_wallet/src/services/payment_requests_api_service.dart';
 import 'package:trydos_wallet/src/services/transfer_purposes_api_service.dart';
 import 'package:trydos_wallet/src/services/transactions_api_service.dart';
-
+//////////////////////////////////////////////////////////////////////////
 import '../config/trydos_wallet_config.dart';
 import 'wallet_event.dart';
 import 'wallet_state.dart';

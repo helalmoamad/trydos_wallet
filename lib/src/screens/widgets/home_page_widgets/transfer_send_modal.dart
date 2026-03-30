@@ -88,6 +88,13 @@ class _TransferSendModalState extends State<TransferSendModal>
   String? requestStatus;
   String? maskedAccountName;
   String? qrPurpose;
+  String? _lockedAssetSymbol;
+  String? _lockedAssetType;
+  // Original asset selection before modal opened — restored on dispose
+  WalletBloc? _walletBloc;
+  String? _originalAssetId;
+  String? _originalAssetSymbol;
+  String? _originalAssetType;
   Timer? _expiryTicker;
   bool _wasKeyboardVisible = false;
 
@@ -141,10 +148,12 @@ class _TransferSendModalState extends State<TransferSendModal>
   }
 
   Future<void> _applyScannedPayload(QrTransferPayload payload) async {
-    _syncSelectedAssetWithRequest(
-      assetType: null,
-      assetSymbol: payload.currencySymbol,
-    );
+    if (payload.isRequestFlow) {
+      _syncSelectedAssetWithRequest(
+        assetType: null,
+        assetSymbol: payload.currencySymbol,
+      );
+    }
 
     setState(() {
       isFromQr = true;
@@ -232,6 +241,46 @@ class _TransferSendModalState extends State<TransferSendModal>
     return (value ?? '').trim().toUpperCase();
   }
 
+  ({String symbol, String type}) _resolveSelectedAssetMeta(WalletState state) {
+    final lockedSymbol = (_lockedAssetSymbol ?? '').trim();
+    final lockedType = (_lockedAssetType ?? '').trim().toUpperCase();
+    if (!isRequestFlow && lockedSymbol.isNotEmpty && lockedType.isNotEmpty) {
+      return (
+        symbol: lockedSymbol,
+        type: lockedType == 'METAL' ? 'METAL' : 'CURRENCY',
+      );
+    }
+
+    final selectedSymbol = state.selectedAssetSymbol.trim();
+    final selectedType = state.selectedAssetType.trim().toUpperCase();
+    if (selectedSymbol.isNotEmpty && selectedType.isNotEmpty) {
+      return (
+        symbol: selectedSymbol,
+        type: selectedType == 'METAL' ? 'METAL' : 'CURRENCY',
+      );
+    }
+
+    final selectedId = state.selectedAssetId ?? '';
+    final selectedBalance = state.balances[selectedId];
+    if (selectedBalance != null && selectedBalance.assetSymbol.isNotEmpty) {
+      return (
+        symbol: selectedBalance.assetSymbol,
+        type: _normalizeAssetType(selectedBalance.assetType),
+      );
+    }
+
+    for (final currency in state.currencies) {
+      if (currency.id == selectedId && currency.symbol.trim().isNotEmpty) {
+        return (
+          symbol: currency.symbol,
+          type: _normalizeAssetType(currency.assetType),
+        );
+      }
+    }
+
+    return (symbol: 'USD', type: 'CURRENCY');
+  }
+
   String? _findAssetIdForRequest(
     WalletState state, {
     required String assetType,
@@ -279,7 +328,12 @@ class _TransferSendModalState extends State<TransferSendModal>
     }
 
     context.read<WalletBloc>().add(
-      BalanceCardIsSelected(isSelected: true, assetId: matchedAssetId),
+      BalanceCardIsSelected(
+        isSelected: true,
+        assetId: matchedAssetId,
+        assetSymbol: assetSymbol,
+        assetType: assetType,
+      ),
     );
     context.read<WalletBloc>().add(WalletBalanceLoadRequested(matchedAssetId));
   }
@@ -413,7 +467,16 @@ class _TransferSendModalState extends State<TransferSendModal>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    context.read<WalletBloc>().add(const WalletTransferPurposesLoadRequested());
+    _walletBloc = context.read<WalletBloc>();
+    _walletBloc!.add(const WalletTransferPurposesLoadRequested());
+    final initialState = _walletBloc!.state;
+    final initialAsset = _resolveSelectedAssetMeta(initialState);
+    _lockedAssetSymbol = initialAsset.symbol;
+    _lockedAssetType = initialAsset.type;
+    // Remember the original selection to restore it when the modal is closed
+    _originalAssetId = initialState.selectedAssetId;
+    _originalAssetSymbol = initialAsset.symbol;
+    _originalAssetType = initialAsset.type;
     recipientFocus.addListener(() {
       if (!recipientFocus.hasFocus && isEditingRecipient) {
         _verifyRecipient();
@@ -647,20 +710,7 @@ class _TransferSendModalState extends State<TransferSendModal>
       });
       return;
     }
-    Currency? currency;
-    final selectedId = state.selectedAssetId ?? '';
-    for (final c in state.currencies) {
-      if (c.id == selectedId) {
-        currency = c;
-        break;
-      }
-    }
-    final selectedBalance = state.balances[selectedId];
-    final selectedAssetSymbol = selectedBalance?.assetSymbol.isNotEmpty == true
-        ? selectedBalance!.assetSymbol
-        : (currency?.symbol ?? r'$');
-    final selectedAssetType = (selectedBalance?.assetType ?? 'CURRENCY')
-        .toUpperCase();
+    final selectedAsset = _resolveSelectedAssetMeta(state);
 
     setState(() {
       isTransferVerifyLoading = true;
@@ -670,8 +720,8 @@ class _TransferSendModalState extends State<TransferSendModal>
 
     final result = await _transfersApi.verifyTransfer(
       toAccountNumber: toAccount,
-      assetSymbol: selectedAssetSymbol,
-      assetType: selectedAssetType,
+      assetSymbol: selectedAsset.symbol,
+      assetType: selectedAsset.type,
       amount: amount,
     );
     if (!mounted) return;
@@ -801,6 +851,21 @@ class _TransferSendModalState extends State<TransferSendModal>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _expiryTicker?.cancel();
+    // Restore the original asset selection so the home page reflects the
+    // asset the user had chosen before this modal was opened.
+    final origId = _originalAssetId ?? '';
+    final origSymbol = _originalAssetSymbol ?? '';
+    final origType = _originalAssetType ?? '';
+    if (origId.isNotEmpty || origSymbol.isNotEmpty) {
+      _walletBloc?.add(
+        BalanceCardIsSelected(
+          isSelected: true,
+          assetId: origId.isNotEmpty ? origId : null,
+          assetSymbol: origSymbol.isNotEmpty ? origSymbol : null,
+          assetType: origType.isNotEmpty ? origType : null,
+        ),
+      );
+    }
     _formScrollController.dispose();
     recipientFocus.dispose();
     nameFocus.dispose();
@@ -1002,20 +1067,7 @@ class _TransferSendModalState extends State<TransferSendModal>
     final amount = _parseAmountValue();
     final toAccountNumber = recipientController.text.trim();
     final purposeId = _resolvePurposeIdForSend(state);
-    Currency? currency;
-    final selectedId = state.selectedAssetId ?? '';
-    for (final c in state.currencies) {
-      if (c.id == selectedId) {
-        currency = c;
-        break;
-      }
-    }
-    final selectedBalance = state.balances[selectedId];
-    final selectedAssetSymbol = selectedBalance?.assetSymbol.isNotEmpty == true
-        ? selectedBalance!.assetSymbol
-        : (currency?.symbol ?? r'$');
-    final selectedAssetType = (selectedBalance?.assetType ?? 'CURRENCY')
-        .toUpperCase();
+    final selectedAsset = _resolveSelectedAssetMeta(state);
 
     if (amount == null || amount <= 0) {
       showMessage(
@@ -1139,8 +1191,8 @@ class _TransferSendModalState extends State<TransferSendModal>
 
     final result = await _transfersApi.sendTransfer(
       toAccountNumber: toAccountNumber,
-      assetSymbol: selectedAssetSymbol,
-      assetType: selectedAssetType,
+      assetSymbol: selectedAsset.symbol,
+      assetType: selectedAsset.type,
       amount: amount,
       purposeId: purposeId!,
       note: noteController.text,
@@ -2189,8 +2241,20 @@ class _TransferSendModalState extends State<TransferSendModal>
         break;
       }
     }
-    final symbol = currency?.displayName ?? r'$';
-    final symbolImageUrl = currency?.symbolImageUrl;
+    var symbol = currency?.displayName ?? r'$';
+    String? symbolImageUrl = currency?.symbolImageUrl;
+
+    final lockedSymbol = (_lockedAssetSymbol ?? '').trim();
+    if (!isRequestFlow && lockedSymbol.isNotEmpty) {
+      for (final c in state.currencies) {
+        if (_normalizeSymbol(c.symbol) == _normalizeSymbol(lockedSymbol)) {
+          currency = c;
+          symbol = c.displayName.isNotEmpty ? c.displayName : c.symbol;
+          symbolImageUrl = c.symbolImageUrl;
+          break;
+        }
+      }
+    }
 
     if (symbolImageUrl != null && symbolImageUrl.isNotEmpty) {
       final isSvg = symbolImageUrl.toLowerCase().endsWith('.svg');
@@ -2262,10 +2326,21 @@ class _TransferSendModalState extends State<TransferSendModal>
         break;
       }
     }
-    final symbol = currency?.symbol ?? r'$';
-    final assetName = (currency != null)
+    var symbol = currency?.symbol ?? r'$';
+    var assetName = (currency != null)
         ? currency.localizedName(state.languageCode)
         : currency?.name ?? balance?.asset?.name ?? '';
+
+    final lockedSymbol = (_lockedAssetSymbol ?? '').trim();
+    if (!isRequestFlow && lockedSymbol.isNotEmpty) {
+      symbol = lockedSymbol;
+      for (final c in state.currencies) {
+        if (_normalizeSymbol(c.symbol) == _normalizeSymbol(lockedSymbol)) {
+          assetName = c.localizedName(state.languageCode);
+          break;
+        }
+      }
+    }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.baseline,

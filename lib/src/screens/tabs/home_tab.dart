@@ -382,9 +382,6 @@ class _HomeTabState extends State<HomeTab> {
                                           : 2,
                                     )
                                   : '0');
-                        print(
-                          "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF${balance?.assetId}",
-                        );
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
