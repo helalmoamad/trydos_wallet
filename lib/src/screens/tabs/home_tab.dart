@@ -382,6 +382,9 @@ class _HomeTabState extends State<HomeTab> {
                                           : 2,
                                     )
                                   : '0');
+                        print(
+                          "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF${balance?.assetId}",
+                        );
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -404,6 +407,8 @@ class _HomeTabState extends State<HomeTab> {
                                   BalanceCardIsSelected(
                                     isSelected: false,
                                     assetId: currency.id,
+                                    assetSymbol: currency.symbol,
+                                    assetType: currency.assetType,
                                   ),
                                 );
                               } else {
@@ -411,6 +416,8 @@ class _HomeTabState extends State<HomeTab> {
                                   BalanceCardIsSelected(
                                     isSelected: true,
                                     assetId: currency.id,
+                                    assetSymbol: currency.symbol,
+                                    assetType: currency.assetType,
                                   ),
                                 );
                               }
@@ -498,6 +505,8 @@ class _HomeTabState extends State<HomeTab> {
                                     BalanceCardIsSelected(
                                       isSelected: false,
                                       assetId: currency.id,
+                                      assetSymbol: currency.symbol,
+                                      assetType: currency.assetType,
                                     ),
                                   );
                                 } else {
@@ -505,6 +514,8 @@ class _HomeTabState extends State<HomeTab> {
                                     BalanceCardIsSelected(
                                       isSelected: true,
                                       assetId: currency.id,
+                                      assetSymbol: currency.symbol,
+                                      assetType: currency.assetType,
                                     ),
                                   );
                                 }

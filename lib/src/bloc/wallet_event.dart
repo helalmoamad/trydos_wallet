@@ -103,7 +103,14 @@ class WalletImageResetRequested extends WalletEvent {
 class BalanceCardIsSelected extends WalletEvent {
   final bool isSelected;
   final String? assetId;
-  const BalanceCardIsSelected({required this.isSelected, this.assetId});
+  final String? assetSymbol;
+  final String? assetType;
+  const BalanceCardIsSelected({
+    required this.isSelected,
+    this.assetId,
+    this.assetSymbol,
+    this.assetType,
+  });
 }
 
 class WalletDepositRequestsRequested extends WalletEvent {

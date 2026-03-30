@@ -4,6 +4,7 @@ import 'currency_paytab.dart';
 class Currency {
   const Currency({
     required this.id,
+    required this.assetType,
     required this.name,
     required this.displayName,
     required this.symbol,
@@ -21,6 +22,7 @@ class Currency {
 
     return Currency(
       id: json['id'] as String,
+      assetType: (json['assetType'] as String? ?? 'CURRENCY').toUpperCase(),
       name: parsedNames.en,
       displayName: json['displayName'] as String? ?? parsedNames.ar,
       symbol: json['symbol'] as String? ?? '',
@@ -37,6 +39,7 @@ class Currency {
   }
 
   final String id;
+  final String assetType;
   final String name;
   final String displayName;
   final String symbol;

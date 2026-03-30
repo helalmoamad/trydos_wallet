@@ -48,10 +48,11 @@ class CurrenciesApiService {
 
           final items = <Currency>[
             ...currenciesRaw.whereType<Map<String, dynamic>>().map(
-              Currency.fromJson,
+              (currency) =>
+                  Currency.fromJson({...currency, 'assetType': 'CURRENCY'}),
             ),
             ...metalsRaw.whereType<Map<String, dynamic>>().map(
-              (metal) => Currency.fromJson(metal),
+              (metal) => Currency.fromJson({...metal, 'assetType': 'METAL'}),
             ),
           ];
 

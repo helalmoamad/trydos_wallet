@@ -154,10 +154,29 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     BalanceCardIsSelected event,
     Emitter<WalletState> emit,
   ) {
+    String resolvedSymbol = event.assetSymbol ?? '';
+    String resolvedType = event.assetType ?? '';
+
+    if (event.isSelected && event.assetId != null) {
+      for (final currency in state.currencies) {
+        if (currency.id == event.assetId) {
+          if (resolvedSymbol.isEmpty) {
+            resolvedSymbol = currency.symbol;
+          }
+          if (resolvedType.isEmpty) {
+            resolvedType = currency.assetType;
+          }
+          break;
+        }
+      }
+    }
+
     emit(
       state.copyWith(
         balanceCardIsSelected: event.isSelected,
         selectedAssetId: event.isSelected ? event.assetId : null,
+        selectedAssetSymbol: event.isSelected ? resolvedSymbol : '',
+        selectedAssetType: event.isSelected ? resolvedType : '',
       ),
     );
   }

@@ -113,12 +113,6 @@ class _ReceiveModalState extends State<ReceiveModal> {
   }
 
   String _currencySymbolFromState(WalletState state) {
-    final balanceSymbol = (_resolveReceiveBalance(state)?.assetSymbol ?? '')
-        .trim();
-    if (balanceSymbol.isNotEmpty) {
-      return balanceSymbol;
-    }
-
     final selectedId = state.selectedAssetId;
     if (selectedId != null) {
       for (final currency in state.currencies) {
@@ -128,10 +122,10 @@ class _ReceiveModalState extends State<ReceiveModal> {
       }
     }
 
-    final symbol = state.currencies.isNotEmpty
-        ? state.currencies.first.symbol
-        : '';
-    return symbol;
+    if (state.currencies.isNotEmpty) {
+      return state.currencies.first.symbol;
+    }
+    return '';
   }
 
   String _currencyDisplayNameFromState(WalletState state) {
@@ -146,12 +140,12 @@ class _ReceiveModalState extends State<ReceiveModal> {
       }
     }
 
-    final balance = _resolveReceiveBalance(state);
-    final assetName = balance?.asset?.name ?? '';
-    if (assetName.isNotEmpty) return assetName;
-    final symbol = balance?.assetSymbol ?? '';
-    if (symbol.isNotEmpty) return symbol;
-
+    if (state.currencies.isNotEmpty) {
+      final first = state.currencies.first;
+      final localized = first.localizedName(state.languageCode);
+      if (localized.isNotEmpty) return localized;
+      if (first.symbol.isNotEmpty) return first.symbol;
+    }
     return AppStrings.get(state.languageCode, 'american_dollars');
   }
 

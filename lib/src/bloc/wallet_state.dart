@@ -50,6 +50,8 @@ class WalletState {
     this.depositRequestsTotalPages = 0,
     this.balanceCardIsSelected = false,
     this.selectedAssetId,
+    this.selectedAssetSymbol = '',
+    this.selectedAssetType = '',
     this.depositRequestsErrorMessage,
     // Payment Requests
     this.paymentRequestResponse,
@@ -81,6 +83,8 @@ class WalletState {
   final Set<String> loadingBalanceIds;
   final bool balanceCardIsSelected;
   final String? selectedAssetId;
+  final String selectedAssetSymbol;
+  final String selectedAssetType;
   final String firstName;
   final String lastName;
   final String? email;
@@ -186,6 +190,8 @@ class WalletState {
     int? depositRequestsTotal,
     int? depositRequestsTotalPages,
     String? selectedAssetId,
+    String? selectedAssetSymbol,
+    String? selectedAssetType,
     String? firstName,
     String? lastName,
     String? email,
@@ -247,6 +253,8 @@ class WalletState {
       depositRequestsTotalPages:
           depositRequestsTotalPages ?? this.depositRequestsTotalPages,
       selectedAssetId: selectedAssetId ?? this.selectedAssetId,
+      selectedAssetSymbol: selectedAssetSymbol ?? this.selectedAssetSymbol,
+      selectedAssetType: selectedAssetType ?? this.selectedAssetType,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       email: email ?? this.email,

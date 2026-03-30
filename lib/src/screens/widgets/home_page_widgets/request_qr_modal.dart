@@ -61,6 +61,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
   Timer? _expiryTicker;
   DateTime? _responseExpiryTime;
   String? _encryptedRequestQrPayload;
+  ValueNotifier<Color>? _modalBackgroundNotifier;
 
   final String _maskedName = '*******';
   bool _isNameMasked = false;
@@ -111,6 +112,12 @@ class _RequestQRModalState extends State<RequestQRModal> {
         });
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _modalBackgroundNotifier ??= walletModalBackgroundNotifierOf(context);
   }
 
   DateTime? _parseResponseExpiry(dynamic value) {
@@ -175,7 +182,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
   @override
   void dispose() {
     // Ensure parent modal returns to default background when this page closes.
-    setWalletModalBackground(context, Colors.white);
+    _modalBackgroundNotifier?.value = Colors.white;
     _expiryTicker?.cancel();
     _formScrollController.dispose();
     _amountFocusNode.dispose();
@@ -234,7 +241,23 @@ class _RequestQRModalState extends State<RequestQRModal> {
   }
 
   String _currencySymbol(WalletState state) {
-    return state.balances[state.selectedAssetId ?? '']?.assetSymbol ?? 'SYP';
+    final selectedSymbol = state.selectedAssetSymbol.trim();
+    if (selectedSymbol.isNotEmpty) {
+      return selectedSymbol;
+    }
+
+    final selectedId = state.selectedAssetId;
+    if (selectedId != null) {
+      for (final currency in state.currencies) {
+        if (currency.id == selectedId && currency.symbol.trim().isNotEmpty) {
+          return currency.symbol;
+        }
+      }
+    }
+    if (state.currencies.isNotEmpty) {
+      return state.currencies.first.symbol;
+    }
+    return 'SYP';
   }
 
   String _currencyDisplayName(WalletState state) {
@@ -249,18 +272,33 @@ class _RequestQRModalState extends State<RequestQRModal> {
       }
     }
 
-    final balance = state.balances[state.selectedAssetId ?? ''];
-    final assetName = balance?.asset?.name ?? '';
-    if (assetName.isNotEmpty) return assetName;
-    final symbol = balance?.assetSymbol ?? '';
-    if (symbol.isNotEmpty) return symbol;
-
+    if (state.currencies.isNotEmpty) {
+      final first = state.currencies.first;
+      final localized = first.localizedName(state.languageCode);
+      if (localized.isNotEmpty) return localized;
+      if (first.symbol.isNotEmpty) return first.symbol;
+    }
     return AppStrings.get(state.languageCode, 'american_dollars');
   }
 
   String _selectedAssetType(WalletState state) {
-    final selectedId = state.selectedAssetId ?? '';
-    final type = (state.balances[selectedId]?.assetType ?? 'CURRENCY')
+    final selectedType = state.selectedAssetType.trim().toUpperCase();
+    if (selectedType.isNotEmpty) {
+      return selectedType == 'METAL' ? 'METAL' : 'CURRENCY';
+    }
+
+    final selectedId = state.selectedAssetId;
+
+    if (selectedId != null) {
+      for (final currency in state.currencies) {
+        if (currency.id == selectedId) {
+          final type = currency.assetType.toUpperCase();
+          return type == 'METAL' ? 'METAL' : 'CURRENCY';
+        }
+      }
+    }
+
+    final type = (state.balances[selectedId ?? '']?.assetType ?? 'CURRENCY')
         .toUpperCase();
     return type == 'METAL' ? 'METAL' : 'CURRENCY';
   }
@@ -343,14 +381,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
         WalletPaymentRequestCreated(
           accountNumber: _accountNumber,
           assetType: _selectedAssetType(context.read<WalletBloc>().state),
-          assetSymbol:
-              context
-                  .read<WalletBloc>()
-                  .state
-                  .balances[context.read<WalletBloc>().state.selectedAssetId ??
-                      '']
-                  ?.assetSymbol ??
-              'USD',
+          assetSymbol: _currencySymbol(context.read<WalletBloc>().state),
           amount: double.parse(_amountController.text),
           purposeId: _selectedPurpose,
           reference: _referenceController.text,

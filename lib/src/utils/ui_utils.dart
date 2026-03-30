@@ -127,6 +127,10 @@ void setWalletModalBackground(BuildContext context, Color color) {
   notifier.value = color;
 }
 
+ValueNotifier<Color>? walletModalBackgroundNotifierOf(BuildContext context) {
+  return _WalletModalBackgroundScope.maybeNotifierOf(context);
+}
+
 void setWalletModalBackButton(
   BuildContext context, {
   required bool visible,
