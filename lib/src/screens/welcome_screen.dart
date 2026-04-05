@@ -1,5 +1,7 @@
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trydos_wallet/src/config/trydos_wallet_config.dart';
 import 'package:flutter/material.dart';
+import 'package:trydos_wallet/src/constent/constant_design.dart';
 import 'package:trydos_wallet/src/screens/home_page.dart';
 import 'package:trydos_wallet/src/screens/widgets/splash_widget.dart';
 
@@ -37,16 +39,26 @@ class _TrydosWalletWelcomeScreenState extends State<TrydosWalletWelcomeScreen>
       return const TrydosWalletHomePage();
     }
 
-    return Stack(
-      children: [
-        const TrydosWalletHomePage(),
-        AnimatedOpacity(
-          opacity: _showSplash ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 300),
-          onEnd: () {},
-          child: IgnorePointer(ignoring: !_showSplash, child: SplashWidget()),
-        ),
-      ],
+    return ScreenUtilInit(
+      designSize: kDesignSize,
+      minTextAdapt: true,
+      builder: (context, child) {
+        return 
+   Stack(
+          children: [
+            const TrydosWalletHomePage(),
+            AnimatedOpacity(
+              opacity: _showSplash ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              onEnd: () {},
+              child: IgnorePointer(
+                ignoring: !_showSplash,
+                child: SplashWidget(),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

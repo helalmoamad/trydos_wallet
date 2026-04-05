@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:trydos_wallet/src/constent/build_context.dart';
+import 'package:trydos_wallet/src/constent/theme/typography.dart';
 
 import '../constent/assets.dart';
 import '../bloc/bloc.dart';
@@ -70,7 +73,7 @@ class _TrydosWalletHomePageContentState
   Widget _buildBottomNav(BuildContext context, WalletState state) {
     final labels = [
       AppStrings.get(state.languageCode, 'home_title'),
-      AppStrings.get(state.languageCode, 'my_wallet'),
+      AppStrings.get(state.languageCode, 'transactions'),
       AppStrings.get(state.languageCode, 'addresses'),
       AppStrings.get(state.languageCode, 'settings'),
     ];
@@ -81,30 +84,38 @@ class _TrydosWalletHomePageContentState
       right: false,
       bottom: true,
       child: SizedBox(
-        height: 75,
+        height: 80.h,
         child: Container(
           color: const Color(0xFFF4F5F5),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: EdgeInsets.symmetric(vertical: 10.h),
           child: Row(
             children: [
               _buildCustomBottomNavItem(
                 index: 0,
-                assetPath: TrydosWalletAssets.home,
+                assetPath: _selectedIndex != 0
+                    ? TrydosWalletAssets.homeNotTaped
+                    : TrydosWalletAssets.home,
                 label: labels[0],
               ),
               _buildCustomBottomNavItem(
                 index: 1,
-                assetPath: TrydosWalletAssets.transactions,
+                assetPath: _selectedIndex != 1
+                    ? TrydosWalletAssets.transactions
+                    : TrydosWalletAssets.transactionTaped,
                 label: labels[1],
               ),
               _buildCustomBottomNavItem(
                 index: 2,
-                assetPath: TrydosWalletAssets.addresses,
+                assetPath: _selectedIndex != 2
+                    ? TrydosWalletAssets.addresses
+                    : TrydosWalletAssets.addressesTaped,
                 label: labels[2],
               ),
               _buildCustomBottomNavItem(
                 index: 3,
-                assetPath: TrydosWalletAssets.setting,
+                assetPath: _selectedIndex != 3
+                    ? TrydosWalletAssets.setting
+                    : TrydosWalletAssets.settingTaped,
                 label: labels[3],
               ),
             ],
@@ -132,16 +143,21 @@ class _TrydosWalletHomePageContentState
           children: [
             SvgPicture.asset(
               assetPath,
+              height: 25.h,
               package: TrydosWalletStyles.packageName,
-              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
             ),
-            const SizedBox(height: 2),
+
             Text(
               label,
-              style: TrydosWalletStyles.bodySmall.copyWith(
-                fontSize: isSelected ? 12 : 10,
-                color: color,
-              ),
+              style: isSelected
+                  ? context.textTheme.bodyMedium?.rq.copyWith(
+                      fontSize: 12.sp,
+                      color: color,
+                    )
+                  : context.textTheme.bodyMedium?.lq.copyWith(
+                      fontSize: 10.sp,
+                      color: color,
+                    ),
               textAlign: TextAlign.center,
             ),
             const Spacer(),

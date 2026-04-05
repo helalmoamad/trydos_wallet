@@ -16,6 +16,10 @@ class TrydosWalletAssets {
   static const String transactions = '$_svgPath/transactions.svg';
   static const String addresses = '$_svgPath/addresses.svg';
   static const String upArrow = '$_svgPath/up_arrow.svg';
+  static const String homeNotTaped = '$_svgPath/home_notTaped.svg';
+  static const String settingTaped = '$_svgPath/setting_taped.svg';
+  static const String transactionTaped = '$_svgPath/transaction_taped.svg';
+  static const String addressesTaped = '$_svgPath/addresses_taped.svg';
   static const String downArrow = '$_svgPath/down_arrow.svg';
   static const String cashDeposit = '$_svgPath/cash_deposit.svg';
   static const String cashWithdrawal = '$_svgPath/cash_withdrawal.svg';

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
+import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/qr_scanner_page.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/receive_modal.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/send_modal.dart';
@@ -21,10 +24,10 @@ class WalletHeader extends StatelessWidget {
           previous.selectedAssetId != current.selectedAssetId,
       builder: (context, state) {
         return Padding(
-          padding: const EdgeInsetsDirectional.only(
-            start: 24,
-            end: 24,
-            top: 20,
+          padding: EdgeInsetsDirectional.only(
+            start: 24.w,
+            end: 24.w,
+            top: 20.h,
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -33,7 +36,7 @@ class WalletHeader extends StatelessWidget {
               SvgPicture.asset(
                 TrydosWalletAssets.rdb,
                 package: TrydosWalletStyles.packageName,
-                height: 30,
+                height: 30.h,
               ),
               const Spacer(),
               state.balanceCardIsSelected
@@ -53,23 +56,23 @@ class WalletHeader extends StatelessWidget {
                         children: [
                           SvgPicture.asset(
                             TrydosWalletAssets.receive,
-                            height: 20,
+                            height: 20.h,
                             package: TrydosWalletStyles.packageName,
                           ),
-                          SizedBox(height: 5),
+                          SizedBox(height: 5.h),
                           Text(
                             AppStrings.get(state.languageCode, 'receive_label'),
-                            style: TrydosWalletStyles.bodySmall.copyWith(
+                            style: context.textTheme.bodyMedium?.rq.copyWith(
                               color: const Color(0xff404040),
-                              fontSize: 11,
+                              fontSize: 11.sp,
                               height: 1.3,
                             ),
                           ),
                         ],
                       ),
                     )
-                  : const SizedBox(height: 30),
-              const SizedBox(width: 20),
+                  : SizedBox(height: 30.h),
+              SizedBox(width: 30.w),
               state.balanceCardIsSelected
                   ? InkWell(
                       onTap: () async {
@@ -111,15 +114,15 @@ class WalletHeader extends StatelessWidget {
                         children: [
                           SvgPicture.asset(
                             TrydosWalletAssets.send,
-                            height: 20,
+                            height: 20.h,
                             package: TrydosWalletStyles.packageName,
                           ),
                           SizedBox(height: 5),
                           Text(
                             AppStrings.get(state.languageCode, 'send_label'),
-                            style: TrydosWalletStyles.bodySmall.copyWith(
+                            style: context.textTheme.bodyMedium?.rq.copyWith(
                               color: const Color(0xff404040),
-                              fontSize: 11,
+                              fontSize: 11.sp,
                               height: 1.3,
                             ),
                           ),
@@ -129,21 +132,21 @@ class WalletHeader extends StatelessWidget {
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        SizedBox(height: 25),
+                        SizedBox(height: 25.h),
                         Text(
                           "",
-                          style: TrydosWalletStyles.bodySmall.copyWith(
+                          style: context.textTheme.bodyMedium?.rq.copyWith(
                             color: const Color(0xff404040),
-                            fontSize: 11,
+                            fontSize: 11.sp,
                             height: 1.3,
                           ),
                         ),
                       ],
                     ),
-              const SizedBox(width: 20),
+              SizedBox(width: 30.w),
               InkWell(
                 onTap: () async {
-                  if (!state.balanceCardIsSelected) {
+                  /*   if (!state.balanceCardIsSelected) {
                     showMessage(
                       AppStrings.get(
                         state.languageCode,
@@ -154,7 +157,7 @@ class WalletHeader extends StatelessWidget {
                     );
                     return;
                   }
-
+*/
                   final walletBloc = context.read<WalletBloc>();
                   final headerContext = context;
 
@@ -189,7 +192,7 @@ class WalletHeader extends StatelessWidget {
                 child: SvgPicture.asset(
                   TrydosWalletAssets.qr,
                   package: TrydosWalletStyles.packageName,
-                  height: 25,
+                  height: 25.h,
                 ),
               ),
             ],

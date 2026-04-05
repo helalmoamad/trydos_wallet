@@ -2,6 +2,9 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:trydos_wallet/src/constent/build_context.dart';
+import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -351,16 +354,16 @@ class _ReceiveModalState extends State<ReceiveModal> {
         // Trydos Logo
         SvgPicture.asset(
           TrydosWalletAssets.trydos,
-          height: 30,
+          height: 30.h,
           package: TrydosWalletStyles.packageName,
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 20.h),
         // QR Code Area
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(12.h),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(20.r),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.02),
@@ -372,7 +375,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
           child: Column(
             children: [
               SizedBox.square(
-                dimension: 250,
+                dimension: 250.h,
                 child: PrettyQrView.data(
                   data: qrPayload,
                   errorCorrectLevel: QrErrorCorrectLevel.M,
@@ -385,40 +388,52 @@ class _ReceiveModalState extends State<ReceiveModal> {
                   ),
                 ),
               ),
-              const SizedBox(height: 5),
+              SizedBox(height: 5.h),
               Text(
                 accountNumber,
-                style: TrydosWalletStyles.bodyMedium.copyWith(
+                style: context.textTheme.bodyMedium?.mq.copyWith(
                   color: const Color(0xff1D1D1D),
-                  fontSize: 16,
+                  fontSize: 16.sp,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 24),
-        // Account Details
-        _buildInfoSection(
-          AppStrings.get(state.languageCode, 'account_name'),
-          _isMasked ? _maskedName : accountName,
-          trailing: GestureDetector(
-            onTap: () => setState(() => _isMasked = !_isMasked),
-            child: SvgPicture.asset(
-              TrydosWalletAssets.hide,
-              package: TrydosWalletStyles.packageName,
-              colorFilter: ColorFilter.mode(
-                _isMasked ? const Color(0xff1D1D1D) : const Color(0xff8D8D8D),
-                BlendMode.srcIn,
-              ),
+        SizedBox(height: 20.h),
+        SizedBox(
+          height: 150,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildInfoSection(
+                  AppStrings.get(state.languageCode, 'account_name'),
+                  _isMasked ? _maskedName : accountName,
+                  trailing: GestureDetector(
+                    onTap: () => setState(() => _isMasked = !_isMasked),
+                    child: SvgPicture.asset(
+                      TrydosWalletAssets.hide,
+                      height: 16.h,
+                      package: TrydosWalletStyles.packageName,
+                      colorFilter: ColorFilter.mode(
+                        _isMasked
+                            ? const Color(0xff1D1D1D)
+                            : const Color(0xff8D8D8D),
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 5.h),
+                _buildInfoSection(
+                  AppStrings.get(state.languageCode, 'account_number'),
+                  '$accountNumber  $currencyDisplayName',
+                ),
+              ],
             ),
           ),
         ),
-        const SizedBox(height: 5),
-        _buildInfoSection(
-          AppStrings.get(state.languageCode, 'account_number'),
-          '$accountNumber  $currencyDisplayName',
-        ),
 
+        // Account Details
         Spacer(),
         // Action Buttons
         SafeArea(
@@ -427,8 +442,9 @@ class _ReceiveModalState extends State<ReceiveModal> {
           right: false,
           bottom: true,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
+              Spacer(),
               _buildActionButton(
                 asset: TrydosWalletAssets.generate,
 
@@ -439,27 +455,31 @@ class _ReceiveModalState extends State<ReceiveModal> {
                   });
                 },
               ),
+              SizedBox(width: 50.w),
               _buildActionButton(
                 asset: TrydosWalletAssets.copy,
                 label: AppStrings.get(state.languageCode, 'copy'),
                 onTap: _handleCopy,
               ),
+              SizedBox(width: 50.w),
               _buildActionButton(
                 asset: TrydosWalletAssets.download,
                 label: AppStrings.get(state.languageCode, 'download'),
                 onTap: _handleDownload,
                 isLoading: _isDownloading,
               ),
+              SizedBox(width: 50.w),
               _buildActionButton(
                 asset: TrydosWalletAssets.share,
                 label: AppStrings.get(state.languageCode, 'share'),
                 onTap: _handleShare,
                 isLoading: _isSharing,
               ),
+              Spacer(),
             ],
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 20.h),
       ],
     );
   }
@@ -467,36 +487,39 @@ class _ReceiveModalState extends State<ReceiveModal> {
   Widget _buildInfoSection(String label, String value, {Widget? trailing}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: const Color(0xffF9F9F9),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(15.r),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Text(
-            label,
-            style: TrydosWalletStyles.bodySmall.copyWith(
-              color: const Color(0xff8D8D8D),
-              fontSize: 11,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  value,
-                  style: TrydosWalletStyles.bodyMedium.copyWith(
-                    color: const Color(0xff1D1D1D),
-                    fontSize: 12,
-                  ),
+              Text(
+                label,
+                style: context.textTheme.bodyMedium?.rq.copyWith(
+                  color: const Color(0xff8D8D8D),
+                  fontSize: 11.sp,
                 ),
               ),
-              if (trailing != null) trailing,
+              SizedBox(height: 8.h),
+              Text(
+                value,
+                style: context.textTheme.bodyMedium?.rq.copyWith(
+                  color: const Color(0xff1D1D1D),
+                  fontSize: 13.sp,
+                ),
+              ),
             ],
+          ),
+          PositionedDirectional(
+            end: 10.w,
+            top: 14.h,
+            child: (trailing != null) ? trailing : SizedBox.shrink(),
           ),
         ],
       ),
@@ -511,34 +534,34 @@ class _ReceiveModalState extends State<ReceiveModal> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(8.r),
       child: SizedBox(
-        width: 70,
+        height: 42,
         child: Column(
           children: [
             isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
+                ? SizedBox(
+                    height: 20.h,
+                    width: 20.w,
+                    child: const CircularProgressIndicator(
                       strokeWidth: 2,
                       color: Color(0xff404040),
                     ),
                   )
                 : SvgPicture.asset(
                     asset,
-                    height: 20,
+                    height: 20.h,
                     // ignore: deprecated_member_use
                     color: Color(0xff404040),
                     package: TrydosWalletStyles.packageName,
                   ),
 
-            const SizedBox(height: 8),
+            SizedBox(height: 8.h),
             Text(
               label,
-              style: TrydosWalletStyles.bodySmall.copyWith(
+              style: context.textTheme.bodyMedium?.rq.copyWith(
                 color: const Color(0xff404040),
-                fontSize: 11,
+                fontSize: 11.sp,
               ),
             ),
           ],
@@ -570,9 +593,9 @@ class _CleanQRCard extends StatelessWidget {
     return Directionality(
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Container(
-        height: MediaQuery.of(context).size.height,
-        width: MediaQuery.of(context).size.width,
-        padding: const EdgeInsets.all(30),
+        height: 1.sh,
+        width: 1.sw,
+        padding: EdgeInsets.all(30.r),
         decoration: const BoxDecoration(color: Colors.white),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -580,12 +603,12 @@ class _CleanQRCard extends StatelessWidget {
           children: [
             SvgPicture.asset(
               TrydosWalletAssets.trydos,
-              height: 40,
+              height: 30.h,
               package: TrydosWalletStyles.packageName,
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20.h),
             SizedBox.square(
-              dimension: 300,
+              dimension: 300.h,
               child: PrettyQrView.data(
                 data: qrPayload,
                 errorCorrectLevel: QrErrorCorrectLevel.M,
@@ -598,24 +621,26 @@ class _CleanQRCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10.h),
             Text(
               accountNumber,
-              style: TrydosWalletStyles.bodyMedium.copyWith(
+              style: context.textTheme.bodyMedium?.mq.copyWith(
                 color: const Color(0xff404040),
-                fontSize: 18,
+                fontSize: 16.sp,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20.h),
             _buildInfoBox(
               AppStrings.get(languageCode, 'account_name'),
               accountName,
+              context,
             ),
-            const SizedBox(height: 5),
+            SizedBox(height: 5.h),
             _buildInfoBox(
               AppStrings.get(languageCode, 'account_number'),
               '$accountNumber  $currencyDisplayName',
+              context,
             ),
           ],
         ),
@@ -623,30 +648,31 @@ class _CleanQRCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoBox(String label, String value) {
+  Widget _buildInfoBox(String label, String value, BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 9.h),
       decoration: BoxDecoration(
         color: const Color(0xffF9F9F9).withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: TrydosWalletStyles.bodySmall.copyWith(
+            style: context.textTheme.bodyMedium?.rq.copyWith(
               color: const Color(0xff8D8D8D),
-              fontSize: 11,
+              fontSize: 11.sp,
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6.h),
           Text(
             value,
-            style: TrydosWalletStyles.bodyMedium.copyWith(
+            style: context.textTheme.bodyMedium?.rq.copyWith(
               color: const Color(0xff1D1D1D),
-              fontSize: 13,
+              fontSize: 13.sp,
             ),
           ),
         ],

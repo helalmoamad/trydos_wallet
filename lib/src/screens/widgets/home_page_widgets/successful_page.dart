@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:gal/gal.dart';
@@ -12,7 +13,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
 import 'package:trydos_wallet/src/bloc/wallet_state.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
+import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/receipt_widget.dart';
 import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
@@ -241,19 +244,21 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
 
               // Visible UI
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 30),
-                decoration: const BoxDecoration(
-                  color: Color(0xffF4FFFA),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+                padding: EdgeInsets.symmetric(horizontal: 30.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xffF4FFFA),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(30.r),
+                  ),
                 ),
                 child: Column(
                   children: [
                     SvgPicture.asset(
                       TrydosWalletAssets.sendSuccess,
-                      height: 40,
+                      height: 40.h,
                       package: TrydosWalletStyles.packageName,
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10.h),
                     Text(
                       widget.isSuccess
                           ? AppStrings.get(
@@ -264,16 +269,16 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                               state.languageCode,
                               'transaction_failed',
                             ).toUpperCase(),
-                      style: TrydosWalletStyles.bodyMedium.copyWith(
+                      style: context.textTheme.bodyMedium?.mq.copyWith(
                         color: const Color(0xff1D1D1D),
-                        fontSize: 13,
+                        fontSize: 13.sp,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20.h),
                     Container(
                       color: const Color(0xffF4FFFA),
                       child: SizedBox.square(
-                        dimension: 120,
+                        dimension: 120.h,
                         child: PrettyQrView.data(
                           data: _successQrPayload(),
                           errorCorrectLevel: QrErrorCorrectLevel.M,
@@ -287,17 +292,16 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10.h),
                     Text(
                       widget.reference,
-                      style: TrydosWalletStyles.bodyMedium.copyWith(
+                      style: context.textTheme.bodyMedium?.mq.copyWith(
                         color: const Color(0xff1D1D1D),
-                        fontSize: 11,
+                        fontSize: 11.sp,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      height: (MediaQuery.of(context).size.height * 0.9) - 375,
+                    SizedBox(height: 20.h),
+                    Expanded(
                       child: SingleChildScrollView(
                         child: Column(
                           mainAxisSize: MainAxisSize.max,
@@ -309,7 +313,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                               ),
                               widget.senderAccount,
                             ),
-                            const SizedBox(height: 15),
+                            SizedBox(height: 5.h),
                             if (widget.recipientPhoneNumber != null &&
                                 widget.recipientName != null &&
                                 widget.recipientId != null) ...[
@@ -320,7 +324,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                                 ),
                                 widget.recipientPhoneNumber!,
                               ),
-                              const SizedBox(height: 15),
+                              SizedBox(height: 5.h),
                               _buildInfoRow(
                                 AppStrings.get(
                                   state.languageCode,
@@ -328,7 +332,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                                 ),
                                 widget.recipientName!,
                               ),
-                              const SizedBox(height: 15),
+                              SizedBox(height: 5.h),
                               _buildInfoRow(
                                 AppStrings.get(
                                   state.languageCode,
@@ -347,7 +351,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                                     ? _successQrPayload()
                                     : null,
                               ),
-                            const SizedBox(height: 15),
+                            SizedBox(height: 5.h),
                             Row(
                               children: [
                                 Expanded(
@@ -371,7 +375,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 15),
+                            SizedBox(height: 5.h),
                             Row(
                               children: [
                                 Expanded(
@@ -391,7 +395,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 15),
+                            SizedBox(height: 5.h),
                             Row(
                               children: [
                                 Expanded(
@@ -416,10 +420,10 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                                         style: TrydosWalletStyles.bodyMedium
                                             .copyWith(
                                               color: const Color(0xff8D8D8D),
-                                              fontSize: 9,
+                                              fontSize: 9.sp,
                                             ),
                                       ),
-                                      const SizedBox(height: 5),
+                                      SizedBox(height: 5.h),
                                       Row(
                                         children: [
                                           Text(
@@ -437,14 +441,14 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                                                   color: const Color(
                                                     0xff1D1D1D,
                                                   ),
-                                                  fontSize: 11,
+                                                  fontSize: 11.sp,
                                                 ),
                                           ),
                                           if (widget.isSuccess) ...[
-                                            const SizedBox(width: 12),
+                                            SizedBox(width: 12.w),
                                             SvgPicture.asset(
                                               TrydosWalletAssets.successed,
-                                              height: 12,
+                                              height: 12.h,
                                               package: TrydosWalletStyles
                                                   .packageName,
                                             ),
@@ -456,7 +460,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 30),
+                            SizedBox(height: 30.h),
                             (widget.recipientPhoneNumber != null &&
                                         widget.recipientName != null &&
                                         widget.recipientId != null) ||
@@ -464,19 +468,19 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                                 ? const SizedBox.shrink()
                                 : SvgPicture.asset(
                                     TrydosWalletAssets.trydos,
-                                    height: 25,
+                                    height: 25.h,
                                     package: TrydosWalletStyles.packageName,
                                   ),
                             (widget.recipientPhoneNumber != null &&
                                     widget.recipientName != null &&
                                     widget.recipientId != null)
                                 ? const SizedBox.shrink()
-                                : const SizedBox(height: 70),
+                                : SizedBox(height: 70.h),
                           ],
                         ),
                       ),
                     ),
-                    Spacer(),
+
                     SafeArea(
                       top: false,
                       left: false,
@@ -505,7 +509,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 35.h),
                   ],
                 ),
               ),
@@ -522,46 +526,49 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
     bool isBold = false,
     String? qrData,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              label,
-              style: TrydosWalletStyles.bodyMedium.copyWith(
-                color: const Color(0xff8D8D8D),
-                fontSize: 11,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 5),
-        Row(
-          children: [
-            if (qrData != null && qrData.isNotEmpty) ...[
-              SvgPicture.asset(
-                TrydosWalletAssets.realQr,
-                height: 16,
-                width: 16,
-                package: TrydosWalletStyles.packageName,
-              ),
-              const SizedBox(width: 8),
-            ],
-            Expanded(
-              child: Text(
-                value,
-                style: TrydosWalletStyles.bodyMedium.copyWith(
-                  color: const Color(0xff1D1D1D),
-                  fontSize: 13,
-                  fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+    return SizedBox(
+      height: 54.h,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                label,
+                style: context.textTheme.bodyMedium?.rq.copyWith(
+                  color: const Color(0xff8D8D8D),
+                  fontSize: 11.sp,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+          SizedBox(height: 5.h),
+          Row(
+            children: [
+              if (qrData != null && qrData.isNotEmpty) ...[
+                SvgPicture.asset(
+                  TrydosWalletAssets.realQr,
+                  height: 16.h,
+                  width: 16.w,
+                  package: TrydosWalletStyles.packageName,
+                ),
+                SizedBox(width: 8.w),
+              ],
+              Expanded(
+                child: Text(
+                  value,
+                  style: context.textTheme.bodyMedium?.rq.copyWith(
+                    color: const Color(0xff1D1D1D),
+                    fontSize: 13.sp,
+                    fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -576,23 +583,23 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
       child: Column(
         children: [
           if (isLoading && label != 'Done')
-            const SizedBox(
-              height: 20,
-              width: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+            SizedBox(
+              height: 20.h,
+
+              child: const CircularProgressIndicator(strokeWidth: 2),
             )
           else
             SvgPicture.asset(
               asset,
-              height: 20,
+              height: 20.h,
               package: TrydosWalletStyles.packageName,
             ),
-          const SizedBox(height: 5),
+          SizedBox(height: 5.h),
           Text(
             label,
-            style: TrydosWalletStyles.bodyMedium.copyWith(
+            style: context.textTheme.bodyMedium?.rq.copyWith(
               color: const Color(0xff1D1D1D),
-              fontSize: 11,
+              fontSize: 11.sp,
             ),
           ),
         ],

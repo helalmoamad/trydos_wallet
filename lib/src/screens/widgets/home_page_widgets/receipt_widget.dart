@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
+import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
 import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 
@@ -63,28 +66,28 @@ class ReceiptWidget extends StatelessWidget {
     return Directionality(
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Container(
-        width: 400, // Fixed width for consistent receipt aspect ratio
+        width: 1.sw, // Fixed width for consistent receipt aspect ratio
         color: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 100.h),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SvgPicture.asset(
               TrydosWalletAssets.trydos,
-              height: 25,
+              height: 25.h,
               package: TrydosWalletStyles.packageName,
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10.h),
             Text(
               AppStrings.get(languageCode, 'receipt'),
-              style: TrydosWalletStyles.bodyLarge.copyWith(
+              style: context.textTheme.bodyMedium?.mq.copyWith(
                 color: const Color(0xff1D1D1D),
-                fontSize: 40,
+                fontSize: 40.sp,
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10.h),
             SizedBox.square(
-              dimension: 70,
+              dimension: 70.w,
               child: PrettyQrView.data(
                 data: _receiptQrPayload(),
                 errorCorrectLevel: QrErrorCorrectLevel.M,
@@ -97,21 +100,22 @@ class ReceiptWidget extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10.h),
             Text(
               '${AppStrings.get(languageCode, 'id')} $reference',
               style: TrydosWalletStyles.bodyMedium.copyWith(
                 color: const Color(0xff1D1D1D),
-                fontSize: 11,
+                fontSize: 11.sp,
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20.h),
 
             _buildFullWidthBox(
               AppStrings.get(languageCode, 'sender_account'),
               senderAccount,
+              context,
             ),
-            const SizedBox(height: 5),
+            SizedBox(height: 5.h),
 
             if (recipientPhoneNumber != null &&
                 recipientName != null &&
@@ -119,25 +123,29 @@ class ReceiptWidget extends StatelessWidget {
               _buildFullWidthBox(
                 AppStrings.get(languageCode, 'recipient_phone'),
                 recipientPhoneNumber!,
+                context,
               ),
-              const SizedBox(height: 5),
+              SizedBox(height: 5.h),
               _buildFullWidthBox(
                 AppStrings.get(languageCode, 'recipient_name_id'),
                 recipientName!,
+                context,
               ),
-              const SizedBox(height: 5),
+              SizedBox(height: 5.h),
               _buildFullWidthBox(
                 AppStrings.get(languageCode, 'recipient_id_num'),
                 recipientId!,
+                context,
               ),
-              const SizedBox(height: 5),
+              SizedBox(height: 5.h),
             ] else ...[
               _buildFullWidthBox(
                 AppStrings.get(languageCode, 'recipient_account'),
                 recipientAccount,
+                context,
                 qrData: isFromQr ? _receiptQrPayload() : null,
               ),
-              const SizedBox(height: 5),
+              SizedBox(height: 5.h),
             ],
             Row(
               children: [
@@ -145,46 +153,51 @@ class ReceiptWidget extends StatelessWidget {
                   child: _buildHalfWidthBox(
                     AppStrings.get(languageCode, 'amount_to_be_sent'),
                     '$amount $currencySymbol',
+                    context,
                     isBold: true,
                   ),
                 ),
-                const SizedBox(width: 5),
+                SizedBox(width: 5.w),
                 Expanded(
                   child: _buildHalfWidthBox(
                     AppStrings.get(languageCode, 'reference'),
                     reference,
+                    context,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 5),
+            SizedBox(height: 5.h),
             Row(
               children: [
                 Expanded(
                   child: _buildHalfWidthBox(
                     AppStrings.get(languageCode, 'date_time'),
                     dateAndTimeString,
+                    context,
                   ),
                 ),
-                const SizedBox(width: 5),
+                SizedBox(width: 5.w),
                 Expanded(
                   child: _buildHalfWidthBox(
                     AppStrings.get(languageCode, 'type'),
                     type,
+                    context,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 5),
+            SizedBox(height: 5.h),
             Row(
               children: [
                 Expanded(
                   child: _buildHalfWidthBox(
                     AppStrings.get(languageCode, 'purpose_of_send'),
                     purpose,
+                    context,
                   ),
                 ),
-                const SizedBox(width: 5),
+                SizedBox(width: 5.w),
                 Expanded(
                   child: _buildStatusBox(
                     AppStrings.get(languageCode, 'status'),
@@ -192,23 +205,24 @@ class ReceiptWidget extends StatelessWidget {
                         ? AppStrings.get(languageCode, 'succeeded')
                         : AppStrings.get(languageCode, 'failed'),
                     isSuccess,
+                    context,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 5),
+            SizedBox(height: 5.h),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(12.r),
               decoration: BoxDecoration(
                 color: const Color(0xffF9F9F9),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(10.r),
               ),
               child: Text(
                 AppStrings.get(languageCode, 'receipt_footer_msg'),
-                style: TrydosWalletStyles.bodyMedium.copyWith(
+                style: context.textTheme.bodyMedium?.rq.copyWith(
                   color: const Color(0xff8D8D8D),
-                  fontSize: 9,
+                  fontSize: 11.sp,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -219,41 +233,46 @@ class ReceiptWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildFullWidthBox(String label, String value, {String? qrData}) {
+  Widget _buildFullWidthBox(
+    String label,
+    String value,
+    BuildContext context, {
+    String? qrData,
+  }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(12.r),
       decoration: BoxDecoration(
         color: const Color(0xffF9F9F9),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(10.r),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: TrydosWalletStyles.bodyMedium.copyWith(
+            style: context.textTheme.bodyMedium?.rq.copyWith(
               color: const Color(0xff8D8D8D),
-              fontSize: 9,
+              fontSize: 11.sp,
             ),
           ),
-          const SizedBox(height: 5),
+          SizedBox(height: 5.h),
           Row(
             children: [
               if (qrData != null && qrData.isNotEmpty) ...[
                 SvgPicture.asset(
                   TrydosWalletAssets.realQr,
-                  height: 16,
-                  width: 16,
+                  height: 16.h,
+                  width: 16.w,
                   package: TrydosWalletStyles.packageName,
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8.w),
               ],
               Text(
                 value,
-                style: TrydosWalletStyles.bodyMedium.copyWith(
+                style: context.textTheme.bodyMedium?.rq.copyWith(
                   color: const Color(0xff1D1D1D),
-                  fontSize: 11,
+                  fontSize: 13.sp,
                 ),
               ),
             ],
@@ -263,29 +282,34 @@ class ReceiptWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildHalfWidthBox(String label, String value, {bool isBold = false}) {
+  Widget _buildHalfWidthBox(
+    String label,
+    String value,
+    BuildContext context, {
+    bool isBold = false,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(12.r),
       decoration: BoxDecoration(
         color: const Color(0xffF9F9F9),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(10.r),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: TrydosWalletStyles.bodyMedium.copyWith(
+            style: context.textTheme.bodyMedium?.rq.copyWith(
               color: const Color(0xff8D8D8D),
-              fontSize: 9,
+              fontSize: 11.sp,
             ),
           ),
-          const SizedBox(height: 5),
+          SizedBox(height: 5.h),
           Text(
             value,
-            style: TrydosWalletStyles.bodyMedium.copyWith(
+            style: context.textTheme.bodyMedium?.rq.copyWith(
               color: const Color(0xff1D1D1D),
-              fontSize: 11,
+              fontSize: 13.sp,
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             ),
             overflow: TextOverflow.ellipsis,
@@ -295,38 +319,44 @@ class ReceiptWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBox(String label, String value, bool isSuccessStatus) {
+  Widget _buildStatusBox(
+    String label,
+    String value,
+    bool isSuccessStatus,
+    BuildContext context,
+  ) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(12.r),
       decoration: BoxDecoration(
         color: const Color(0xffF9F9F9),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(10.r),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: TrydosWalletStyles.bodyMedium.copyWith(
+            style: context.textTheme.bodyMedium?.rq.copyWith(
               color: const Color(0xff8D8D8D),
-              fontSize: 9,
+              fontSize: 11.sp,
             ),
           ),
-          const SizedBox(height: 5),
+          SizedBox(height: 5.h),
           Row(
             children: [
               Text(
                 value,
-                style: TrydosWalletStyles.bodyMedium.copyWith(
+                style: context.textTheme.bodyMedium?.rq.copyWith(
                   color: const Color(0xff1D1D1D),
-                  fontSize: 11,
+                  fontSize: 13.sp,
                 ),
               ),
               if (isSuccessStatus) ...[
-                const SizedBox(width: 12),
+                SizedBox(width: 12.w),
                 SvgPicture.asset(
                   TrydosWalletAssets.successed,
-                  height: 12,
+                  height: 12.h,
+
                   package: TrydosWalletStyles.packageName,
                 ),
               ],

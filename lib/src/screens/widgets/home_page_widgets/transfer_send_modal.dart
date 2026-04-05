@@ -3,9 +3,12 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
+import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/services/payment_requests_api_service.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/successful_page.dart';
@@ -1376,13 +1379,13 @@ class _TransferSendModalState extends State<TransferSendModal>
           child: Directionality(
             textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
             child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.9,
+              height: 850.h,
               child: Container(
                 color: hasInactiveRequestBackground
                     ? const Color(0xffFDF3F3)
                     : Colors.transparent,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
+                  padding: EdgeInsets.symmetric(horizontal: 30.w),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1394,10 +1397,10 @@ class _TransferSendModalState extends State<TransferSendModal>
                             children: [
                               SvgPicture.asset(
                                 TrydosWalletAssets.transferSend,
-                                height: 40,
+                                height: 40.h,
                                 package: TrydosWalletStyles.packageName,
                               ),
-                              const SizedBox(height: 8),
+                              SizedBox(height: 10.h),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -1406,20 +1409,22 @@ class _TransferSendModalState extends State<TransferSendModal>
                                       state.languageCode,
                                       'transfer_send',
                                     ).toUpperCase(),
-                                    style: TrydosWalletStyles.bodyMedium
+                                    style: context.textTheme.bodyMedium?.mq
                                         .copyWith(
                                           color: const Color(0xff1D1D1D),
-                                          fontSize: 13,
+                                          fontSize: 13.sp,
                                         ),
                                   ),
                                   isRequestFlow
                                       ? Text(
                                           ' ${AppStrings.get(state.languageCode, 'request').toUpperCase()}',
-                                          style: TrydosWalletStyles.bodyMedium
+                                          style: context
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.bq
                                               .copyWith(
                                                 color: const Color(0xff1D1D1D),
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13.sp,
                                               ),
                                         )
                                       : const SizedBox.shrink(),
@@ -1429,15 +1434,16 @@ class _TransferSendModalState extends State<TransferSendModal>
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20.h),
 
                       // Sender Account Card
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: EdgeInsets.all(10.h),
+
                         decoration: BoxDecoration(
                           color: const Color(0xff3C3C3C),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Color(0xffD3D3D3)),
+                          borderRadius: BorderRadius.circular(15.r),
+                          border: Border.all(color: const Color(0xffD3D3D3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1461,53 +1467,49 @@ class _TransferSendModalState extends State<TransferSendModal>
                                         Colors.white,
                                         BlendMode.srcIn,
                                       ),
-                                      height: 20,
+                                      height: 20.h,
                                       package: TrydosWalletStyles.packageName,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 6),
+                            SizedBox(height: 5.h),
                             Text(
                               AppStrings.get(
                                 state.languageCode,
                                 'sender_account',
                               ),
-                              style: TrydosWalletStyles.bodyMedium.copyWith(
+                              style: context.textTheme.bodyMedium?.lq.copyWith(
                                 color: Colors.white,
-                                fontSize: 11,
+                                fontSize: 11.sp,
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            SizedBox(height: 5.h),
                             Text(
                               _getSenderAccountDisplay(state),
-                              style: TrydosWalletStyles.bodyMedium.copyWith(
+                              style: context.textTheme.bodyMedium?.lq.copyWith(
                                 color: Colors.white,
-                                fontSize: 13,
+                                fontSize: 13.sp,
                               ),
                             ),
-                            const SizedBox(height: 5),
+                            SizedBox(height: 12.h),
+
                             _buildAmountRow(state),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 15),
+                      SizedBox(height: 14.h),
                       Text(
                         AppStrings.get(state.languageCode, 'send_to'),
                         style: TrydosWalletStyles.bodyMedium.copyWith(
                           color: const Color(0xff1D1D1D),
-                          fontSize: 11,
+                          fontSize: 11.sp,
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      SizedBox(height: 14.h),
 
-                      SizedBox(
-                        height:
-                            (isRequestFlow &&
-                                (isExpired || isRequestStatusNotActive))
-                            ? (MediaQuery.of(context).size.height * 0.9 - 302)
-                            : (MediaQuery.of(context).size.height * 0.9) - 395,
+                      Expanded(
                         child: SingleChildScrollView(
                           controller: _formScrollController,
                           padding: EdgeInsets.only(
@@ -1516,7 +1518,7 @@ class _TransferSendModalState extends State<TransferSendModal>
                           child: Column(
                             children: [
                               _buildRecipientInputSection(state),
-                              const SizedBox(height: 5),
+                              SizedBox(height: 5.h),
 
                               if (currentInputType ==
                                       RecipientInputType.phone &&
@@ -1539,7 +1541,7 @@ class _TransferSendModalState extends State<TransferSendModal>
                                   onEdit: () =>
                                       setState(() => isNameVerified = false),
                                 ),
-                                const SizedBox(height: 5),
+                                SizedBox(height: 5.h),
                                 _buildInputField(
                                   state: state,
                                   label: AppStrings.get(
@@ -1557,7 +1559,7 @@ class _TransferSendModalState extends State<TransferSendModal>
                                   onEdit: () =>
                                       setState(() => isIdVerified = false),
                                 ),
-                                const SizedBox(height: 5),
+                                SizedBox(height: 5.h),
                               ],
 
                               _buildInputField(
@@ -1593,9 +1595,9 @@ class _TransferSendModalState extends State<TransferSendModal>
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     if (isTransferVerifyLoading)
-                                      const SizedBox(
-                                        width: 16,
-                                        height: 16,
+                                      SizedBox(
+                                        width: 16.w,
+                                        height: 16.h,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
                                         ),
@@ -1605,13 +1607,14 @@ class _TransferSendModalState extends State<TransferSendModal>
                                 suffixFollowsText: true,
                                 suffix: Text(
                                   ' $currencySymbol',
-                                  style: TrydosWalletStyles.bodyMedium.copyWith(
-                                    color: const Color(0xff1D1D1D),
-                                    fontSize: 13,
-                                  ),
+                                  style: context.textTheme.bodyMedium?.rq
+                                      .copyWith(
+                                        color: const Color(0xff1D1D1D),
+                                        fontSize: 13.sp,
+                                      ),
                                 ),
                               ),
-                              const SizedBox(height: 5),
+                              SizedBox(height: 5.h),
 
                               // Purpose Section
                               if (!isRequestFlow) ...[
@@ -1646,7 +1649,7 @@ class _TransferSendModalState extends State<TransferSendModal>
                                   showMaskedName: false,
                                   enabled: false,
                                 ),
-                                const SizedBox(height: 5),
+                                SizedBox(height: 5.h),
                                 _buildInputField(
                                   state: state,
                                   label: AppStrings.get(
@@ -1662,7 +1665,7 @@ class _TransferSendModalState extends State<TransferSendModal>
                                   showMaskedName: false,
                                   enabled: false,
                                 ),
-                                const SizedBox(height: 5),
+                                SizedBox(height: 5.h),
                                 _buildInputField(
                                   state: state,
                                   label: AppStrings.get(
@@ -1678,7 +1681,7 @@ class _TransferSendModalState extends State<TransferSendModal>
                                   showMaskedName: false,
                                   enabled: false,
                                 ),
-                                const SizedBox(height: 5),
+                                SizedBox(height: 5.h),
                                 _buildInputField(
                                   state: state,
                                   label: AppStrings.get(
@@ -1688,10 +1691,11 @@ class _TransferSendModalState extends State<TransferSendModal>
                                   controller: TextEditingController(text: ''),
                                   customValueWidget: Text(
                                     _requestValidUntilText(state),
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Color(0xff1D1D1D),
-                                    ),
+                                    style: context.textTheme.bodyMedium?.mq
+                                        .copyWith(
+                                          fontSize: 13.sp,
+                                          color: const Color(0xff1D1D1D),
+                                        ),
                                   ),
                                   hint: '',
                                   focusNode: FocusNode(),
@@ -1706,19 +1710,19 @@ class _TransferSendModalState extends State<TransferSendModal>
                               ],
 
                               isRequestFlow
-                                  ? const SizedBox(height: 10)
-                                  : const SizedBox(height: 30),
+                                  ? SizedBox(height: 10.h)
+                                  : SizedBox(height: 20.h),
 
                               if (isRequestFlow &&
                                   (isExpired || isRequestStatusNotActive))
                                 Container(
                                   width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                  ),
+                                  height: 32.h,
+                                  margin: EdgeInsets.only(bottom: 10.h),
+                                  padding: EdgeInsets.symmetric(vertical: 8.h),
                                   decoration: BoxDecoration(
                                     color: const Color(0xffFF5F60),
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(12.r),
                                   ),
                                   alignment: Alignment.center,
                                   child: Text(
@@ -1728,10 +1732,10 @@ class _TransferSendModalState extends State<TransferSendModal>
                                             'expired_code',
                                           )
                                         : _requestStatusMessage(state),
-                                    style: TrydosWalletStyles.bodyMedium
+                                    style: context.textTheme.bodyMedium?.mq
                                         .copyWith(
                                           color: Colors.white,
-                                          fontSize: 11,
+                                          fontSize: 11.sp,
                                           fontWeight: FontWeight.bold,
                                         ),
                                   ),
@@ -1742,13 +1746,13 @@ class _TransferSendModalState extends State<TransferSendModal>
                           ),
                         ),
                       ),
-                      const Spacer(),
+
                       (isRequestLookupLoading)
-                          ? const Padding(
-                              padding: EdgeInsets.only(bottom: 12),
+                          ? Padding(
+                              padding: EdgeInsets.only(bottom: 30.h, top: 10.h),
                               child: SizedBox(
-                                height: 20,
-                                width: 20,
+                                height: 20.h,
+                                width: 20.w,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                 ),
@@ -1758,7 +1762,7 @@ class _TransferSendModalState extends State<TransferSendModal>
                                 (isExpired || isRequestStatusNotActive))
                           ? SizedBox.shrink()
                           : Padding(
-                              padding: const EdgeInsets.all(10),
+                              padding: EdgeInsets.only(bottom: 35.h, top: 10.h),
                               child: _buildSendButton(state),
                             ),
                     ],
@@ -1805,10 +1809,10 @@ class _TransferSendModalState extends State<TransferSendModal>
                       : (!isReadyToSend
                             ? TrydosWalletAssets.sendDisable
                             : TrydosWalletAssets.transferSend),
-                  height: 25,
+                  height: 25.h,
                   package: TrydosWalletStyles.packageName,
                 ),
-                const SizedBox(height: 5),
+                SizedBox(height: 5.h),
                 Text(
                   currentTransferState == TransferState.sending
                       ? AppStrings.get(state.languageCode, 'sending')
@@ -1818,11 +1822,11 @@ class _TransferSendModalState extends State<TransferSendModal>
                                 'send_deposits',
                               )
                             : AppStrings.get(state.languageCode, 'send_label')),
-                  style: TrydosWalletStyles.bodyLarge.copyWith(
+                  style: context.textTheme.bodyMedium?.mq.copyWith(
                     color: isReadyToSend
                         ? const Color(0xff388CFF)
                         : const Color(0xff8D8D8D),
-                    fontSize: 15,
+                    fontSize: 15.sp,
                   ),
                 ),
               ],
@@ -1836,11 +1840,12 @@ class _TransferSendModalState extends State<TransferSendModal>
   Widget _buildPurposeSection(WalletState state) {
     final purposeOptions = _purposeOptions(state);
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(10.h),
+
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: const Color(0xffD3D3D3)),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(15.r),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1849,13 +1854,13 @@ class _TransferSendModalState extends State<TransferSendModal>
             AppStrings.get(state.languageCode, 'select_purpose_send'),
             style: TrydosWalletStyles.bodyMedium.copyWith(
               color: const Color(0xff8D8D8D),
-              fontSize: 11,
+              fontSize: 11.sp,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10.h),
           SizedBox(
             width: double.infinity,
-            height: 32,
+            height: 30.h,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: purposeOptions.length,
@@ -1864,16 +1869,16 @@ class _TransferSendModalState extends State<TransferSendModal>
               },
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10.h),
           Row(
             key: _noteRowKey,
             children: [
               SvgPicture.asset(
                 TrydosWalletAssets.edit,
-                height: 14,
+                height: 14.h,
                 package: TrydosWalletStyles.packageName,
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8.w),
               Expanded(
                 child: TextField(
                   controller: noteController,
@@ -1883,16 +1888,16 @@ class _TransferSendModalState extends State<TransferSendModal>
                       state.languageCode,
                       'enter_note_receiver',
                     ),
-                    hintStyle: TrydosWalletStyles.bodyMedium.copyWith(
+                    hintStyle: context.textTheme.bodyMedium?.lq.copyWith(
                       color: const Color(0xffD3D3D3),
-                      fontSize: 11,
+                      fontSize: 11.sp,
                     ),
                     border: InputBorder.none,
                     isDense: true,
                   ),
-                  style: TrydosWalletStyles.bodyMedium.copyWith(
+                  style: context.textTheme.bodyMedium?.rq.copyWith(
                     color: const Color(0xff1D1D1D),
-                    fontSize: 11,
+                    fontSize: 11.sp,
                   ),
                 ),
               ),
@@ -1904,7 +1909,7 @@ class _TransferSendModalState extends State<TransferSendModal>
                   },
                   child: SvgPicture.asset(
                     TrydosWalletAssets.close,
-                    height: 16,
+                    height: 16.h,
                     package: TrydosWalletStyles.packageName,
                   ),
                 ),
@@ -1956,7 +1961,8 @@ class _TransferSendModalState extends State<TransferSendModal>
 
     return Container(
       key: key,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: isVerified
             ? isRequestFlow
@@ -1966,7 +1972,7 @@ class _TransferSendModalState extends State<TransferSendModal>
                   : const Color(0xffF7F7F7)
             : Colors.white,
         border: isVerified ? null : Border.all(color: borderColor),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(15.r),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -1982,46 +1988,46 @@ class _TransferSendModalState extends State<TransferSendModal>
                         onTap: onEdit,
                         child: Text(
                           AppStrings.get(state.languageCode, 'edit'),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xff388CFF),
+                          style: context.textTheme.bodyMedium?.mq.copyWith(
+                            fontSize: 11.sp,
+                            color: const Color(0xff388CFF),
                             decoration: TextDecoration.underline,
-                            decorationColor: Color(0xff388CFF),
+                            decorationColor: const Color(0xff388CFF),
                           ),
                         ),
                       ),
-                    if (isVerified && onEdit != null) const SizedBox(width: 4),
+                    if (isVerified && onEdit != null) SizedBox(width: 4.w),
                     if (customTopLabelWidget != null && !isVerified)
                       Expanded(child: customTopLabelWidget)
                     else ...[
                       Text(
                         label,
-                        style: TextStyle(
-                          fontSize: 11,
+                        style: context.textTheme.bodyMedium?.rq.copyWith(
+                          fontSize: 11.sp,
                           color: isRequestFlow
                               ? const Color(0xff8D8D8D)
                               : const Color(0xff1D1D1D),
                         ),
                       ),
                       if (showQuestionIcon && inlineLabel == null) ...[
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4.w),
                         SvgPicture.asset(
                           TrydosWalletAssets.question,
                           package: TrydosWalletStyles.packageName,
                         ),
                       ],
                       if (inlineLabel != null) ...[
-                        const SizedBox(width: 10),
-                        const Text(
-                          'inline label',
-                          style: TextStyle(
-                            fontSize: 10,
+                        SizedBox(width: 10.w),
+                        Text(
+                          inlineLabel,
+                          style: context.textTheme.bodyMedium?.mq.copyWith(
+                            fontSize: 11.sp,
                             decoration: TextDecoration.underline,
-                            decorationColor: Color(0xffD3D3D3),
-                            color: Color(0xffD3D3D3),
+                            decorationColor: const Color(0xffD3D3D3),
+                            color: const Color(0xffD3D3D3),
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4.w),
                         SvgPicture.asset(
                           TrydosWalletAssets.question,
                           package: TrydosWalletStyles.packageName,
@@ -2030,9 +2036,7 @@ class _TransferSendModalState extends State<TransferSendModal>
                     ],
                   ],
                 ),
-                !isFromAccount || isVerified
-                    ? SizedBox.shrink()
-                    : const SizedBox(height: 8),
+                SizedBox(height: 8.h),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -2043,102 +2047,93 @@ class _TransferSendModalState extends State<TransferSendModal>
                           if (suffixFollowsText &&
                               suffix != null &&
                               !isVerified)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Opacity(
-                                    opacity: 0,
-                                    child: Text(
-                                      controller?.text.isEmpty ?? true
-                                          ? hint
-                                          : controller!.text,
-                                      style: TrydosWalletStyles.bodyMedium
-                                          .copyWith(
-                                            color: const Color(0xff1D1D1D),
-                                            fontSize:
-                                                (controller?.text.isEmpty ??
-                                                    true)
-                                                ? 13
-                                                : 14,
-                                            fontWeight:
-                                                (controller?.text.isEmpty ??
-                                                    true)
-                                                ? FontWeight.normal
-                                                : FontWeight.bold,
-                                          ),
-                                    ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Opacity(
+                                  opacity: 0,
+                                  child: Text(
+                                    controller?.text.isEmpty ?? true
+                                        ? hint
+                                        : controller!.text,
+                                    style: context.textTheme.bodyMedium?.mq
+                                        .copyWith(
+                                          color: const Color(0xff1D1D1D),
+                                          fontSize:
+                                              (controller?.text.isEmpty ?? true)
+                                              ? 13.sp
+                                              : 14.sp,
+                                          fontWeight:
+                                              (controller?.text.isEmpty ?? true)
+                                              ? FontWeight.normal
+                                              : FontWeight.bold,
+                                        ),
                                   ),
-                                  const SizedBox(width: 20),
-                                  suffix,
-                                ],
-                              ),
+                                ),
+                                SizedBox(width: 20.w),
+                                suffix,
+                              ],
                             ),
                           if (isVerified)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4.0),
-                              child:
-                                  customValueWidget ??
-                                  Row(
-                                    children: [
-                                      if (isFromQr) ...[
-                                        SvgPicture.asset(
-                                          TrydosWalletAssets.realQr,
-                                          height: 16,
-                                          width: 16,
-                                          package:
-                                              TrydosWalletStyles.packageName,
-                                        ),
-                                        const SizedBox(width: 10),
-                                      ],
-                                      Text(
-                                        controller?.text ?? '',
-                                        style: TrydosWalletStyles.bodyMedium
-                                            .copyWith(
-                                              color: const Color(0xff1D1D1D),
-                                              fontSize: 14,
-                                              fontWeight:
-                                                  ((int.tryParse(
-                                                            controller!.text
-                                                                .replaceAll(
-                                                                  ',',
-                                                                  '',
-                                                                ),
-                                                          ) ??
-                                                          0) >
-                                                      0)
-                                                  ? FontWeight.bold
-                                                  : FontWeight.normal,
-                                            ),
+                            customValueWidget ??
+                                Row(
+                                  children: [
+                                    if (isFromQr) ...[
+                                      SvgPicture.asset(
+                                        TrydosWalletAssets.realQr,
+                                        height: 16.h,
+                                        width: 16.w,
+                                        package: TrydosWalletStyles.packageName,
                                       ),
-                                      if (suffixFollowsText &&
-                                          suffix != null) ...[
-                                        const SizedBox(width: 4),
-                                        suffix,
-                                      ],
-                                      if (!suffixFollowsText &&
-                                          showMaskedName) ...[
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            isRequestFlow
-                                                ? (maskedAccountName ?? '')
-                                                : (recipientAccountName ?? ''),
-                                            style: TrydosWalletStyles.bodyMedium
-                                                .copyWith(
-                                                  color: const Color(
-                                                    0xff8D8D8D,
-                                                  ),
-                                                  fontSize: 11,
-                                                ),
-                                            overflow: TextOverflow.visible,
-                                          ),
-                                        ),
-                                      ],
+                                      SizedBox(width: 10.w),
                                     ],
-                                  ),
-                            )
+                                    Text(
+                                      controller?.text ?? '',
+                                      style: context.textTheme.bodyMedium?.rq
+                                          .copyWith(
+                                            color: const Color(0xff1D1D1D),
+                                            fontSize: 13.sp,
+                                            fontWeight:
+                                                ((int.tryParse(
+                                                          controller!.text
+                                                              .replaceAll(
+                                                                ',',
+                                                                '',
+                                                              ),
+                                                        ) ??
+                                                        0) >
+                                                    0)
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                          ),
+                                    ),
+                                    if (suffixFollowsText &&
+                                        suffix != null) ...[
+                                      SizedBox(width: 4.w),
+                                      suffix,
+                                    ],
+                                    if (!suffixFollowsText &&
+                                        showMaskedName) ...[
+                                      SizedBox(width: 8.w),
+                                      Expanded(
+                                        child: Text(
+                                          isRequestFlow
+                                              ? (maskedAccountName ?? '')
+                                              : (recipientAccountName ?? ''),
+                                          style: context
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.rq
+                                              .copyWith(
+                                                color: const Color(0xff8D8D8D),
+                                                fontSize: 11.sp,
+                                              ),
+                                          overflow: TextOverflow.visible,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                )
                           else
                             TextField(
                               controller: controller,
@@ -2148,29 +2143,29 @@ class _TransferSendModalState extends State<TransferSendModal>
                               keyboardType: keyboardType,
                               inputFormatters: inputFormatters,
                               cursorColor: const Color(0xff388CFF),
-                              style: TrydosWalletStyles.bodyMedium.copyWith(
+                              style: context.textTheme.bodyMedium?.mq.copyWith(
                                 color: const Color(0xff1D1D1D),
-                                fontSize: 14,
+                                fontSize: 11.sp,
                                 fontWeight: FontWeight.bold,
                               ),
                               decoration: InputDecoration(
                                 hintText: hint,
                                 prefixText: prefixText,
-                                prefixStyle: TrydosWalletStyles.bodyMedium
+                                prefixStyle: context.textTheme.bodyMedium?.mq
                                     .copyWith(
                                       color: const Color(0xff1D1D1D),
-                                      fontSize: 14,
+                                      fontSize: 13.sp,
                                       fontWeight: FontWeight.bold,
                                     ),
                                 suffix: suffixFollowsText ? null : suffix,
-                                hintStyle: TrydosWalletStyles.bodyMedium
+                                hintStyle: context.textTheme.bodyMedium?.mq
                                     .copyWith(
                                       color: const Color(0xffD3D3D3),
-                                      fontSize: 13,
+                                      fontSize: 13.sp,
                                     ),
                                 border: InputBorder.none,
                                 isDense: true,
-                                contentPadding: EdgeInsets.zero,
+                                contentPadding: EdgeInsets.only(top: 0),
                               ),
                             ),
                         ],
@@ -2181,10 +2176,11 @@ class _TransferSendModalState extends State<TransferSendModal>
                 if (errorMessage != null)
                   Container(
                     width: double.infinity,
-                    margin: const EdgeInsets.only(top: 12),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+
+                    margin: EdgeInsets.only(top: 8.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 12.h,
                     ),
                     decoration: BoxDecoration(
                       color: const Color(0xffFFF4F4),
@@ -2193,9 +2189,9 @@ class _TransferSendModalState extends State<TransferSendModal>
                     child: Text(
                       errorMessage,
                       textAlign: TextAlign.center,
-                      style: TrydosWalletStyles.bodyMedium.copyWith(
+                      style: context.textTheme.bodyMedium?.rq.copyWith(
                         color: const Color(0xff1D1D1D),
-                        fontSize: 11,
+                        fontSize: 11.sp,
                       ),
                     ),
                   ),
@@ -2203,7 +2199,7 @@ class _TransferSendModalState extends State<TransferSendModal>
                     !isExpired &&
                     showTimeNote &&
                     !isPermanentRequest)
-                  const SizedBox(height: 5),
+                  SizedBox(height: 5.h),
                 if (isRequestFlow &&
                     !isExpired &&
                     showTimeNote &&
@@ -2214,9 +2210,9 @@ class _TransferSendModalState extends State<TransferSendModal>
                         state.languageCode,
                         'cannot_use_after_expiry',
                       ),
-                      style: TrydosWalletStyles.bodyMedium.copyWith(
+                      style: context.textTheme.bodyMedium?.rq.copyWith(
                         color: const Color(0xff1D1D1D),
-                        fontSize: 11,
+                        fontSize: 11.sp,
                       ),
                     ),
                   ),
@@ -2259,17 +2255,17 @@ class _TransferSendModalState extends State<TransferSendModal>
     if (symbolImageUrl != null && symbolImageUrl.isNotEmpty) {
       final isSvg = symbolImageUrl.toLowerCase().endsWith('.svg');
       return Padding(
-        padding: const EdgeInsetsDirectional.only(start: 5, top: 5),
+        padding: EdgeInsetsDirectional.only(start: 5.w),
         child: isSvg
             ? SvgPicture.network(
                 symbolImageUrl,
-                height: 20,
+                height: 20.h,
                 fit: BoxFit.cover,
                 placeholderBuilder: (_) => _buildFallbackSymbol(symbol),
               )
             : Image.network(
                 symbolImageUrl,
-                height: 20,
+                height: 20.h,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => _buildFallbackSymbol(symbol),
               ),
@@ -2278,9 +2274,9 @@ class _TransferSendModalState extends State<TransferSendModal>
 
     return Text(
       symbol,
-      style: TrydosWalletStyles.bodyMedium.copyWith(
+      style: context.textTheme.bodyMedium?.mq.copyWith(
         color: Colors.white,
-        fontSize: 20,
+        fontSize: 20.sp,
         fontWeight: FontWeight.bold,
       ),
     );
@@ -2289,10 +2285,9 @@ class _TransferSendModalState extends State<TransferSendModal>
   Widget _buildFallbackSymbol(String symbol) {
     return Text(
       symbol,
-      style: TrydosWalletStyles.bodyMedium.copyWith(
+      style: context.textTheme.bodyMedium?.bq.copyWith(
         color: Colors.white,
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
+        fontSize: 20.sp,
       ),
     );
   }
@@ -2348,22 +2343,24 @@ class _TransferSendModalState extends State<TransferSendModal>
       children: [
         isBalanceRefreshing
             ? Padding(
-                padding: const EdgeInsets.only(top: 20, right: 20, left: 20),
+                padding: EdgeInsets.only(top: 15.h, right: 15.w, left: 15.w),
                 child: CircularProgressIndicator(
                   color: Colors.white,
                   strokeWidth: 2,
-                  constraints: BoxConstraints.tightFor(width: 16, height: 16),
+                  constraints: BoxConstraints.tightFor(
+                    width: 16.w,
+                    height: 16.h,
+                  ),
                 ),
               )
             : Text(
                 (isBalanceHidden ? '****' : amountStr),
-                style: TrydosWalletStyles.bodyMedium.copyWith(
+                style: context.textTheme.bodyMedium?.mq.copyWith(
                   color: Colors.white,
-                  fontSize: isBalanceRefreshing ? 16 : 25,
-                  fontWeight: FontWeight.bold,
+                  fontSize: isBalanceRefreshing ? 16.sp : 25.sp,
                 ),
               ),
-        const SizedBox(width: 8),
+        SizedBox(width: 8.w),
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -2371,12 +2368,12 @@ class _TransferSendModalState extends State<TransferSendModal>
                 ? SizedBox.shrink()
                 : Text(
                     '$symbol | $assetName',
-                    style: TrydosWalletStyles.bodyMedium.copyWith(
+                    style: context.textTheme.bodyMedium?.lq.copyWith(
                       color: Colors.white,
-                      fontSize: 9,
+                      fontSize: 9.sp,
                     ),
                   ),
-            const SizedBox(width: 15),
+            SizedBox(width: 15.w),
             isBalanceRefreshing
                 ? SizedBox.shrink()
                 : GestureDetector(
@@ -2388,7 +2385,7 @@ class _TransferSendModalState extends State<TransferSendModal>
                         Color(0xffD3D3D3),
                         BlendMode.srcIn,
                       ),
-                      height: 11,
+                      height: 11.h,
                       package: TrydosWalletStyles.packageName,
                     ),
                   ),
@@ -2399,136 +2396,154 @@ class _TransferSendModalState extends State<TransferSendModal>
   }
 
   Widget _buildRecipientInputSection(WalletState state) {
-    return _buildInputField(
-      isFromAccount: true,
-      state: state,
-      customTopLabelWidget: Row(
-        children: [
-          GestureDetector(
-            onTap: () => _switchRecipientInputType(RecipientInputType.account),
-            child: Text(
-              '${AppStrings.get(state.languageCode, 'enter')}${AppStrings.get(state.languageCode, 'recipient_account')}${AppStrings.get(state.languageCode, 'or')}',
-              style: TrydosWalletStyles.bodyMedium.copyWith(
-                fontSize: 10,
+    return Stack(
+      children: [
+        _buildInputField(
+          isFromAccount: true,
+          state: state,
+          customTopLabelWidget: Row(
+            children: [
+              GestureDetector(
+                onTap: () =>
+                    _switchRecipientInputType(RecipientInputType.account),
+                child: Text(
+                  '${AppStrings.get(state.languageCode, 'enter')}${AppStrings.get(state.languageCode, 'recipient_account')}${AppStrings.get(state.languageCode, 'or')}',
+                  style: context.textTheme.bodyMedium?.mq.copyWith(
+                    fontSize: 11.sp,
 
-                color: currentInputType == RecipientInputType.account
-                    ? const Color(0xff1D1D1D)
-                    : const Color(0xffD3D3D3),
-              ),
-            ),
-          ),
-
-          GestureDetector(
-            onTap: () => _switchRecipientInputType(RecipientInputType.phone),
-            child: Text(
-              AppStrings.get(state.languageCode, 'phone_number'),
-              style: TrydosWalletStyles.bodyMedium.copyWith(
-                fontSize: 10,
-                decoration: TextDecoration.underline,
-                decorationColor: currentInputType == RecipientInputType.phone
-                    ? const Color(0xff1D1D1D)
-                    : const Color(0xffD3D3D3),
-                color: currentInputType == RecipientInputType.phone
-                    ? const Color(0xff1D1D1D)
-                    : const Color(0xffD3D3D3),
-              ),
-            ),
-          ),
-          SizedBox(width: 5),
-          SvgPicture.asset(
-            TrydosWalletAssets.question,
-
-            package: TrydosWalletStyles.packageName,
-          ),
-        ],
-      ),
-      label: currentInputType == RecipientInputType.account
-          ? AppStrings.get(state.languageCode, 'recipient_account_num')
-          : AppStrings.get(state.languageCode, 'recipient_phone_num'),
-      controller: recipientController,
-      hint: currentInputType == RecipientInputType.account
-          ? AppStrings.get(state.languageCode, 'enter_recipient_acc')
-          : AppStrings.get(state.languageCode, 'enter_recipient_phone'),
-      focusNode: recipientFocus,
-      isVerified: isRecipientVerified,
-      isFromQr: isFromQr,
-      showMaskedName: true,
-      errorMessage: recipientErrorMessage,
-      keyboardType: currentInputType == RecipientInputType.phone
-          ? TextInputType.phone
-          : TextInputType.number,
-      onEdit: isFromQr
-          ? null
-          : () => setState(() {
-              _resetRecipientLookupState();
-            }),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          if (currentInputType == RecipientInputType.account &&
-              isRecipientLookupLoading) ...[
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            const SizedBox(width: 8),
-          ],
-          if (recipientController.text.isEmpty) ...[
-            GestureDetector(
-              onTap: () async {
-                ClipboardData? data = await Clipboard.getData(
-                  Clipboard.kTextPlain,
-                );
-                if (data != null && data.text != null) {
-                  recipientController.text = data.text!;
-                }
-              },
-              child: Text(
-                AppStrings.get(state.languageCode, 'paste'),
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xff388CFF),
-                  decoration: TextDecoration.underline,
-                  decorationColor: Color(0xff388CFF),
+                    color: currentInputType == RecipientInputType.account
+                        ? const Color(0xff1D1D1D)
+                        : const Color(0xffD3D3D3),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
-            GestureDetector(
-              onTap: () async {
-                final result = await showWalletModal<String>(
-                  context: context,
-                  builder: (context, sc) =>
-                      QRScannerPage(fromQR: true, appairBack: true),
-                );
-                if (result == null) {
-                  return;
-                }
 
-                await _applyScannedRaw(result);
-              },
-              child: SvgPicture.asset(
-                TrydosWalletAssets.qr,
-                height: 14,
+              GestureDetector(
+                onTap: () =>
+                    _switchRecipientInputType(RecipientInputType.phone),
+                child: Text(
+                  AppStrings.get(state.languageCode, 'phone_number'),
+                  style: context.textTheme.bodyMedium?.mq.copyWith(
+                    fontSize: 11.sp,
+                    decoration: TextDecoration.underline,
+                    decorationColor:
+                        currentInputType == RecipientInputType.phone
+                        ? const Color(0xff1D1D1D)
+                        : const Color(0xffD3D3D3),
+                    color: currentInputType == RecipientInputType.phone
+                        ? const Color(0xff1D1D1D)
+                        : const Color(0xffD3D3D3),
+                  ),
+                ),
+              ),
+              SizedBox(width: 5.w),
+              SvgPicture.asset(
+                TrydosWalletAssets.question,
+                height: 14.h,
+
                 package: TrydosWalletStyles.packageName,
               ),
-            ),
-          ] else
-            GestureDetector(
-              onTap: () => setState(() {
-                recipientController.clear();
-                _resetRecipientLookupState();
-              }),
-              child: SvgPicture.asset(
-                TrydosWalletAssets.close,
-                height: 18,
-                package: TrydosWalletStyles.packageName,
-              ),
-            ),
-        ],
-      ),
+            ],
+          ),
+          label: currentInputType == RecipientInputType.account
+              ? AppStrings.get(state.languageCode, 'recipient_account_num')
+              : AppStrings.get(state.languageCode, 'recipient_phone_num'),
+          controller: recipientController,
+          hint: currentInputType == RecipientInputType.account
+              ? AppStrings.get(state.languageCode, 'enter_recipient_acc')
+              : AppStrings.get(state.languageCode, 'enter_recipient_phone'),
+          focusNode: recipientFocus,
+          isVerified: isRecipientVerified,
+          isFromQr: isFromQr,
+          showMaskedName: true,
+          errorMessage: recipientErrorMessage,
+          keyboardType: currentInputType == RecipientInputType.phone
+              ? TextInputType.phone
+              : TextInputType.number,
+          onEdit: isFromQr
+              ? null
+              : () => setState(() {
+                  _resetRecipientLookupState();
+                }),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (currentInputType == RecipientInputType.account &&
+                  isRecipientLookupLoading) ...[
+                SizedBox(
+                  width: 16.w,
+                  height: 16.h,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 8.w),
+              ],
+              if (recipientController.text.isEmpty) ...[
+                GestureDetector(
+                  onTap: () async {
+                    ClipboardData? data = await Clipboard.getData(
+                      Clipboard.kTextPlain,
+                    );
+                    if (data != null && data.text != null) {
+                      recipientController.text = data.text!;
+                    }
+                  },
+                  child: Text(
+                    AppStrings.get(state.languageCode, 'paste'),
+                    style: context.textTheme.bodyMedium?.rq.copyWith(
+                      fontSize: 11.sp,
+                      color: const Color(0xff388CFF),
+                      decoration: TextDecoration.underline,
+                      decorationColor: const Color(0xff388CFF),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 10.w),
+                GestureDetector(
+                  onTap: () async {
+                    final result = await showWalletModal<String>(
+                      context: context,
+                      builder: (context, sc) =>
+                          QRScannerPage(fromQR: true, appairBack: true),
+                    );
+                    if (result == null) {
+                      return;
+                    }
+
+                    await _applyScannedRaw(result);
+                  },
+                  child: SvgPicture.asset(
+                    TrydosWalletAssets.qr,
+                    height: 14.h,
+                    package: TrydosWalletStyles.packageName,
+                  ),
+                ),
+              ] else
+                SizedBox.shrink(),
+            ],
+          ),
+        ),
+        PositionedDirectional(
+          top: 20.h,
+          end: 12.w,
+          child:
+              (recipientController.text.isNotEmpty &&
+                  (!(isRecipientLookupLoading)) &&
+                  !isRecipientVerified)
+              ? GestureDetector(
+                  onTap: () => setState(() {
+                    recipientController.clear();
+                    _resetRecipientLookupState();
+                  }),
+                  child: SvgPicture.asset(
+                    TrydosWalletAssets.close,
+                    height: 16.h,
+                    package: TrydosWalletStyles.packageName,
+                  ),
+                )
+              : SizedBox.shrink(),
+        ),
+      ],
     );
   }
 
@@ -2537,8 +2552,8 @@ class _TransferSendModalState extends State<TransferSendModal>
     return GestureDetector(
       onTap: () => setState(() => selectedPurpose = purpose.id),
       child: Container(
-        margin: const EdgeInsetsDirectional.only(end: 5),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        margin: EdgeInsetsDirectional.only(end: 5.w),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 5.h),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xffFCFCFC) : Colors.white,
           border: Border.all(
@@ -2546,45 +2561,16 @@ class _TransferSendModalState extends State<TransferSendModal>
                 ? const Color(0xff5D5C5D)
                 : const Color(0xffD3D3D3),
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12.r),
         ),
         child: Text(
           purpose.name,
-          style: TrydosWalletStyles.bodyMedium.copyWith(
+          style: context.textTheme.bodyMedium?.rq.copyWith(
             color: const Color(0xff1D1D1D),
-            fontSize: isSelected ? 12 : 11,
+            fontSize: isSelected ? 12.sp : 11.sp,
           ),
         ),
       ),
-    );
-  }
-}
-
-class ThousandSeparatorFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    if (newValue.text.isEmpty) {
-      return newValue;
-    }
-
-    // Remove any existing commas
-    String cleanedText = newValue.text.replaceAll(',', '');
-
-    // Simple 000,000 formatting for 6 digits
-    String formatted = '';
-    if (cleanedText.length > 3) {
-      formatted =
-          '${cleanedText.substring(0, cleanedText.length - 3)},${cleanedText.substring(cleanedText.length - 3)}';
-    } else {
-      formatted = cleanedText;
-    }
-
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

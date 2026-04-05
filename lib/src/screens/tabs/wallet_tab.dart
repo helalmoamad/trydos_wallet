@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:trydos_wallet/src/constent/styles.dart';
+//import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 import '../widgets/widgets.dart';
 
@@ -13,8 +13,8 @@ class WalletTab extends StatefulWidget {
 }
 
 class _WalletTabState extends State<WalletTab> {
-  String? _selectedWalletCurrencyId;
-  final int _depositRequestsRefreshKey = 0;
+  // String? _selectedWalletCurrencyId;
+  //final int _depositRequestsRefreshKey = 0;
   final ScrollController _currenciesScrollController = ScrollController();
 
   @override
@@ -43,7 +43,7 @@ class _WalletTabState extends State<WalletTab> {
     }
   }
 
-  Future<void> _showDepositModal(
+  /*Future<void> _showDepositModal(
     BuildContext context,
     Currency currency,
     WalletState state,
@@ -60,13 +60,20 @@ class _WalletTabState extends State<WalletTab> {
         const WalletTransactionsRefreshRequested(),
       );
     }
-  }
+  }*/
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
         return SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [const WalletHeader(), SizedBox(height: 100)],
+          ),
+        );
+
+        /* SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -310,7 +317,7 @@ class _WalletTabState extends State<WalletTab> {
               const SizedBox(height: 24),
             ],
           ),
-        );
+        );*/
       },
     );
   }

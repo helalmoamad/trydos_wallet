@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
 import 'package:trydos_wallet/src/bloc/wallet_state.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
+import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
 
 /// ويدجت لعرض بطاقة الرصيد (للمستخدم في الصفحة الرئيسية).
@@ -42,16 +45,16 @@ class BalanceCard extends StatelessWidget {
           onTap: onTap,
           child: isSelected
               ? Container(
-                  height: 120,
+                  height: 120.h,
                   width: MediaQuery.of(context).size.width,
-                  padding: const EdgeInsetsDirectional.only(
-                    top: 12,
-                    start: 7,
-                    end: 15,
+                  padding: EdgeInsetsDirectional.only(
+                    top: 12.h,
+                    start: 12.w,
+                    end: 15.w,
                   ),
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(15.r),
                     border: Border.all(color: Color(0xffD3D3D3)),
                   ),
                   child: Column(
@@ -69,20 +72,20 @@ class BalanceCard extends StatelessWidget {
                                     .toLowerCase()
                                     .endsWith('.svg');
                                 return Padding(
-                                  padding: const EdgeInsetsDirectional.only(
-                                    start: 5,
+                                  padding: EdgeInsetsDirectional.only(
+                                    start: 5.w,
                                   ),
                                   child: isSvg
                                       ? SvgPicture.network(
                                           symbolImageUrl!,
-                                          height: 20,
+                                          height: 20.h,
                                           fit: BoxFit.cover,
                                           placeholderBuilder: (_) =>
                                               _buildFallbackIcon(),
                                         )
                                       : Image.network(
                                           symbolImageUrl!,
-                                          height: 20,
+                                          height: 20.h,
                                           fit: BoxFit.cover,
                                           errorBuilder: (_, __, ___) =>
                                               _buildFallbackIcon(),
@@ -92,26 +95,26 @@ class BalanceCard extends StatelessWidget {
                             )
                           else
                             _buildFallbackIcon(),
-                          const SizedBox(height: 10),
+                          SizedBox(height: 10.h),
                           Text(
                             currencyName,
-                            style: TrydosWalletStyles.bodySmall.copyWith(
+                            style: context.textTheme.bodyMedium?.lq.copyWith(
                               color: Colors.white,
-                              fontSize: 11,
+                              fontSize: 11.sp,
                             ),
                           ),
                         ],
                       ),
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
+                        padding: EdgeInsets.only(bottom: 10.h),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           textBaseline: TextBaseline.alphabetic,
                           children: [
                             if (isLoadingBalance)
-                              const SizedBox(
-                                width: 20,
-                                height: 20,
+                              SizedBox(
+                                width: 20.w,
+                                height: 20.h,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                   color: Colors.white,
@@ -120,21 +123,23 @@ class BalanceCard extends StatelessWidget {
                             else
                               Text(
                                 amount,
-                                style: TrydosWalletStyles.amountText.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 25,
-                                ),
+                                style: context.textTheme.bodyMedium?.rq
+                                    .copyWith(
+                                      color: Colors.white,
+                                      fontSize: 25.sp,
+                                    ),
                               ),
-                            const SizedBox(width: 6),
+                            SizedBox(width: 6.w),
                             Padding(
-                              padding: const EdgeInsets.only(top: 20),
+                              padding: EdgeInsets.only(top: 20.h),
                               child: Text(
                                 currencyCode,
-                                style: TrydosWalletStyles.bodySmall.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  height: 1.3,
-                                ),
+                                style: context.textTheme.bodyMedium?.lq
+                                    .copyWith(
+                                      color: Colors.white,
+                                      fontSize: 9.sp,
+                                      height: 1.3,
+                                    ),
                               ),
                             ),
                             const Spacer(),
@@ -143,59 +148,64 @@ class BalanceCard extends StatelessWidget {
                                 SvgPicture.asset(
                                   TrydosWalletAssets.statistic,
                                   package: TrydosWalletStyles.packageName,
+                                  height: 15.h,
                                 ),
-                                const SizedBox(height: 5),
+                                SizedBox(height: 5.h),
                                 Text(
                                   AppStrings.get(
                                     state.languageCode,
                                     'statistic',
                                   ),
-                                  style: TrydosWalletStyles.bodySmall.copyWith(
-                                    color: const Color(0xffFCFCFC),
-                                    fontSize: 9,
-                                    height: 1.3,
-                                  ),
+                                  style: context.textTheme.bodyMedium?.lq
+                                      .copyWith(
+                                        color: const Color(0xffFCFCFC),
+                                        fontSize: 9.sp,
+                                        height: 1.3,
+                                      ),
                                 ),
                               ],
                             ),
-                            const SizedBox(width: 25),
+                            SizedBox(width: 30.w),
                             Column(
                               children: [
                                 SvgPicture.asset(
                                   TrydosWalletAssets.chart,
-                                  height: 15,
+                                  height: 15.h,
                                   package: TrydosWalletStyles.packageName,
                                 ),
-                                const SizedBox(height: 5),
+                                SizedBox(height: 5.h),
                                 Text(
                                   AppStrings.get(state.languageCode, 'chart'),
-                                  style: TrydosWalletStyles.bodySmall.copyWith(
-                                    color: const Color(0xffFCFCFC),
-                                    fontSize: 9,
-                                    height: 1.3,
-                                  ),
+                                  style: context.textTheme.bodyMedium?.lq
+                                      .copyWith(
+                                        color: const Color(0xffFCFCFC),
+                                        fontSize: 9.sp,
+                                        height: 1.3,
+                                      ),
                                 ),
                               ],
                             ),
-                            const SizedBox(width: 25),
+                            SizedBox(width: 30.w),
                             Column(
                               children: [
                                 SvgPicture.asset(
                                   TrydosWalletAssets.info,
+                                  height: 15.h,
                                   package: TrydosWalletStyles.packageName,
                                 ),
-                                const SizedBox(height: 5),
+                                SizedBox(height: 5.h),
                                 Text(
                                   AppStrings.get(state.languageCode, 'info'),
-                                  style: TrydosWalletStyles.bodySmall.copyWith(
-                                    color: const Color(0xffFCFCFC),
-                                    fontSize: 9,
-                                    height: 1.3,
-                                  ),
+                                  style: context.textTheme.bodyMedium?.lq
+                                      .copyWith(
+                                        color: const Color(0xffFCFCFC),
+                                        fontSize: 9.sp,
+                                        height: 1.3,
+                                      ),
                                 ),
                               ],
                             ),
-                            const SizedBox(width: 10),
+                            SizedBox(width: 10.w),
                           ],
                         ),
                       ),
@@ -203,16 +213,16 @@ class BalanceCard extends StatelessWidget {
                   ),
                 )
               : Container(
-                  height: 120,
-                  width: 200,
-                  padding: const EdgeInsetsDirectional.only(
-                    top: 12,
-                    start: 13,
-                    end: 15,
+                  height: 120.h,
+                  width: 200.w,
+                  padding: EdgeInsetsDirectional.only(
+                    top: 11.h,
+                    start: 12.w,
+                    end: 15.w,
                   ),
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(15.r),
                     border: Border.all(color: Color(0xffD3D3D3)),
                   ),
                   child: Column(
@@ -224,51 +234,54 @@ class BalanceCard extends StatelessWidget {
                         children: [
                           if (symbolImageUrl != null &&
                               symbolImageUrl!.isNotEmpty)
-                            Builder(
-                              builder: (_) {
-                                final isSvg = symbolImageUrl!
-                                    .toLowerCase()
-                                    .endsWith('.svg');
-                                return isSvg
-                                    ? SvgPicture.network(
-                                        symbolImageUrl!,
-                                        height: 20,
-                                        fit: BoxFit.cover,
-                                        placeholderBuilder: (_) =>
-                                            _buildFallbackIcon(),
-                                      )
-                                    : Image.network(
-                                        symbolImageUrl!,
-                                        height: 20,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) =>
-                                            _buildFallbackIcon(),
-                                      );
-                              },
+                            Padding(
+                              padding: EdgeInsetsDirectional.only(start: 5.w),
+                              child: Builder(
+                                builder: (_) {
+                                  final isSvg = symbolImageUrl!
+                                      .toLowerCase()
+                                      .endsWith('.svg');
+                                  return isSvg
+                                      ? SvgPicture.network(
+                                          symbolImageUrl!,
+                                          height: 20.h,
+                                          fit: BoxFit.cover,
+                                          placeholderBuilder: (_) =>
+                                              _buildFallbackIcon(),
+                                        )
+                                      : Image.network(
+                                          symbolImageUrl!,
+                                          height: 20.h,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              _buildFallbackIcon(),
+                                        );
+                                },
+                              ),
                             )
                           else
                             _buildFallbackIcon(),
-                          const SizedBox(height: 10),
+                          SizedBox(height: 10.h),
                           Text(
                             currencyName,
-                            style: TrydosWalletStyles.bodySmall.copyWith(
+                            style: context.textTheme.bodyMedium?.lq.copyWith(
                               color: Colors.white,
-                              fontSize: 11,
+                              fontSize: 11.sp,
                             ),
                           ),
                         ],
                       ),
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
+                        padding: EdgeInsets.only(bottom: 10.h),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.baseline,
                           textBaseline: TextBaseline.alphabetic,
                           children: [
                             if (isLoadingBalance)
-                              const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
+                              SizedBox(
+                                width: 20.w,
+                                height: 20.h,
+                                child: const CircularProgressIndicator(
                                   strokeWidth: 2,
                                   color: Colors.white,
                                 ),
@@ -276,20 +289,22 @@ class BalanceCard extends StatelessWidget {
                             else
                               Text(
                                 amount,
-                                style: TrydosWalletStyles.amountText.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 25,
-                                ),
+                                style: context.textTheme.bodyMedium?.mq
+                                    .copyWith(
+                                      color: Colors.white,
+                                      fontSize: 25.sp,
+                                    ),
                               ),
                             const SizedBox(width: 6),
                             Padding(
-                              padding: const EdgeInsets.only(top: 20),
+                              padding: EdgeInsets.only(top: 20.h),
                               child: Text(
                                 currencyCode,
-                                style: TrydosWalletStyles.bodySmall.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                ),
+                                style: context.textTheme.bodyMedium?.lq
+                                    .copyWith(
+                                      color: Colors.white,
+                                      fontSize: 9.sp,
+                                    ),
                               ),
                             ),
                           ],
@@ -309,19 +324,19 @@ class BalanceCard extends StatelessWidget {
         symbol!,
         style: TrydosWalletStyles.headlineMedium.copyWith(
           color: Colors.white,
-          fontSize: 20,
+          fontSize: 20.sp,
         ),
       );
     }
     if (flag != null) {
-      return Text(flag!, style: const TextStyle(fontSize: 24));
+      return Text(flag!, style: TextStyle(fontSize: 24.sp));
     }
     return Container(
-      width: 40,
-      height: 40,
+      width: 40.w,
+      height: 40.h,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(8.r),
       ),
       child: const Icon(Icons.currency_exchange, color: Colors.white),
     );

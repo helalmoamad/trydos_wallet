@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trydos_wallet/src/api/api_interceptors.dart';
 import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
 import 'package:trydos_wallet/src/bloc/wallet_state.dart';
+import 'package:trydos_wallet/src/constent/build_context.dart';
+import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
 
 /// أنواع الرسائل للتنبيهات.
@@ -160,7 +163,8 @@ Future<T?> showWalletModal<T>({
     context: context,
     barrierDismissible: isDismissible,
     barrierLabel: 'Wallet Modal',
-    barrierColor: Colors.black54,
+    // ignore: deprecated_member_use
+    barrierColor: const Color(0xff1D1D1D).withOpacity(0.9),
     transitionDuration: const Duration(milliseconds: 900),
     pageBuilder: (dialogContext, animation, secondaryAnimation) {
       return SafeArea(
@@ -259,12 +263,12 @@ class _WalletModalContainerState extends State<_WalletModalContainer> {
         alignment: Alignment.bottomCenter,
         child: DraggableScrollableSheet(
           controller: _dragController,
-          initialChildSize: 0.9,
+          initialChildSize: 0.915,
           minChildSize: 0.0,
-          maxChildSize: 0.9,
+          maxChildSize: 0.915,
           expand: false,
           snap: true,
-          snapSizes: const [0.0, 0.9],
+          snapSizes: const [0.0, 0.915],
           builder: (context, sheetScrollController) {
             return Material(
               color: Colors.transparent,
@@ -274,8 +278,8 @@ class _WalletModalContainerState extends State<_WalletModalContainer> {
                   return Container(
                     decoration: BoxDecoration(
                       color: modalColor,
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(30),
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(30.r),
                       ),
                     ),
                     child: Column(
@@ -302,32 +306,32 @@ class _WalletModalContainerState extends State<_WalletModalContainer> {
                                       ? TextDirection.rtl
                                       : TextDirection.ltr,
                                   child: SizedBox(
-                                    height: 36,
+                                    height: 36.h,
                                     child: Stack(
                                       children: [
                                         if (backState.visible)
                                           PositionedDirectional(
-                                            start: 10,
-                                            top: 15,
+                                            start: 10.w,
+                                            top: 15.h,
                                             bottom: 0,
                                             child: InkWell(
                                               onTap: backState.onPressed,
                                               child: SizedBox(
-                                                height: 30,
-                                                width: 60,
+                                                height: 30.h,
+                                                width: 65.w,
                                                 child: Row(
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.center,
                                                   children: [
                                                     Padding(
                                                       padding:
-                                                          const EdgeInsetsDirectional.only(
-                                                            start: 10,
+                                                          EdgeInsetsDirectional.only(
+                                                            start: 10.w,
                                                           ),
                                                       child: Icon(
                                                         Icons
                                                             .arrow_back_ios_new,
-                                                        size: 13,
+                                                        size: 13.h,
                                                         color: const Color(
                                                           0xff1D1D1D,
                                                         ),
@@ -337,13 +341,16 @@ class _WalletModalContainerState extends State<_WalletModalContainer> {
                                                       ' ${AppStrings.get(languageCode, 'back')}',
                                                       textAlign:
                                                           TextAlign.center,
-                                                      style: const TextStyle(
-                                                        color: Color(
-                                                          0xff1D1D1D,
-                                                        ),
-                                                        fontSize: 11,
-                                                        fontFamily: 'Quicksand',
-                                                      ),
+                                                      style: context
+                                                          .textTheme
+                                                          .bodyMedium
+                                                          ?.mq
+                                                          .copyWith(
+                                                            fontSize: 13.sp,
+                                                            color: const Color(
+                                                              0xff1D1D1D,
+                                                            ),
+                                                          ),
                                                     ),
                                                   ],
                                                 ),
@@ -421,23 +428,23 @@ class _WalletModalContainerState extends State<_WalletModalContainer> {
                                               );
                                             },
                                             child: Container(
-                                              width: 60,
-                                              height: 35,
+                                              width: 60.w,
+                                              height: 35.h,
                                               alignment: Alignment.topCenter,
                                               child: Padding(
-                                                padding: const EdgeInsets.only(
-                                                  top: 10,
+                                                padding: EdgeInsets.only(
+                                                  top: 10.h,
                                                 ),
                                                 child: Container(
-                                                  width: 40,
-                                                  height: 2,
+                                                  width: 40.w,
+                                                  height: 2.h,
                                                   decoration: BoxDecoration(
                                                     color: const Color(
                                                       0xffC4C2C2,
                                                     ),
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                          2,
+                                                          2.r,
                                                         ),
                                                   ),
                                                 ),
@@ -457,8 +464,8 @@ class _WalletModalContainerState extends State<_WalletModalContainer> {
                         // during sheet compression (closing).
                         Flexible(
                           child: ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(30),
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(30.r),
                             ),
                             child: _WalletModalBackgroundScope(
                               notifier: _backgroundColorNotifier,

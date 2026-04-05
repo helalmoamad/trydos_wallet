@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
 import 'package:trydos_wallet/src/bloc/wallet_state.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
+import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/transfer_send_modal.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
 import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
@@ -34,6 +37,7 @@ class SendModal extends StatefulWidget {
 class _SendModalState extends State<SendModal> {
   late SendModalView _currentView;
   late bool _hasInitialMainStep;
+  bool _didSyncBackButton = false;
 
   void _handleBackAction() {
     final goBackToMain =
@@ -66,6 +70,16 @@ class _SendModalState extends State<SendModal> {
         : SendModalView.transfer;
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didSyncBackButton) {
+      return;
+    }
+    _didSyncBackButton = true;
+    _syncModalBackButton();
+  }
+
   void _syncModalBackButton() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -79,7 +93,6 @@ class _SendModalState extends State<SendModal> {
 
   @override
   Widget build(BuildContext context) {
-    _syncModalBackButton();
     // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
@@ -111,80 +124,69 @@ class _SendModalState extends State<SendModal> {
   Widget _buildMainMenuView(WalletState state, {Key? key}) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: IntrinsicHeight(
-            child: Column(
-              key: key,
-              children: [
-                const SizedBox(height: 10),
-                // Top Icon
-                SvgPicture.asset(
-                  TrydosWalletAssets.send,
-                  height: 40,
-                  package: TrydosWalletStyles.packageName,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  AppStrings.get(state.languageCode, 'send_pay_cash_upper'),
-                  style: TrydosWalletStyles.bodyMedium.copyWith(
-                    color: const Color(0xff1D1D1D),
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 20),
+        return Column(
+          key: key,
+          children: [
+            // Top Icon
+            SvgPicture.asset(
+              TrydosWalletAssets.send,
+              height: 40.h,
+              package: TrydosWalletStyles.packageName,
+            ),
+            SizedBox(height: 10.h),
+            Text(
+              AppStrings.get(state.languageCode, 'send_pay_cash_upper'),
+              style: context.textTheme.bodyMedium?.mq.copyWith(
+                color: const Color(0xff1D1D1D),
+                fontSize: 13.sp,
+              ),
+            ),
+            SizedBox(height: 20.h),
 
-                // First Card: Transfer | send
-                _buildActionCard(
-                  icon: TrydosWalletAssets.transferSend,
-                  title: AppStrings.get(state.languageCode, 'transfer_send'),
-                  subtitle: AppStrings.get(
-                    state.languageCode,
-                    'transfer_send_msg',
-                  ),
-                  onTap: () =>
-                      setState(() => _currentView = SendModalView.transfer),
-                  actions2: [
-                    _buildTextAction(
-                      AppStrings.get(state.languageCode, 'history'),
-                      11,
-                      onTap: () {},
-                    ),
-                  ],
-                  actions1: [],
-                ),
-
-                // Second Card: Cash Withdrawal
-                _buildActionCard(
-                  icon: TrydosWalletAssets.cashWithdrawal,
-                  title: AppStrings.get(state.languageCode, 'cash_withdrawal'),
-                  subtitle: AppStrings.get(
-                    state.languageCode,
-                    'withdrawal_msg',
-                  ),
+            // First Card: Transfer | send
+            _buildActionCard(
+              icon: TrydosWalletAssets.transferSend,
+              title: AppStrings.get(state.languageCode, 'transfer_send'),
+              subtitle: AppStrings.get(state.languageCode, 'transfer_send_msg'),
+              onTap: () {
+                setState(() => _currentView = SendModalView.transfer);
+              },
+              actions2: [
+                _buildTextAction(
+                  AppStrings.get(state.languageCode, 'history'),
+                  11.sp,
                   onTap: () {},
-                  actions1: [
-                    _buildTextAction(
-                      AppStrings.get(state.languageCode, 'nearby_centers'),
-                      13,
-                      onTap: () {},
-                    ),
-                  ],
-                  actions2: [
-                    _buildTextAction(
-                      AppStrings.get(state.languageCode, 'history'),
-                      11,
-                      onTap: () {},
-                    ),
-                  ],
                 ),
+              ],
+              actions1: [],
+            ),
 
-                // Third Section: Bill Payments
-                _buildBillPaymentsSection(state),
-                const SizedBox(height: 20),
+            // Second Card: Cash Withdrawal
+            _buildActionCard(
+              icon: TrydosWalletAssets.cashWithdrawal,
+              title: AppStrings.get(state.languageCode, 'cash_withdrawal'),
+              subtitle: AppStrings.get(state.languageCode, 'withdrawal_msg'),
+              onTap: () {},
+              actions1: [
+                _buildTextAction(
+                  AppStrings.get(state.languageCode, 'nearby_centers'),
+                  13.sp,
+                  onTap: () {},
+                ),
+              ],
+              actions2: [
+                _buildTextAction(
+                  AppStrings.get(state.languageCode, 'history'),
+                  11.sp,
+                  onTap: () {},
+                ),
               ],
             ),
-          ),
+
+            // Third Section: Bill Payments
+            _buildBillPaymentsSection(state),
+            SizedBox(height: 20.h),
+          ],
         );
       },
     );
@@ -201,21 +203,24 @@ class _SendModalState extends State<SendModal> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-        padding: const EdgeInsets.all(15),
+        margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
+        padding: EdgeInsets.symmetric(horizontal: 15.w, vertical: 17.h),
+
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: const Color(0xffF8F8F8),
           borderRadius: BorderRadius.circular(15),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
+
           children: [
             SvgPicture.asset(
               icon,
-              height: 25,
+              height: 25.h,
               package: TrydosWalletStyles.packageName,
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,23 +230,23 @@ class _SendModalState extends State<SendModal> {
                     children: [
                       Text(
                         title,
-                        style: TrydosWalletStyles.bodyMedium.copyWith(
+                        style: context.textTheme.bodyMedium?.mq.copyWith(
                           color: const Color(0xff1D1D1D),
-                          fontSize: 13,
+                          fontSize: 13.sp,
                         ),
                       ),
                       Row(children: actions1),
                     ],
                   ),
-                  const SizedBox(height: 5),
+                  SizedBox(height: 5.h),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         subtitle,
-                        style: TrydosWalletStyles.bodyMedium.copyWith(
+                        style: context.textTheme.bodyMedium?.rq.copyWith(
                           color: const Color(0xff8D8D8D),
-                          fontSize: 11,
+                          fontSize: 11.sp,
                         ),
                       ),
                       Row(children: actions2),
@@ -268,11 +273,12 @@ class _SendModalState extends State<SendModal> {
     ];
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      padding: const EdgeInsetsDirectional.only(top: 15, bottom: 15, start: 15),
+      margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
+
+      padding: EdgeInsetsDirectional.only(top: 15.h, bottom: 15.h, start: 15.w),
       decoration: BoxDecoration(
         color: const Color(0xffF7F7F7),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(15.r),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,10 +288,10 @@ class _SendModalState extends State<SendModal> {
             children: [
               SvgPicture.asset(
                 TrydosWalletAssets.billPayments,
-                width: 25,
+                width: 25.w,
                 package: TrydosWalletStyles.packageName,
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12.w),
               Expanded(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -295,26 +301,26 @@ class _SendModalState extends State<SendModal> {
                       children: [
                         Text(
                           AppStrings.get(state.languageCode, 'bill_payments'),
-                          style: TrydosWalletStyles.bodyMedium.copyWith(
+                          style: context.textTheme.bodyMedium?.mq.copyWith(
                             color: const Color(0xff1D1D1D),
-                            fontSize: 13,
+                            fontSize: 13.sp,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 5.h),
                         Text(
                           AppStrings.get(state.languageCode, 'pay_invoice_msg'),
-                          style: TrydosWalletStyles.bodyMedium.copyWith(
+                          style: context.textTheme.bodyMedium?.rq.copyWith(
                             color: const Color(0xff8D8D8D),
-                            fontSize: 11,
+                            fontSize: 11.sp,
                           ),
                         ),
                       ],
                     ),
                     Padding(
-                      padding: const EdgeInsetsDirectional.only(end: 15.0),
+                      padding: EdgeInsetsDirectional.only(end: 15.w),
                       child: _buildTextAction(
                         AppStrings.get(state.languageCode, 'history'),
-                        11,
+                        11.sp,
                         onTap: () {},
                       ),
                     ),
@@ -323,26 +329,27 @@ class _SendModalState extends State<SendModal> {
               ),
             ],
           ),
-          const SizedBox(height: 15),
+          SizedBox(height: 10.h),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: brands.map((brand) {
                 return Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 8),
+                  padding: EdgeInsetsDirectional.only(end: 8.w),
                   child: Column(
                     children: [
                       SvgPicture.asset(
                         brand['asset']!,
                         package: TrydosWalletStyles.packageName,
                         fit: BoxFit.contain,
+                        height: 70.h,
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6.h),
                       Text(
                         brand['name']!,
-                        style: TrydosWalletStyles.bodyMedium.copyWith(
+                        style: context.textTheme.bodyMedium?.rq.copyWith(
                           color: const Color(0xff1D1D1D),
-                          fontSize: 13,
+                          fontSize: 13.sp,
                         ),
                       ),
                     ],
@@ -365,7 +372,7 @@ class _SendModalState extends State<SendModal> {
       onTap: onTap,
       child: Text(
         text,
-        style: TrydosWalletStyles.bodyMedium.copyWith(
+        style: context.textTheme.bodyMedium?.rq.copyWith(
           color: const Color(0xff8D8D8D),
           fontSize: fontSize,
 

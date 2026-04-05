@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
 import '../widgets/widgets.dart';
@@ -20,19 +23,19 @@ class SettingsTab extends StatelessWidget {
             const WalletHeader(),
             Padding(
               padding: ResponsivePadding.only(
-                start: 24,
-                end: 24,
-                top: 1,
+                start: 24.w,
+                end: 24.w,
+                top: 1.h,
                 isRtl: isRtl,
               ),
               child: const Divider(height: 0.5, color: Color(0xffD3D3D3)),
             ),
             Padding(
               padding: ResponsivePadding.only(
-                start: 16,
-                end: 16,
-                top: 14,
-                bottom: 24,
+                start: 16.w,
+                end: 16.w,
+                top: 14.h,
+                bottom: 24.h,
                 isRtl: isRtl,
               ),
               child: Column(
@@ -41,14 +44,14 @@ class SettingsTab extends StatelessWidget {
                 ),
                 children: [
                   _ProfileCard(state: state),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h),
                   _SectionTitle(
                     title: AppStrings.get(
                       state.languageCode,
                       'personal_information',
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10.h),
                   _SettingsInfoCard(
                     icon: Icons.email_outlined,
                     label: AppStrings.get(state.languageCode, 'email'),
@@ -62,12 +65,12 @@ class SettingsTab extends StatelessWidget {
                     isRtl: isRtl,
                     forceLtrValue: true,
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10.h),
                   _SettingsInfoCard(
                     icon: Icons.phone_outlined,
                     label: AppStrings.get(state.languageCode, 'phone_number'),
                     valueWidget: Wrap(
-                      spacing: 8,
+                      spacing: 8.h,
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
@@ -85,10 +88,10 @@ class SettingsTab extends StatelessWidget {
                         if (state.isPhoneVerified)
                           Text(
                             '✓ ${AppStrings.get(state.languageCode, 'verified')}',
-                            style: TrydosWalletStyles.bodyMedium.copyWith(
+                            style: context.textTheme.bodyMedium?.mq.copyWith(
                               color: const Color(0xFF25B660),
                               fontWeight: FontWeight.w600,
-                              fontSize: 12,
+                              fontSize: 12.sp,
                             ),
                           ),
                       ],
@@ -108,7 +111,7 @@ class SettingsTab extends StatelessWidget {
                     ),
                     isRtl: isRtl,
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10.h),
                   _SettingsInfoCard(
                     icon: Icons.person_outline,
                     label: AppStrings.get(state.languageCode, 'last_name'),
@@ -122,14 +125,14 @@ class SettingsTab extends StatelessWidget {
                     isRtl: isRtl,
                     italicWhenFallback: _isBlank(state.lastName),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h),
                   _SectionTitle(
                     title: AppStrings.get(
                       state.languageCode,
                       'account_information',
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10.h),
                   _SettingsInfoCard(
                     icon: Icons.shield_outlined,
                     label: AppStrings.get(state.languageCode, 'account_status'),
@@ -140,7 +143,7 @@ class SettingsTab extends StatelessWidget {
                     valueColor: const Color(0xFF25B660),
                     isRtl: isRtl,
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10.h),
                   _SettingsInfoCard(
                     icon: Icons.visibility_outlined,
                     label: AppStrings.get(
@@ -153,7 +156,7 @@ class SettingsTab extends StatelessWidget {
                     ),
                     isRtl: isRtl,
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10.h),
                   _SettingsInfoCard(
                     icon: Icons.calendar_today_outlined,
                     label: AppStrings.get(state.languageCode, 'member_since'),
@@ -164,9 +167,9 @@ class SettingsTab extends StatelessWidget {
                     isRtl: isRtl,
                     forceLtrValue: true,
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10.h),
                   _LanguageCard(state: state),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24.h),
                   _LogoutButton(languageCode: state.languageCode),
                 ],
               ),
@@ -187,10 +190,10 @@ class _ProfileCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
       decoration: BoxDecoration(
         color: const Color(0xFFF8F8F8),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20.r),
       ),
       child: Column(
         children: [
@@ -199,7 +202,7 @@ class _ProfileCard extends StatelessWidget {
             firstName: state.firstName,
             lastName: state.lastName,
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14.r),
           Text(
             _displayName(
               state.firstName,
@@ -207,7 +210,7 @@ class _ProfileCard extends StatelessWidget {
               AppStrings.get(state.languageCode, 'not_provided'),
             ),
             textAlign: TextAlign.center,
-            style: TrydosWalletStyles.bodyMedium.copyWith(
+            style: context.textTheme.bodyMedium?.mq.copyWith(
               fontWeight: FontWeight.w700,
               fontSize: 16,
               color: const Color(0xFF1D1D1D),
@@ -244,8 +247,8 @@ class _ProfileAvatar extends StatelessWidget {
     final initials = _buildInitials(firstName, lastName);
 
     return Container(
-      width: 86,
-      height: 86,
+      width: 86.w,
+      height: 86.h,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(color: const Color(0xFF2E6AE8), width: 2),
@@ -331,10 +334,10 @@ class _SettingsInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
       decoration: BoxDecoration(
         color: const Color(0xFFF8F8F8),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(18.r),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,19 +346,19 @@ class _SettingsInfoCard extends StatelessWidget {
             padding: const EdgeInsets.only(top: 2),
             child: Icon(icon, color: const Color(0xFF2E6AE8), size: 22),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
           Expanded(
             child: Column(
               crossAxisAlignment: ResponsiveAlignment.crossAxisAlignment(isRtl),
               children: [
                 Text(
                   label,
-                  style: TrydosWalletStyles.bodyMedium.copyWith(
+                  style: context.textTheme.bodyMedium?.mq.copyWith(
                     color: const Color(0xFF8D8D8D),
-                    fontSize: 12,
+                    fontSize: 12.sp,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4.h),
                 valueWidget ??
                     Text(
                       value ?? '',
@@ -383,10 +386,10 @@ class _LanguageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
       decoration: BoxDecoration(
         color: const Color(0xFFF8F8F8),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(18.r),
       ),
       child: Row(
         children: [
@@ -398,15 +401,15 @@ class _LanguageCard extends StatelessWidget {
               size: 22,
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
           Text(
             AppStrings.get(state.languageCode, 'language'),
-            style: TrydosWalletStyles.bodyMedium.copyWith(
+            style: context.textTheme.bodyMedium?.mq.copyWith(
               color: const Color(0xFF8D8D8D),
-              fontSize: 12,
+              fontSize: 12.sp,
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
           Expanded(
             child: Align(
               alignment: AlignmentDirectional.centerEnd,
@@ -438,15 +441,20 @@ class _LanguageSelector extends StatelessWidget {
       },
       color: Colors.white,
       position: PopupMenuPosition.under,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.r)),
       itemBuilder: (context) => _languageOptions.map((option) {
         final isSelected = option.code == state.languageCode;
         return PopupMenuItem<String>(
           value: option.code,
           child: Row(
             children: [
-              Text(option.flag, style: const TextStyle(fontSize: 16)),
-              const SizedBox(width: 10),
+              Text(
+                option.flag,
+                style: context.textTheme.bodyMedium?.mq.copyWith(
+                  fontSize: 16.sp,
+                ),
+              ),
+              SizedBox(width: 10.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,14 +462,14 @@ class _LanguageSelector extends StatelessWidget {
                   children: [
                     Text(
                       AppStrings.get(state.languageCode, option.labelKey),
-                      style: TrydosWalletStyles.bodyMedium.copyWith(
+                      style: context.textTheme.bodyMedium?.mq.copyWith(
                         color: const Color(0xFF1D1D1D),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     Text(
                       option.nativeLabel,
-                      style: TrydosWalletStyles.bodySmall.copyWith(
+                      style: context.textTheme.bodySmall?.mq.copyWith(
                         color: const Color(0xFF8D8D8D),
                         fontSize: 10,
                       ),
@@ -470,11 +478,7 @@ class _LanguageSelector extends StatelessWidget {
                 ),
               ),
               if (isSelected)
-                const Icon(
-                  Icons.check_circle,
-                  color: Color(0xFF2E6AE8),
-                  size: 20,
-                ),
+                Icon(Icons.check_circle, color: Color(0xFF2E6AE8), size: 20.h),
             ],
           ),
         );
@@ -490,13 +494,16 @@ class _LanguageSelector extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(selected.flag, style: const TextStyle(fontSize: 16)),
-            const SizedBox(width: 10),
+            Text(
+              selected.flag,
+              style: context.textTheme.bodyMedium?.mq.copyWith(fontSize: 16),
+            ),
+            SizedBox(width: 10.w),
             Expanded(
               child: Text(
                 AppStrings.get(state.languageCode, selected.labelKey),
                 overflow: TextOverflow.ellipsis,
-                style: TrydosWalletStyles.bodyMedium.copyWith(
+                style: context.textTheme.bodyMedium?.mq.copyWith(
                   color: const Color(0xFF1D1D1D),
                   fontWeight: FontWeight.w600,
                 ),
@@ -510,11 +517,11 @@ class _LanguageSelector extends StatelessWidget {
                 fontSize: 11,
               ),
             ),
-            const SizedBox(width: 6),
-            const Icon(
+            SizedBox(width: 6.w),
+            Icon(
               Icons.keyboard_arrow_down_rounded,
               color: Color(0xFF8D8D8D),
-              size: 20,
+              size: 20.h,
             ),
           ],
         ),
@@ -546,10 +553,10 @@ class _LogoutButton extends StatelessWidget {
         icon: const Icon(Icons.logout_rounded, size: 20),
         label: Text(
           AppStrings.get(languageCode, 'logout'),
-          style: TrydosWalletStyles.bodyMedium.copyWith(
+          style: context.textTheme.bodyMedium?.mq.copyWith(
             color: Colors.white,
             fontWeight: FontWeight.w700,
-            fontSize: 14,
+            fontSize: 14.sp,
           ),
         ),
       ),

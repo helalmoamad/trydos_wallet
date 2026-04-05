@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
 import 'package:trydos_wallet/src/bloc/wallet_state.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
+import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
 
 /// Wallet splash screen. Preloads home page data during 5 seconds.
@@ -89,7 +92,7 @@ class _SplashOverlay extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Spacer(flex: 3),
+            const Spacer(flex: 5),
 
             // Logo section
             SizedBox(
@@ -101,11 +104,13 @@ class _SplashOverlay extends StatelessWidget {
                   SvgPicture.asset(
                     TrydosWalletAssets.rdb,
                     package: TrydosWalletStyles.packageName,
+                    height: 72.h,
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 20.h),
                   SvgPicture.asset(
                     TrydosWalletAssets.rammazDigitalBanking,
                     package: TrydosWalletStyles.packageName,
+                    height: 13.h,
                   ),
                 ],
               ),
@@ -122,40 +127,40 @@ class _SplashOverlay extends StatelessWidget {
                 children: [
                   // Custom progress bar
                   Container(
-                    width: 180,
-                    height: 10,
+                    width: 146.w,
+                    height: 5.h,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(15.r),
                       border: Border.all(
                         color: const Color(0xFF707070),
-                        width: 0.8,
+                        width: 0.8.h,
                       ),
                     ),
-                    padding: const EdgeInsets.all(1.5),
+                    padding: EdgeInsets.all(1.h),
                     child: Stack(
                       children: [
                         Container(
-                          width: 177 * progress,
+                          height: 5.h,
+                          width: (146.w) * progress,
                           decoration: BoxDecoration(
                             color: const Color(0xFF3066CC),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(15.r),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12.h),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     child: Text(
                       _getWord(progress, languageCode),
                       key: ValueKey<String>(_getWord(progress, languageCode)),
                       textAlign: TextAlign.center,
-                      style: TrydosWalletStyles.bodySmall.copyWith(
-                        fontSize: 16,
+                      style: context.textTheme.bodyMedium?.rq.copyWith(
+                        fontSize: 13.sp,
                         color: Colors.black,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
@@ -176,18 +181,19 @@ class _SplashOverlay extends StatelessWidget {
                     children: [
                       Text(
                         AppStrings.get(languageCode, 'powered_by'),
-                        style: const TextStyle(
-                          fontSize: 8,
-                          color: Color(0xff404040),
+                        style: context.textTheme.bodyMedium?.lq.copyWith(
+                          fontSize: 8.sp,
+                          color: const Color(0xff404040),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      SizedBox(height: 10.h),
                       Stack(
                         clipBehavior: Clip.none,
                         children: [
                           SvgPicture.asset(
                             TrydosWalletAssets.rammaz,
                             package: TrydosWalletStyles.packageName,
+                            height: 10.h,
                           ),
                           Positioned(
                             top: -5,
@@ -195,6 +201,7 @@ class _SplashOverlay extends StatelessWidget {
                             child: SvgPicture.asset(
                               TrydosWalletAssets.bracket,
                               package: TrydosWalletStyles.packageName,
+                              height: 5.h,
                             ),
                           ),
                           Positioned(
@@ -203,6 +210,7 @@ class _SplashOverlay extends StatelessWidget {
                             child: SvgPicture.asset(
                               TrydosWalletAssets.rLetter,
                               package: TrydosWalletStyles.packageName,
+                              height: 7.h,
                             ),
                           ),
                         ],

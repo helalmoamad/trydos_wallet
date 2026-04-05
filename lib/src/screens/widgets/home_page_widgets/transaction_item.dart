@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/constent/theme/typography.dart';
 
 /// ويدجت لعرض معاملة واحدة في القائمة.
 class TransactionItem extends StatelessWidget {
@@ -9,6 +12,7 @@ class TransactionItem extends StatelessWidget {
   final String title;
   final Color titleColor;
   final String subtitle;
+  final InlineSpan? subtitleSpan;
   final Color subtitleColor;
   final String amount;
   final String symbol;
@@ -26,6 +30,7 @@ class TransactionItem extends StatelessWidget {
     required this.title,
     this.titleColor = Colors.black87,
     required this.subtitle,
+    this.subtitleSpan,
     this.subtitleColor = Colors.grey,
     required this.amount,
     this.amountColor = Colors.black,
@@ -40,52 +45,59 @@ class TransactionItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 5),
-        padding: const EdgeInsetsDirectional.only(
-          start: 10,
-          top: 8,
-          end: 14,
-          bottom: 8,
+        margin: EdgeInsets.only(bottom: 5.h),
+        padding: EdgeInsetsDirectional.only(
+          start: 10.w,
+          top: 7.h,
+          end: 10.w,
+          bottom: 7.h,
         ),
         decoration: BoxDecoration(
           border: isSelected
               ? Border.all(color: const Color(0xFFD3D3D3))
               : null,
           color: const Color(0xFFFCFCFC),
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(15.r),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SvgPicture.asset(icon, package: TrydosWalletStyles.packageName),
-                const SizedBox(height: 4),
+                SvgPicture.asset(
+                  icon,
+                  package: TrydosWalletStyles.packageName,
+                  height: 16.h,
+                ),
+                SizedBox(height: 3.h),
                 SvgPicture.asset(
                   directionIcon,
                   package: TrydosWalletStyles.packageName,
+                  height: 14.h,
                 ),
               ],
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: TrydosWalletStyles.bodyMedium.copyWith(
-                      fontSize: 13,
+                    style: context.textTheme.bodyMedium?.mq.copyWith(
+                      fontSize: 13.sp,
                       color: titleColor,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
+                  SizedBox(height: 3.h),
+                  Text.rich(
+                    subtitleSpan ?? TextSpan(text: subtitle),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TrydosWalletStyles.bodySmall.copyWith(
+                    style: context.textTheme.bodyMedium?.lq.copyWith(
                       color: subtitleColor,
-                      fontSize: 11,
+                      fontSize: 11.sp,
                     ),
                   ),
                 ],
@@ -98,27 +110,27 @@ class TransactionItem extends StatelessWidget {
                   children: [
                     Text(
                       amount,
-                      style: TrydosWalletStyles.bodyMedium.copyWith(
+                      style: context.textTheme.bodyMedium?.mq.copyWith(
                         fontWeight: isSelected ? FontWeight.bold : null,
                         color: amountColor,
-                        fontSize: 13,
+                        fontSize: 13.sp,
                       ),
                     ),
                     Text(
                       symbol,
-                      style: TrydosWalletStyles.bodyMedium.copyWith(
+                      style: context.textTheme.bodyMedium?.lq.copyWith(
                         color: amountColor,
-                        fontSize: 13,
+                        fontSize: 13.sp,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 3.h),
                 Text(
                   status,
-                  style: TrydosWalletStyles.bodySmall.copyWith(
+                  style: context.textTheme.bodyMedium?.lq.copyWith(
                     color: statusColor,
-                    fontSize: 11,
+                    fontSize: 11.sp,
                   ),
                 ),
               ],
