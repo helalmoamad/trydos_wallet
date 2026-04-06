@@ -24,6 +24,10 @@ class _HomeTabState extends State<HomeTab> {
   int _selectedTransactionIndex = 0;
   final List<String> _selectedCurrencies = [];
   bool _hideBalance = false;
+  bool _transactionsPaginationLocked = false;
+  String? _lastPaginationCursor;
+  int _lastPaginationItemCount = -1;
+  double _lastPaginationPixels = -1;
   final ScrollController _currenciesScrollController = ScrollController();
   final ScrollController _transactionsScrollController = ScrollController();
 
@@ -59,15 +63,43 @@ class _HomeTabState extends State<HomeTab> {
   void _onTransactionsScroll() {
     final bloc = context.read<WalletBloc>();
     final state = bloc.state;
+    if (!_transactionsScrollController.hasClients) {
+      return;
+    }
+    final nextCursor = state.transactionsNextCursor;
     if (state.transactionsStatus == WalletStatus.loading ||
-        !state.transactionsHasNext) {
+        !state.transactionsHasNext ||
+        nextCursor == null ||
+        nextCursor.isEmpty) {
       return;
     }
     final pos = _transactionsScrollController.position;
+
+    // Ignore duplicate trigger at nearly the same viewport position.
+    if (_transactionsPaginationLocked &&
+        _lastPaginationCursor == nextCursor &&
+        _lastPaginationItemCount == state.transactions.length &&
+        (pos.pixels - _lastPaginationPixels).abs() < 24) {
+      return;
+    }
+
+    // Unlock when user leaves the bottom area enough.
+    if (_transactionsPaginationLocked && pos.extentAfter > 220) {
+      _transactionsPaginationLocked = false;
+    }
+
+    if (_transactionsPaginationLocked) {
+      return;
+    }
+
     if (pos.userScrollDirection != ScrollDirection.reverse) {
       return;
     }
-    if (pos.pixels >= pos.maxScrollExtent - 100) {
+    if (pos.extentAfter <= 120) {
+      _transactionsPaginationLocked = true;
+      _lastPaginationCursor = nextCursor;
+      _lastPaginationItemCount = state.transactions.length;
+      _lastPaginationPixels = pos.pixels;
       bloc.add(const WalletTransactionsLoadMoreRequested());
     }
   }
@@ -226,10 +258,25 @@ class _HomeTabState extends State<HomeTab> {
             state.transactionsStatus == WalletStatus.loading &&
             transactions.isNotEmpty;
 
+        if (state.transactionsStatus != WalletStatus.loading) {
+          _transactionsPaginationLocked = false;
+        }
+        if (_lastPaginationItemCount >= 0 &&
+            transactions.length > _lastPaginationItemCount) {
+          _transactionsPaginationLocked = false;
+          _lastPaginationCursor = null;
+          _lastPaginationItemCount = -1;
+          _lastPaginationPixels = -1;
+        }
+
         return Directionality(
           textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
           child: RefreshIndicator(
             onRefresh: () async {
+              _transactionsPaginationLocked = false;
+              _lastPaginationCursor = null;
+              _lastPaginationItemCount = -1;
+              _lastPaginationPixels = -1;
               context.read<WalletBloc>().add(const WalletRefreshAllRequested());
             },
             child: SizedBox(

@@ -172,7 +172,7 @@ class _SplashOverlay extends StatelessWidget {
 
             // Powered By section
             Padding(
-              padding: const EdgeInsets.only(bottom: 40),
+              padding: EdgeInsets.only(bottom: 40.h),
               child: Center(
                 child: IntrinsicWidth(
                   child: Column(
@@ -196,8 +196,8 @@ class _SplashOverlay extends StatelessWidget {
                             height: 10.h,
                           ),
                           Positioned(
-                            top: -5,
-                            left: 44,
+                            top: -5.h,
+                            left: 44.w,
                             child: SvgPicture.asset(
                               TrydosWalletAssets.bracket,
                               package: TrydosWalletStyles.packageName,
@@ -205,8 +205,8 @@ class _SplashOverlay extends StatelessWidget {
                             ),
                           ),
                           Positioned(
-                            top: -5,
-                            right: -5,
+                            top: -5.h,
+                            right: -5.w,
                             child: SvgPicture.asset(
                               TrydosWalletAssets.rLetter,
                               package: TrydosWalletStyles.packageName,

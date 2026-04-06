@@ -96,6 +96,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   int _banksPage = 0;
   final int _pageSize = 10;
   String? _inFlightTransactionsCursor;
+  String? _lastResolvedTransactionsCursor;
 
   void _onLanguageChanged(
     WalletLanguageChanged event,
@@ -290,6 +291,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     Emitter<WalletState> emit,
   ) async {
     _inFlightTransactionsCursor = null;
+    _lastResolvedTransactionsCursor = null;
     emit(state.copyWith(transactionsStatus: WalletStatus.loading));
     await _fetchTransactions(emit, cursor: null, append: false);
   }
@@ -299,6 +301,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     Emitter<WalletState> emit,
   ) async {
     _inFlightTransactionsCursor = null;
+    _lastResolvedTransactionsCursor = null;
     await _fetchTransactions(emit, cursor: null, append: false);
   }
 
@@ -309,10 +312,12 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     final nextCursor = state.transactionsNextCursor;
     if (state.transactionsStatus == WalletStatus.loading ||
         !state.transactionsHasNext ||
-        nextCursor == null) {
+        nextCursor == null ||
+        nextCursor.isEmpty) {
       return;
     }
-    if (_inFlightTransactionsCursor == nextCursor) {
+    if (_inFlightTransactionsCursor == nextCursor ||
+        _lastResolvedTransactionsCursor == nextCursor) {
       return;
     }
     _inFlightTransactionsCursor = nextCursor;
@@ -334,6 +339,24 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       limit: _pageSize,
     );
     if (result.isSuccess && result.data != null) {
+      final fetchedItems = result.data!.items;
+
+      // Stop pagination if backend reports next page but returns no progress.
+      final noProgressPage =
+          append &&
+          fetchedItems.isEmpty &&
+          (result.data!.endCursor == null || result.data!.endCursor == cursor);
+      if (noProgressPage) {
+        emit(
+          state.copyWith(
+            transactionsStatus: WalletStatus.success,
+            transactionsHasNext: false,
+            transactionsNextCursor: null,
+          ),
+        );
+        return;
+      }
+
       String? nextCursor;
       if (result.data!.hasNextPage) {
         final currentPage = result.data!.page;
@@ -345,13 +368,19 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           nextCursor = result.data!.endCursor;
         }
       }
+      if (append && cursor != null) {
+        _lastResolvedTransactionsCursor = cursor;
+      }
+      if (append && cursor != null && nextCursor == cursor) {
+        nextCursor = null;
+      }
       emit(
         state.copyWith(
           transactions: append
               ? [...state.transactions, ...result.data!.items]
               : result.data!.items,
           transactionsStatus: WalletStatus.success,
-          transactionsHasNext: result.data!.hasNextPage,
+          transactionsHasNext: result.data!.hasNextPage && nextCursor != null,
           transactionsNextCursor: nextCursor,
         ),
       );
