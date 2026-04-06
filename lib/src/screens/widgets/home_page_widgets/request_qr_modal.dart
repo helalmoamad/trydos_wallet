@@ -83,6 +83,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
 
   final List<String> _expiryOptions = [
     'always',
+    'minute_1',
     'minutes_3',
     'minutes_15',
     'hour_1',
@@ -222,6 +223,8 @@ class _RequestQRModalState extends State<RequestQRModal> {
 
   Duration? _expiryDuration() {
     switch (_selectedExpiry) {
+      case 'minute_1':
+        return const Duration(minutes: 1);
       case 'minutes_3':
         return const Duration(minutes: 3);
       case 'minutes_15':
@@ -363,6 +366,9 @@ class _RequestQRModalState extends State<RequestQRModal> {
     int? expiryMinutes;
     if (_selectedExpiry != 'always') {
       switch (_selectedExpiry) {
+        case 'minute_1':
+          expiryMinutes = 1;
+          break;
         case 'minutes_3':
           expiryMinutes = 3;
           break;
@@ -989,13 +995,13 @@ class _RequestQRModalState extends State<RequestQRModal> {
   }) {
     return Container(
       key: fieldKey,
-
+      height: 56.h,
       decoration: BoxDecoration(
         color: const Color(0xffFFFFFF).withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(15.r),
         border: Border.all(color: const Color(0xffD3D3D3)),
       ),
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
