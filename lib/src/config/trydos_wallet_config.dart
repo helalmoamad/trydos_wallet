@@ -27,6 +27,7 @@ class TrydosWalletConfig {
     this.memberSince,
     this.allowBadCertificate = false,
     this.skipSplash = false,
+    this.disableWalletOverscrollIndicator = true,
   });
 
   final String baseUrl;
@@ -47,6 +48,7 @@ class TrydosWalletConfig {
   final DateTime? memberSince;
   final bool allowBadCertificate;
   final bool skipSplash;
+  final bool disableWalletOverscrollIndicator;
 
   ApiHeadersConfig get headersConfig => ApiHeadersConfig(
     languageCode: languageCode,
@@ -120,6 +122,8 @@ class TrydosWallet {
       memberSince: _config!.memberSince,
       allowBadCertificate: _config!.allowBadCertificate,
       skipSplash: _config!.skipSplash,
+      disableWalletOverscrollIndicator:
+          _config!.disableWalletOverscrollIndicator,
     );
     _apiClient?.updateHeaders(_config!.headersConfig);
   }
@@ -147,6 +151,8 @@ class TrydosWallet {
       memberSince: _config!.memberSince,
       allowBadCertificate: _config!.allowBadCertificate,
       skipSplash: _config!.skipSplash,
+      disableWalletOverscrollIndicator:
+          _config!.disableWalletOverscrollIndicator,
     );
     _apiClient?.updateHeaders(_config!.headersConfig);
     emitLanguageChangeEvent(
@@ -197,6 +203,8 @@ class TrydosWallet {
       memberSince: memberSince ?? _config!.memberSince,
       allowBadCertificate: _config!.allowBadCertificate,
       skipSplash: _config!.skipSplash,
+      disableWalletOverscrollIndicator:
+          _config!.disableWalletOverscrollIndicator,
     );
   }
 }

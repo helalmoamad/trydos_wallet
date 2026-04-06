@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shimmer/shimmer.dart';
@@ -24,7 +25,8 @@ class _HomeTabState extends State<HomeTab> {
   int _selectedTransactionIndex = 0;
   final List<String> _selectedCurrencies = [];
   bool _hideBalance = false;
-  bool _transactionsPaginationLocked = false;
+  bool _transactionsLoadMoreQueued = false;
+  int _lastPaginationTriggerMs = 0;
   String? _lastPaginationCursor;
   int _lastPaginationItemCount = -1;
   double _lastPaginationPixels = -1;
@@ -75,33 +77,61 @@ class _HomeTabState extends State<HomeTab> {
     }
     final pos = _transactionsScrollController.position;
 
-    // Ignore duplicate trigger at nearly the same viewport position.
-    if (_transactionsPaginationLocked &&
-        _lastPaginationCursor == nextCursor &&
-        _lastPaginationItemCount == state.transactions.length &&
-        (pos.pixels - _lastPaginationPixels).abs() < 24) {
-      return;
-    }
-
-    // Unlock when user leaves the bottom area enough.
-    if (_transactionsPaginationLocked && pos.extentAfter > 220) {
-      _transactionsPaginationLocked = false;
-    }
-
-    if (_transactionsPaginationLocked) {
-      return;
-    }
-
     if (pos.userScrollDirection != ScrollDirection.reverse) {
       return;
     }
-    if (pos.extentAfter <= 120) {
-      _transactionsPaginationLocked = true;
-      _lastPaginationCursor = nextCursor;
-      _lastPaginationItemCount = state.transactions.length;
-      _lastPaginationPixels = pos.pixels;
-      bloc.add(const WalletTransactionsLoadMoreRequested());
+
+    if (pos.extentAfter > 120) {
+      return;
     }
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final isRepeatedEdgeTrigger =
+        _lastPaginationCursor == nextCursor &&
+        _lastPaginationItemCount == state.transactions.length &&
+        (pos.pixels - _lastPaginationPixels).abs() < 32;
+    if (isRepeatedEdgeTrigger && nowMs - _lastPaginationTriggerMs < 350) {
+      return;
+    }
+
+    _lastPaginationCursor = nextCursor;
+    _lastPaginationItemCount = state.transactions.length;
+    _lastPaginationPixels = pos.pixels;
+    _lastPaginationTriggerMs = nowMs;
+    _queueTransactionsLoadMore();
+  }
+
+  void _queueTransactionsLoadMore() {
+    if (_transactionsLoadMoreQueued) {
+      return;
+    }
+    _transactionsLoadMoreQueued = true;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _transactionsLoadMoreQueued = false;
+      if (!mounted) {
+        return;
+      }
+
+      final bloc = context.read<WalletBloc>();
+      final state = bloc.state;
+      final nextCursor = state.transactionsNextCursor;
+      if (state.transactionsStatus == WalletStatus.loading ||
+          !state.transactionsHasNext ||
+          nextCursor == null ||
+          nextCursor.isEmpty) {
+        return;
+      }
+
+      bloc.add(const WalletTransactionsLoadMoreRequested());
+    });
+  }
+
+  void _resetTransactionsPaginationGuards() {
+    _transactionsLoadMoreQueued = false;
+    _lastPaginationTriggerMs = 0;
+    _lastPaginationCursor = null;
+    _lastPaginationItemCount = -1;
+    _lastPaginationPixels = -1;
   }
 
   String _getTransactionsTitle(String languageCode) {
@@ -251,32 +281,36 @@ class _HomeTabState extends State<HomeTab> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<WalletBloc, WalletState>(
+    final disableOverscrollIndicator =
+        TrydosWallet.config.disableWalletOverscrollIndicator;
+
+    return BlocConsumer<WalletBloc, WalletState>(
+      listener: (context, state) {
+        final nextCursor = state.transactionsNextCursor;
+        if (state.transactionsStatus == WalletStatus.failure ||
+            !state.transactionsHasNext ||
+            nextCursor == null ||
+            nextCursor.isEmpty) {
+          _resetTransactionsPaginationGuards();
+          return;
+        }
+
+        if (_lastPaginationItemCount >= 0 &&
+            state.transactions.length > _lastPaginationItemCount) {
+          _transactionsLoadMoreQueued = false;
+        }
+      },
       builder: (context, state) {
         final transactions = state.transactions;
         final isLoadingMore =
             state.transactionsStatus == WalletStatus.loading &&
             transactions.isNotEmpty;
 
-        if (state.transactionsStatus != WalletStatus.loading) {
-          _transactionsPaginationLocked = false;
-        }
-        if (_lastPaginationItemCount >= 0 &&
-            transactions.length > _lastPaginationItemCount) {
-          _transactionsPaginationLocked = false;
-          _lastPaginationCursor = null;
-          _lastPaginationItemCount = -1;
-          _lastPaginationPixels = -1;
-        }
-
         return Directionality(
           textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
           child: RefreshIndicator(
             onRefresh: () async {
-              _transactionsPaginationLocked = false;
-              _lastPaginationCursor = null;
-              _lastPaginationItemCount = -1;
-              _lastPaginationPixels = -1;
+              _resetTransactionsPaginationGuards();
               context.read<WalletBloc>().add(const WalletRefreshAllRequested());
             },
             child: SizedBox(
@@ -718,77 +752,96 @@ class _HomeTabState extends State<HomeTab> {
                           )
                         else
                           Expanded(
-                            child: ListView.builder(
-                              controller: _transactionsScrollController,
-                              primary: false,
-                              physics: const ClampingScrollPhysics(),
-                              itemCount:
-                                  transactions.length + (isLoadingMore ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                if (index == transactions.length) {
-                                  return Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: 16.h,
-                                    ),
-                                    child: Center(
-                                      child: isLoadingMore
-                                          ? SizedBox(
-                                              width: 24.w,
-                                              height: 24.h,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            )
-                                          : const SizedBox.shrink(),
-                                    ),
-                                  );
-                                }
+                            child:
+                                NotificationListener<
+                                  OverscrollIndicatorNotification
+                                >(
+                                  onNotification: (notification) {
+                                    if (disableOverscrollIndicator) {
+                                      notification.disallowIndicator();
+                                    }
+                                    return false;
+                                  },
+                                  child: ListView.builder(
+                                    controller: _transactionsScrollController,
+                                    primary: false,
+                                    physics: const ClampingScrollPhysics(),
+                                    itemCount:
+                                        transactions.length +
+                                        (isLoadingMore ? 1 : 0),
+                                    itemBuilder: (context, index) {
+                                      if (index == transactions.length) {
+                                        return Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            vertical: 16.h,
+                                          ),
+                                          child: Center(
+                                            child: isLoadingMore
+                                                ? SizedBox(
+                                                    width: 24.w,
+                                                    height: 24.h,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                        ),
+                                                  )
+                                                : const SizedBox.shrink(),
+                                          ),
+                                        );
+                                      }
 
-                                final transaction = transactions[index];
-                                return Padding(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 16.w,
-                                  ),
-                                  child: TransactionItem(
-                                    icon: _transactionIcon(transaction),
-                                    directionIcon: _transactionDirectionIcon(
-                                      transaction,
-                                    ),
-                                    title: _transactionTitle(
-                                      state.languageCode,
-                                      transaction,
-                                    ),
-                                    subtitle: _transactionSubtitle(
-                                      state.languageCode,
-                                      transaction,
-                                    ),
-                                    subtitleSpan: _transactionSubtitleSpan(
-                                      context,
-                                      state.languageCode,
-                                      transaction,
-                                      const Color(0xff8D8D8D),
-                                    ),
-                                    symbol: transaction.assetSymbol,
-                                    amount: _formatAmount(transaction),
-                                    status: _transactionStatus(
-                                      state.languageCode,
-                                      transaction,
-                                    ),
-                                    amountColor: const Color(0xff1D1D1D),
-                                    titleColor: const Color(0xff1D1D1D),
-                                    statusColor: const Color(0xff8D8D8D),
-                                    subtitleColor: const Color(0xff8D8D8D),
-                                    isSelected:
-                                        _selectedTransactionIndex == index,
-                                    onTap: () {
-                                      setState(
-                                        () => _selectedTransactionIndex = index,
+                                      final transaction = transactions[index];
+                                      return Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 16.w,
+                                        ),
+                                        child: TransactionItem(
+                                          icon: _transactionIcon(transaction),
+                                          directionIcon:
+                                              _transactionDirectionIcon(
+                                                transaction,
+                                              ),
+                                          title: _transactionTitle(
+                                            state.languageCode,
+                                            transaction,
+                                          ),
+                                          subtitle: _transactionSubtitle(
+                                            state.languageCode,
+                                            transaction,
+                                          ),
+                                          subtitleSpan:
+                                              _transactionSubtitleSpan(
+                                                context,
+                                                state.languageCode,
+                                                transaction,
+                                                const Color(0xff8D8D8D),
+                                              ),
+                                          symbol: transaction.assetSymbol,
+                                          amount: _formatAmount(transaction),
+                                          status: _transactionStatus(
+                                            state.languageCode,
+                                            transaction,
+                                          ),
+                                          amountColor: const Color(0xff1D1D1D),
+                                          titleColor: const Color(0xff1D1D1D),
+                                          statusColor: const Color(0xff8D8D8D),
+                                          subtitleColor: const Color(
+                                            0xff8D8D8D,
+                                          ),
+                                          isSelected:
+                                              _selectedTransactionIndex ==
+                                              index,
+                                          onTap: () {
+                                            setState(
+                                              () => _selectedTransactionIndex =
+                                                  index,
+                                            );
+                                          },
+                                        ),
                                       );
                                     },
                                   ),
-                                );
-                              },
-                            ),
+                                ),
                           ),
                       ],
                     ),
