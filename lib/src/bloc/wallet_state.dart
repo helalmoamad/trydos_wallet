@@ -5,6 +5,8 @@ enum WalletStatus { initial, loading, success, failure }
 
 /// Unified state for the entire wallet application.
 class WalletState {
+  static const Object _unset = Object();
+
   const WalletState({
     this.languageCode = 'en',
     // Currencies
@@ -166,7 +168,7 @@ class WalletState {
     List<Transaction>? transactions,
     WalletStatus? transactionsStatus,
     bool? transactionsHasNext,
-    String? transactionsNextCursor,
+    Object? transactionsNextCursor = _unset,
     String? transactionsErrorMessage,
     List<TransferPurpose>? transferPurposes,
     WalletStatus? transferPurposesStatus,
@@ -221,8 +223,9 @@ class WalletState {
       transactions: transactions ?? this.transactions,
       transactionsStatus: transactionsStatus ?? this.transactionsStatus,
       transactionsHasNext: transactionsHasNext ?? this.transactionsHasNext,
-      transactionsNextCursor:
-          transactionsNextCursor ?? this.transactionsNextCursor,
+      transactionsNextCursor: transactionsNextCursor == _unset
+          ? this.transactionsNextCursor
+          : transactionsNextCursor as String?,
       transactionsErrorMessage:
           transactionsErrorMessage ?? this.transactionsErrorMessage,
       transferPurposes: transferPurposes ?? this.transferPurposes,

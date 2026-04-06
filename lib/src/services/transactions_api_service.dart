@@ -10,10 +10,11 @@ class TransactionsApiService {
   final ApiClient _client;
 
   Future<ApiResult<CursorPaginatedResponse<Transaction>>> getTransactions({
+    int page = 0,
     String? cursor,
     int limit = 10,
   }) async {
-    final query = <String, dynamic>{'limit': limit, 'page': 0};
+    final query = <String, dynamic>{'limit': limit, 'page': page};
     if (cursor != null && cursor.isNotEmpty) {
       final page = int.tryParse(cursor);
       if (page != null) {
