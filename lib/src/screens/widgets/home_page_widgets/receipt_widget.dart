@@ -59,6 +59,10 @@ class ReceiptWidget extends StatelessWidget {
     );
   }
 
+  static const PrettyQrDecoration _receiptQrDecoration = PrettyQrDecoration(
+    shape: PrettyQrSmoothSymbol(color: Color(0xff1D1D1D), roundFactor: 0.32),
+    quietZone: PrettyQrQuietZone.modules(1),
+  );
   @override
   Widget build(BuildContext context) {
     final isRtl = languageCode == 'ar' || languageCode == 'ku';
@@ -91,13 +95,7 @@ class ReceiptWidget extends StatelessWidget {
               child: PrettyQrView.data(
                 data: _receiptQrPayload(),
                 errorCorrectLevel: QrErrorCorrectLevel.M,
-                decoration: const PrettyQrDecoration(
-                  shape: PrettyQrSmoothSymbol(
-                    color: Color(0xff1D1D1D),
-                    roundFactor: 0.9,
-                  ),
-                  quietZone: PrettyQrQuietZone.modules(0),
-                ),
+                decoration: _receiptQrDecoration,
               ),
             ),
             SizedBox(height: 10.h),

@@ -19,11 +19,13 @@ import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 class TransferSendModal extends StatefulWidget {
   final QrTransferPayload? initialPayload;
   final String? initialScanRaw;
+  final ValueChanged<bool>? onSuccessStateChanged;
 
   const TransferSendModal({
     super.key,
     this.initialPayload,
     this.initialScanRaw,
+    this.onSuccessStateChanged,
   });
 
   @override
@@ -100,6 +102,18 @@ class _TransferSendModalState extends State<TransferSendModal>
   String? _originalAssetType;
   Timer? _expiryTicker;
   bool _wasKeyboardVisible = false;
+  bool _reportedSuccessToParent = false;
+
+  void _syncSuccessStateToParent() {
+    final isSuccessView = currentTransferState == TransferState.success;
+    if (_reportedSuccessToParent == isSuccessView) return;
+    _reportedSuccessToParent = isSuccessView;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.onSuccessStateChanged?.call(isSuccessView);
+    });
+  }
 
   bool get isExpired =>
       isRequestFlow &&
@@ -1247,6 +1261,7 @@ class _TransferSendModalState extends State<TransferSendModal>
 
   @override
   Widget build(BuildContext context) {
+    _syncSuccessStateToParent();
     _syncModalBackgroundColor();
 
     if (currentTransferState == TransferState.success) {

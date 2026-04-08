@@ -37,9 +37,25 @@ class SendModal extends StatefulWidget {
 class _SendModalState extends State<SendModal> {
   late SendModalView _currentView;
   late bool _hasInitialMainStep;
-  bool _didSyncBackButton = false;
+  bool _isTransferSuccessView = false;
+
+  void _setTransferSuccessView(bool isSuccessView) {
+    if (!mounted || _isTransferSuccessView == isSuccessView) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isTransferSuccessView == isSuccessView) return;
+      setState(() {
+        _isTransferSuccessView = isSuccessView;
+      });
+    });
+  }
 
   void _handleBackAction() {
+    if (_isTransferSuccessView) {
+      Navigator.pop(context);
+      return;
+    }
+
     final goBackToMain =
         _currentView == SendModalView.transfer && _hasInitialMainStep;
     if (goBackToMain) {
@@ -70,22 +86,13 @@ class _SendModalState extends State<SendModal> {
         : SendModalView.transfer;
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_didSyncBackButton) {
-      return;
-    }
-    _didSyncBackButton = true;
-    _syncModalBackButton();
-  }
-
   void _syncModalBackButton() {
+    final showBackButton = !_isTransferSuccessView;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       setWalletModalBackButton(
         context,
-        visible: true,
+        visible: showBackButton,
         onPressed: _handleBackAction,
       );
     });
@@ -93,6 +100,7 @@ class _SendModalState extends State<SendModal> {
 
   @override
   Widget build(BuildContext context) {
+    _syncModalBackButton();
     // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
@@ -112,6 +120,7 @@ class _SendModalState extends State<SendModal> {
                   key: const ValueKey('transfer'),
                   initialPayload: widget.initialPayload,
                   initialScanRaw: widget.initialScanRaw,
+                  onSuccessStateChanged: _setTransferSuccessView,
                 ),
               ],
             ),

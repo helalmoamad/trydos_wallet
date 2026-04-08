@@ -117,7 +117,7 @@ class WalletHeader extends StatelessWidget {
                             height: 20.h,
                             package: TrydosWalletStyles.packageName,
                           ),
-                          SizedBox(height: 5),
+                          SizedBox(height: 5.h),
                           Text(
                             AppStrings.get(state.languageCode, 'send_label'),
                             style: context.textTheme.bodyMedium?.rq.copyWith(

@@ -710,7 +710,7 @@ class _HomeTabState extends State<HomeTab> {
                       mainAxisAlignment: MainAxisAlignment.start,
 
                       children: [
-                        SizedBox(height: 18.h),
+                        SizedBox(height: 16.h),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [

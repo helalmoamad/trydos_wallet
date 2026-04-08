@@ -27,6 +27,7 @@ class RequestQRModal extends StatefulWidget {
   final VoidCallback? onBack;
   final String? accountName;
   final String? accountNumber;
+  final ValueChanged<bool>? onFinalStateChanged;
 
   const RequestQRModal({
     super.key,
@@ -34,6 +35,7 @@ class RequestQRModal extends StatefulWidget {
     this.onBack,
     this.accountName,
     this.accountNumber,
+    this.onFinalStateChanged,
   });
 
   @override
@@ -68,6 +70,10 @@ class _RequestQRModalState extends State<RequestQRModal> {
 
   final String _maskedName = '*******';
   bool _isNameMasked = false;
+
+  void _notifyFinalStateChanged() {
+    widget.onFinalStateChanged?.call(_state == RequestQRState.finalQR);
+  }
 
   String get _accountName {
     final fromWidget = widget.accountName?.trim() ?? '';
@@ -201,6 +207,16 @@ class _RequestQRModalState extends State<RequestQRModal> {
   List<TransferPurpose> _purposeOptions(WalletState state) {
     return state.transferPurposes;
   }
+
+  static const PrettyQrDecoration _receiveQrDecoration = PrettyQrDecoration(
+    shape: PrettyQrSquaresSymbol(
+      color: Color(0xff1D1D1D),
+      density: 0.98,
+      rounding: 0.60,
+      unifiedFinderPattern: true,
+    ),
+    quietZone: PrettyQrQuietZone.modules(0),
+  );
 
   String _purposeName(WalletState state, String purposeId) {
     for (final purpose in _purposeOptions(state)) {
@@ -511,6 +527,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
               );
             });
             _restartExpiryWatcher();
+            _notifyFinalStateChanged();
           }
         } else if (state.paymentRequestStatus == WalletStatus.failure) {
           // Show error message
@@ -526,6 +543,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
               _responseExpiryTime = null;
               _encryptedRequestQrPayload = null;
             });
+            _notifyFinalStateChanged();
           }
         }
       },
@@ -772,13 +790,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                           _accountNumber,
                         ),
                     errorCorrectLevel: QrErrorCorrectLevel.M,
-                    decoration: const PrettyQrDecoration(
-                      shape: PrettyQrSmoothSymbol(
-                        color: Color(0xff1D1D1D),
-                        roundFactor: 0.9,
-                      ),
-                      quietZone: PrettyQrQuietZone.modules(0),
-                    ),
+                    decoration: _receiveQrDecoration,
                   ),
                 ),
                 SizedBox(height: 5.h),
@@ -1548,13 +1560,7 @@ class _CleanRequestQRCard extends StatelessWidget {
               child: PrettyQrView.data(
                 data: qrPayload,
                 errorCorrectLevel: QrErrorCorrectLevel.M,
-                decoration: const PrettyQrDecoration(
-                  shape: PrettyQrSmoothSymbol(
-                    color: Color(0xff1D1D1D),
-                    roundFactor: 0.9,
-                  ),
-                  quietZone: PrettyQrQuietZone.modules(0),
-                ),
+                decoration: _RequestQRModalState._receiveQrDecoration,
               ),
             ),
             SizedBox(height: 10.h),

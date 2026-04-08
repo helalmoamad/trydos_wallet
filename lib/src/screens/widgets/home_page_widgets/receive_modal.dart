@@ -36,8 +36,29 @@ class _ReceiveModalState extends State<ReceiveModal> {
   bool _isDownloading = false;
   bool _isSharing = false;
   ReceiveModalView _currentView = ReceiveModalView.main;
+  bool _isRequestFinalView = false;
 
   static const String _maskedName = 'RBTYLS';
+  static const PrettyQrDecoration _receiveQrDecoration = PrettyQrDecoration(
+    shape: PrettyQrSquaresSymbol(
+      color: Color(0xff1D1D1D),
+      density: 0.98,
+      rounding: 0.60,
+      unifiedFinderPattern: true,
+    ),
+    quietZone: PrettyQrQuietZone.modules(0),
+  );
+
+  void _setRequestFinalView(bool isFinal) {
+    if (!mounted || _isRequestFinalView == isFinal) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isRequestFinalView == isFinal) return;
+      setState(() {
+        _isRequestFinalView = isFinal;
+      });
+    });
+  }
 
   void _resetModalBackgroundToWhite() {
     if (!mounted) return;
@@ -47,8 +68,19 @@ class _ReceiveModalState extends State<ReceiveModal> {
   void _handleBackAction() {
     final canGoBack = _currentView == ReceiveModalView.request;
     if (canGoBack) {
+      if (_isRequestFinalView) {
+        if (widget.onBack != null) {
+          widget.onBack!.call();
+          return;
+        }
+
+        Navigator.pop(context);
+        return;
+      }
+
       setState(() {
         _currentView = ReceiveModalView.main;
+        _isRequestFinalView = false;
       });
       _resetModalBackgroundToWhite();
       return;
@@ -68,7 +100,8 @@ class _ReceiveModalState extends State<ReceiveModal> {
   }
 
   void _syncModalBackButton() {
-    final canGoBack = _currentView == ReceiveModalView.request;
+    final canGoBack =
+        _currentView == ReceiveModalView.request && !_isRequestFinalView;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       setWalletModalBackButton(
@@ -327,7 +360,11 @@ class _ReceiveModalState extends State<ReceiveModal> {
                               onBack: () {
                                 setState(() {
                                   _currentView = ReceiveModalView.main;
+                                  _isRequestFinalView = false;
                                 });
+                              },
+                              onFinalStateChanged: (isFinal) {
+                                _setRequestFinalView(isFinal);
                               },
                             ),
                     );
@@ -379,13 +416,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
                 child: PrettyQrView.data(
                   data: qrPayload,
                   errorCorrectLevel: QrErrorCorrectLevel.M,
-                  decoration: const PrettyQrDecoration(
-                    shape: PrettyQrSmoothSymbol(
-                      color: Color(0xff1D1D1D),
-                      roundFactor: 0.9,
-                    ),
-                    quietZone: PrettyQrQuietZone.modules(0),
-                  ),
+                  decoration: _receiveQrDecoration,
                 ),
               ),
               SizedBox(height: 5.h),
@@ -452,6 +483,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
                 onTap: () {
                   setState(() {
                     _currentView = ReceiveModalView.request;
+                    _isRequestFinalView = false;
                   });
                 },
               ),
@@ -612,13 +644,7 @@ class _CleanQRCard extends StatelessWidget {
               child: PrettyQrView.data(
                 data: qrPayload,
                 errorCorrectLevel: QrErrorCorrectLevel.M,
-                decoration: const PrettyQrDecoration(
-                  shape: PrettyQrSmoothSymbol(
-                    color: Color(0xff1D1D1D),
-                    roundFactor: 0.9,
-                  ),
-                  quietZone: PrettyQrQuietZone.modules(0),
-                ),
+                decoration: _ReceiveModalState._receiveQrDecoration,
               ),
             ),
             SizedBox(height: 10.h),

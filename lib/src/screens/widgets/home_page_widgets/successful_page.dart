@@ -172,6 +172,10 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
     }
   }
 
+  static const PrettyQrDecoration _successQrDecoration = PrettyQrDecoration(
+    shape: PrettyQrSmoothSymbol(color: Color(0xff1D1D1D), roundFactor: 0.32),
+    quietZone: PrettyQrQuietZone.modules(1),
+  );
   Future<void> _handleShare() async {
     if (_isDownloading || _isSharing) return;
     setState(() => _isSharing = true);
@@ -282,13 +286,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                         child: PrettyQrView.data(
                           data: _successQrPayload(),
                           errorCorrectLevel: QrErrorCorrectLevel.M,
-                          decoration: const PrettyQrDecoration(
-                            shape: PrettyQrSmoothSymbol(
-                              color: Color(0xff1D1D1D),
-                              roundFactor: 0.9,
-                            ),
-                            quietZone: PrettyQrQuietZone.modules(0),
-                          ),
+                          decoration: _successQrDecoration,
                         ),
                       ),
                     ),
