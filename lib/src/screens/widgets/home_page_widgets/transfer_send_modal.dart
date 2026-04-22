@@ -104,6 +104,19 @@ class _TransferSendModalState extends State<TransferSendModal>
   bool _wasKeyboardVisible = false;
   bool _reportedSuccessToParent = false;
 
+  TextEditingValue _formatAccountInput(TextEditingValue value) {
+    final digitsOnly = value.text.replaceAll(RegExp(r'\D'), '');
+    final formatted = digitsOnly.length <= 4
+        ? digitsOnly
+        : '${digitsOnly.substring(0, 4)}-${digitsOnly.substring(4)}';
+
+    final selectionIndex = formatted.length;
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: selectionIndex),
+    );
+  }
+
   void _syncSuccessStateToParent() {
     final isSuccessView = currentTransferState == TransferState.success;
     if (_reportedSuccessToParent == isSuccessView) return;
@@ -2475,6 +2488,13 @@ class _TransferSendModalState extends State<TransferSendModal>
           keyboardType: currentInputType == RecipientInputType.phone
               ? TextInputType.phone
               : TextInputType.number,
+          inputFormatters: currentInputType == RecipientInputType.account
+              ? [
+                  TextInputFormatter.withFunction((oldValue, newValue) {
+                    return _formatAccountInput(newValue);
+                  }),
+                ]
+              : null,
           onEdit: isFromQr
               ? null
               : () => setState(() {

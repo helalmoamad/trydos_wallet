@@ -56,6 +56,13 @@ class WalletTransactionsLoadRequested extends WalletEvent {
   const WalletTransactionsLoadRequested();
 }
 
+class WalletTransactionsAssetFilterChanged extends WalletEvent {
+  const WalletTransactionsAssetFilterChanged(this.assetSymbol);
+
+  /// Pass null to clear the filter.
+  final String? assetSymbol;
+}
+
 class WalletTransactionsLoadMoreRequested extends WalletEvent {
   const WalletTransactionsLoadMoreRequested();
 }

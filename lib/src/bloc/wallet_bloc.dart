@@ -71,6 +71,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletTransactionsLoadRequested>(_onTransactionsLoadRequested);
     on<WalletTransactionsLoadMoreRequested>(_onTransactionsLoadMoreRequested);
     on<WalletTransactionsRefreshRequested>(_onTransactionsRefreshRequested);
+    on<WalletTransactionsAssetFilterChanged>(_onTransactionsAssetFilterChanged);
     on<WalletBanksLoadRequested>(_onBanksLoadRequested);
     on<WalletBanksLoadMoreRequested>(_onBanksLoadMoreRequested);
     on<WalletDepositSubmitted>(_onDepositSubmitted);
@@ -117,6 +118,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         currenciesStatus: WalletStatus.loading,
         balancesStatus: WalletStatus.loading,
         transactionsStatus: WalletStatus.loading,
+        transactions: const [],
+        transactionsHasNext: false,
+        transactionsNextCursor: null,
       ),
     );
     await _fetchCurrencies(emit, page: 0, append: false);
@@ -152,10 +156,10 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     await _fetchCurrencies(emit, page: _currenciesPage + 1, append: true);
   }
 
-  void _onBalanceCardIsSelected(
+  Future<void> _onBalanceCardIsSelected(
     BalanceCardIsSelected event,
     Emitter<WalletState> emit,
-  ) {
+  ) async {
     String resolvedSymbol = event.assetSymbol ?? '';
     String resolvedType = event.assetType ?? '';
 
@@ -173,14 +177,23 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       }
     }
 
+    final filterSymbol = event.isSelected ? resolvedSymbol : null;
+
+    _inFlightTransactionsPage = null;
     emit(
       state.copyWith(
         balanceCardIsSelected: event.isSelected,
         selectedAssetId: event.isSelected ? event.assetId : null,
         selectedAssetSymbol: event.isSelected ? resolvedSymbol : '',
         selectedAssetType: event.isSelected ? resolvedType : '',
+        transactionsAssetSymbolFilter: filterSymbol,
+        transactionsStatus: WalletStatus.loading,
+        transactions: const [],
+        transactionsHasNext: false,
+        transactionsNextCursor: null,
       ),
     );
+    await _fetchTransactions(emit, page: 0, append: false);
   }
 
   Future<void> _fetchCurrencies(
@@ -284,13 +297,37 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     }
   }
 
+  Future<void> _onTransactionsAssetFilterChanged(
+    WalletTransactionsAssetFilterChanged event,
+    Emitter<WalletState> emit,
+  ) async {
+    _inFlightTransactionsPage = null;
+    emit(
+      state.copyWith(
+        transactionsAssetSymbolFilter: event.assetSymbol,
+        transactionsStatus: WalletStatus.loading,
+        transactions: const [],
+        transactionsHasNext: false,
+        transactionsNextCursor: null,
+      ),
+    );
+    await _fetchTransactions(emit, page: 0, append: false);
+  }
+
   /// Transactions
   Future<void> _onTransactionsLoadRequested(
     WalletTransactionsLoadRequested event,
     Emitter<WalletState> emit,
   ) async {
     _inFlightTransactionsPage = null;
-    emit(state.copyWith(transactionsStatus: WalletStatus.loading));
+    emit(
+      state.copyWith(
+        transactionsStatus: WalletStatus.loading,
+        transactions: const [],
+        transactionsHasNext: false,
+        transactionsNextCursor: null,
+      ),
+    );
     await _fetchTransactions(emit, page: 0, append: false);
   }
 
@@ -299,7 +336,14 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     Emitter<WalletState> emit,
   ) async {
     _inFlightTransactionsPage = null;
-    emit(state.copyWith(transactionsStatus: WalletStatus.loading));
+    emit(
+      state.copyWith(
+        transactionsStatus: WalletStatus.loading,
+        transactions: const [],
+        transactionsHasNext: false,
+        transactionsNextCursor: null,
+      ),
+    );
     await _fetchTransactions(emit, page: 0, append: false);
   }
 
@@ -338,6 +382,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     final result = await _transactionsApi.getTransactions(
       page: page,
       limit: _pageSize,
+      assetSymbol: state.transactionsAssetSymbolFilter,
     );
     if (result.isSuccess && result.data != null) {
       final response = result.data!;

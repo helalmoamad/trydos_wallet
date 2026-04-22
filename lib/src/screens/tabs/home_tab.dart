@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/build_context.dart';
@@ -22,6 +23,8 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
+  static const String _hideBalancePrefKey = 'wallet_home_hide_balance';
+
   int _selectedTransactionIndex = 0;
   final List<String> _selectedCurrencies = [];
   bool _hideBalance = false;
@@ -38,6 +41,7 @@ class _HomeTabState extends State<HomeTab> {
     super.initState();
     _currenciesScrollController.addListener(_onCurrenciesScroll);
     _transactionsScrollController.addListener(_onTransactionsScroll);
+    _restoreHideBalance();
   }
 
   @override
@@ -132,6 +136,26 @@ class _HomeTabState extends State<HomeTab> {
     _lastPaginationCursor = null;
     _lastPaginationItemCount = -1;
     _lastPaginationPixels = -1;
+  }
+
+  Future<void> _restoreHideBalance() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getBool(_hideBalancePrefKey);
+    if (!mounted || saved == null) {
+      return;
+    }
+    setState(() {
+      _hideBalance = saved;
+    });
+  }
+
+  Future<void> _toggleHideBalance() async {
+    final next = !_hideBalance;
+    setState(() {
+      _hideBalance = next;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_hideBalancePrefKey, next);
   }
 
   String _getTransactionsTitle(String languageCode) {
@@ -360,11 +384,7 @@ class _HomeTabState extends State<HomeTab> {
                                     ),
                                     SizedBox(width: 10.w),
                                     InkWell(
-                                      onTap: () {
-                                        setState(() {
-                                          _hideBalance = !_hideBalance;
-                                        });
-                                      },
+                                      onTap: _toggleHideBalance,
                                       child: SizedBox(
                                         height: 15.h,
 
@@ -433,11 +453,7 @@ class _HomeTabState extends State<HomeTab> {
                                     ),
                                     SizedBox(width: 8.w),
                                     InkWell(
-                                      onTap: () {
-                                        setState(() {
-                                          _hideBalance = !_hideBalance;
-                                        });
-                                      },
+                                      onTap: _toggleHideBalance,
                                       child: SizedBox(
                                         height: 15.h,
 

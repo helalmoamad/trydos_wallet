@@ -38,7 +38,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
   ReceiveModalView _currentView = ReceiveModalView.main;
   bool _isRequestFinalView = false;
 
-  static const String _maskedName = 'RBTYLS';
+  static const String _maskedName = '*******';
   static const PrettyQrDecoration _receiveQrDecoration = PrettyQrDecoration(
     shape: PrettyQrSquaresSymbol(
       color: Color(0xff1D1D1D),

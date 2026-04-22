@@ -13,8 +13,9 @@ class TransactionsApiService {
     int page = 0,
     String? cursor,
     int limit = 10,
+    String? assetSymbol,
   }) async {
-    final query = <String, dynamic>{'limit': limit, 'page': page};
+    final query = <String, dynamic>{'limit': 20, 'page': page};
     if (cursor != null && cursor.isNotEmpty) {
       final page = int.tryParse(cursor);
       if (page != null) {
@@ -24,6 +25,9 @@ class TransactionsApiService {
           ..remove('page')
           ..['cursor'] = cursor;
       }
+    }
+    if (assetSymbol != null && assetSymbol.isNotEmpty) {
+      query['assetSymbol'] = assetSymbol;
     }
     return _client.get<CursorPaginatedResponse<Transaction>>(
       ApiPaths.myTransactions,

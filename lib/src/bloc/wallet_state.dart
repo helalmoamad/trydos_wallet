@@ -24,6 +24,7 @@ class WalletState {
     this.transactionsHasNext = false,
     this.transactionsNextCursor,
     this.transactionsErrorMessage,
+    this.transactionsAssetSymbolFilter,
     // Transfer Purposes
     this.transferPurposes = const [],
     this.transferPurposesStatus = WalletStatus.initial,
@@ -104,6 +105,7 @@ class WalletState {
   final bool transactionsHasNext;
   final String? transactionsNextCursor;
   final String? transactionsErrorMessage;
+  final String? transactionsAssetSymbolFilter;
 
   // Transfer Purposes
   final List<TransferPurpose> transferPurposes;
@@ -170,6 +172,7 @@ class WalletState {
     bool? transactionsHasNext,
     Object? transactionsNextCursor = _unset,
     String? transactionsErrorMessage,
+    Object? transactionsAssetSymbolFilter = _unset,
     List<TransferPurpose>? transferPurposes,
     WalletStatus? transferPurposesStatus,
     String? transferPurposesErrorMessage,
@@ -228,6 +231,9 @@ class WalletState {
           : transactionsNextCursor as String?,
       transactionsErrorMessage:
           transactionsErrorMessage ?? this.transactionsErrorMessage,
+      transactionsAssetSymbolFilter: transactionsAssetSymbolFilter == _unset
+          ? this.transactionsAssetSymbolFilter
+          : transactionsAssetSymbolFilter as String?,
       transferPurposes: transferPurposes ?? this.transferPurposes,
       transferPurposesStatus:
           transferPurposesStatus ?? this.transferPurposesStatus,
