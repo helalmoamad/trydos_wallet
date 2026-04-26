@@ -51,6 +51,18 @@ class WalletBalanceLoadRequested extends WalletEvent {
   final String assetId;
 }
 
+class WalletRealtimeBalanceUpdated extends WalletEvent {
+  const WalletRealtimeBalanceUpdated(this.payload);
+  final Map<String, dynamic> payload;
+}
+
+class WalletRealtimeTransactionReceived extends WalletEvent {
+  const WalletRealtimeTransactionReceived(this.eventName, this.payload);
+
+  final String eventName;
+  final Map<String, dynamic> payload;
+}
+
 /// Transactions
 class WalletTransactionsLoadRequested extends WalletEvent {
   const WalletTransactionsLoadRequested();

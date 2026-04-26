@@ -17,16 +17,23 @@ class TrydosWalletHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    WalletBloc? existingBloc;
+    try {
+      existingBloc = BlocProvider.of<WalletBloc>(context);
+    } catch (_) {
+      existingBloc = null;
+    }
+
+    if (existingBloc != null) {
+      return BlocProvider.value(
+        value: existingBloc,
+        child: const _TrydosWalletHomePageContent(),
+      );
+    }
+
     return BlocProvider(
-      create: (context) => WalletBloc()
-        ..add(const WalletRefreshAllRequested())
-        ..add(const WalletTransferPurposesLoadRequested()),
-      child: BlocBuilder<WalletBloc, WalletState>(
-        buildWhen: (prev, curr) => prev.languageCode != curr.languageCode,
-        builder: (context, state) {
-          return const _TrydosWalletHomePageContent();
-        },
-      ),
+      create: (context) => WalletBloc(),
+      child: const _TrydosWalletHomePageContent(),
     );
   }
 }
@@ -42,6 +49,17 @@ class _TrydosWalletHomePageContent extends StatefulWidget {
 class _TrydosWalletHomePageContentState
     extends State<_TrydosWalletHomePageContent> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final bloc = context.read<WalletBloc>();
+      bloc.add(const WalletRefreshAllRequested());
+      bloc.add(const WalletTransferPurposesLoadRequested());
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

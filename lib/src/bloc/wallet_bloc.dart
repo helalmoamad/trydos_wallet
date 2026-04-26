@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trydos_wallet/src/models/models.dart';
 import 'package:trydos_wallet/src/services/balances_api_service.dart';
@@ -8,6 +9,7 @@ import 'package:trydos_wallet/src/services/media_api_service.dart';
 import 'package:trydos_wallet/src/services/payment_requests_api_service.dart';
 import 'package:trydos_wallet/src/services/transfer_purposes_api_service.dart';
 import 'package:trydos_wallet/src/services/transactions_api_service.dart';
+import 'package:trydos_wallet/src/services/wallet_websocket_service.dart';
 //////////////////////////////////////////////////////////////////////////
 import '../config/trydos_wallet_config.dart';
 import 'wallet_event.dart';
@@ -23,6 +25,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     MediaApiService? mediaApi,
     TransferPurposesApiService? transferPurposesApi,
     PaymentRequestsApiService? paymentRequestsApi,
+    WalletWebSocketService? walletWebSocketService,
     String? initialLanguage,
     String? firstName,
     String? lastName,
@@ -43,6 +46,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
        _transferPurposesApi =
            transferPurposesApi ?? TransferPurposesApiService(),
        _paymentRequestsApi = paymentRequestsApi ?? PaymentRequestsApiService(),
+       _walletWebSocketService = walletWebSocketService,
        super(
          WalletState(
            languageCode: initialLanguage ?? TrydosWallet.config.languageCode,
@@ -82,6 +86,12 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletDepositRequestsRequested>(_onDepositRequestsRequested);
     on<WalletTransferPurposesLoadRequested>(_onTransferPurposesLoadRequested);
     on<WalletPaymentRequestCreated>(_onPaymentRequestCreated);
+    on<WalletRealtimeBalanceUpdated>(_onRealtimeBalanceUpdated);
+    on<WalletRealtimeTransactionReceived>(_onRealtimeTransactionReceived);
+
+    _walletWebSocketService ??= _createDefaultWalletWebSocketService();
+
+    _walletWebSocketService?.connect();
   }
 
   final CurrenciesApiService _currenciesApi;
@@ -92,11 +102,49 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   final MediaApiService _mediaApi;
   final TransferPurposesApiService _transferPurposesApi;
   final PaymentRequestsApiService _paymentRequestsApi;
+  WalletWebSocketService? _walletWebSocketService;
 
   int _currenciesPage = 0;
   int _banksPage = 0;
   int? _inFlightTransactionsPage;
   final int _pageSize = 10;
+
+  WalletWebSocketService? _createDefaultWalletWebSocketService() {
+    final token = TrydosWallet.config.token;
+    if (token == null || token.trim().isEmpty) {
+      return null;
+    }
+
+    return WalletWebSocketService(
+      baseUrl: TrydosWallet.config.baseUrl,
+      token: token,
+      allowBadCertificate: TrydosWallet.config.allowBadCertificate,
+      onLog: (message) {
+        debugPrint('[WalletWS] $message');
+      },
+      onTrackedEvent: (event, payload) {
+        debugPrint('[WalletWS] Event received: $event');
+        debugPrint('[WalletWS] Payload: $payload');
+        if (!isClosed && event == 'balance:updated' && payload is Map) {
+          add(WalletRealtimeBalanceUpdated(Map<String, dynamic>.from(payload)));
+        }
+        if (!isClosed && event.startsWith('ledger:') && payload is Map) {
+          add(
+            WalletRealtimeTransactionReceived(
+              event,
+              Map<String, dynamic>.from(payload),
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  @override
+  Future<void> close() {
+    _walletWebSocketService?.disconnect();
+    return super.close();
+  }
 
   void _onLanguageChanged(
     WalletLanguageChanged event,
@@ -297,6 +345,179 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     }
   }
 
+  void _onRealtimeBalanceUpdated(
+    WalletRealtimeBalanceUpdated event,
+    Emitter<WalletState> emit,
+  ) {
+    final payload = event.payload;
+
+    final rawSymbol = (payload['assetSymbol'] ?? '').toString().trim();
+    if (rawSymbol.isEmpty) return;
+
+    final rawType = (payload['assetType'] ?? 'CURRENCY')
+        .toString()
+        .trim()
+        .toUpperCase();
+    final normalizedSymbol = rawSymbol.toUpperCase();
+
+    String assetId = '';
+    for (final currency in state.currencies) {
+      if (currency.symbol.toUpperCase() == normalizedSymbol &&
+          currency.assetType.toUpperCase() == rawType) {
+        assetId = currency.id;
+        break;
+      }
+    }
+
+    String existingKey = '';
+    Balance? existing;
+    for (final entry in state.balances.entries) {
+      final balance = entry.value;
+      if (balance.assetSymbol.toUpperCase() == normalizedSymbol &&
+          balance.assetType.toUpperCase() == rawType) {
+        existingKey = entry.key;
+        existing = balance;
+        break;
+      }
+    }
+
+    if (assetId.isEmpty) {
+      assetId = existingKey;
+    }
+    if (assetId.isEmpty) {
+      return;
+    }
+
+    double toDouble(dynamic value) {
+      if (value is num) return value.toDouble();
+      return double.tryParse(value?.toString() ?? '') ?? 0;
+    }
+
+    final available = toDouble(payload['available']);
+    final locked = toDouble(payload['locked']);
+    final reserved = toDouble(payload['reserved']);
+    final timestamp = (payload['timestamp'] ?? '').toString();
+
+    final updatedBalance = Balance(
+      id: existing?.id ?? '',
+      accountId: existing?.accountId ?? '',
+      assetType: rawType,
+      assetId: assetId,
+      assetSymbol: rawSymbol,
+      available: available,
+      locked: locked,
+      reserved: reserved,
+      createdAt: existing?.createdAt ?? timestamp,
+      updatedAt: timestamp.isNotEmpty ? timestamp : (existing?.updatedAt ?? ''),
+      asset: existing?.asset,
+      accountNumber: existing?.accountNumber ?? '',
+      accountName: existing?.accountName ?? '',
+      accountSubtype: existing?.accountSubtype ?? 'MAIN',
+    );
+
+    final updatedBalances = <String, Balance>{...state.balances};
+    if (existingKey.isNotEmpty && existingKey != assetId) {
+      updatedBalances.remove(existingKey);
+    }
+    updatedBalances[assetId] = updatedBalance;
+
+    emit(
+      state.copyWith(
+        balances: updatedBalances,
+        balancesStatus: WalletStatus.success,
+      ),
+    );
+  }
+
+  void _onRealtimeTransactionReceived(
+    WalletRealtimeTransactionReceived event,
+    Emitter<WalletState> emit,
+  ) {
+    final transaction = _transactionFromRealtimePayload(event.payload);
+    if (transaction == null) return;
+
+    final incomingId = transaction.id.trim();
+    final existingIndex = state.transactions.indexWhere(
+      (tx) => tx.id.trim() == incomingId,
+    );
+    final eventName = event.eventName.trim().toLowerCase();
+
+    if (eventName == 'ledger:completed' ||
+        eventName == 'ledger:failed' ||
+        eventName == 'ledger:cancelled') {
+      if (existingIndex < 0) {
+        return;
+      }
+
+      final current = state.transactions[existingIndex];
+      final updated = Transaction(
+        id: current.id,
+        userId: current.userId,
+        accountId: current.accountId,
+        ledgerType: current.ledgerType,
+        status: transaction.status,
+        direction: current.direction,
+        assetType: current.assetType,
+        assetId: current.assetId,
+        description: current.description,
+        balanceId: current.balanceId,
+        assetSymbol: current.assetSymbol,
+        type: current.type,
+        amount: current.amount,
+        feeAmount: current.feeAmount,
+        taxAmount: current.taxAmount,
+        balanceBefore: current.balanceBefore,
+        balanceAfter: current.balanceAfter,
+        balanceField: current.balanceField,
+        title: current.title,
+        journalEntryId: current.journalEntryId,
+        senderUserId: current.senderUserId,
+        senderAccount: current.senderAccount,
+        receiverUserId: current.receiverUserId,
+        receiverAccount: current.receiverAccount,
+        referenceId: current.referenceId,
+        errorMessage: current.errorMessage,
+        note: current.note,
+        metadata: current.metadata,
+        createdAt: current.createdAt,
+        updatedAt: current.updatedAt,
+      );
+
+      final updatedList = List<Transaction>.from(state.transactions);
+      updatedList[existingIndex] = updated;
+
+      emit(
+        state.copyWith(
+          transactions: updatedList,
+          transactionsStatus: WalletStatus.success,
+        ),
+      );
+      return;
+    }
+
+    if (eventName != 'ledger:created') {
+      return;
+    }
+
+    if (existingIndex >= 0) {
+      return;
+    }
+
+    final activeFilter = state.transactionsAssetSymbolFilter?.trim();
+    if (activeFilter != null &&
+        activeFilter.isNotEmpty &&
+        transaction.assetSymbol.toUpperCase() != activeFilter.toUpperCase()) {
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        transactions: _upsertTransactionAtTop(state.transactions, transaction),
+        transactionsStatus: WalletStatus.success,
+      ),
+    );
+  }
+
   Future<void> _onTransactionsAssetFilterChanged(
     WalletTransactionsAssetFilterChanged event,
     Emitter<WalletState> emit,
@@ -451,6 +672,95 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     }
 
     return merged;
+  }
+
+  List<Transaction> _upsertTransactionAtTop(
+    List<Transaction> current,
+    Transaction incoming,
+  ) {
+    final incomingId = incoming.id.trim();
+    final merged = <Transaction>[incoming];
+
+    for (final tx in current) {
+      final currentId = tx.id.trim();
+      if (incomingId.isNotEmpty && currentId == incomingId) {
+        continue;
+      }
+      merged.add(tx);
+    }
+
+    return merged;
+  }
+
+  Transaction? _transactionFromRealtimePayload(Map<String, dynamic> payload) {
+    final id = (payload['id'] ?? '').toString().trim();
+    if (id.isEmpty) return null;
+
+    final normalized = <String, dynamic>{...payload};
+
+    normalized['title'] = _localizedTextFromDynamic(payload['title']);
+    normalized['description'] = _localizedTextFromDynamic(
+      payload['description'],
+    );
+
+    final metadataRaw = payload['metadata'];
+    if (metadataRaw is Map) {
+      final metadata = Map<String, dynamic>.from(metadataRaw);
+      metadata['purposeName'] = _localizedTextFromDynamic(
+        metadata['purposeName'],
+      );
+      normalized['metadata'] = metadata;
+    }
+
+    normalized['type'] = (payload['type'] ?? payload['ledgerType'] ?? '')
+        .toString();
+    normalized['ledgerType'] = (payload['ledgerType'] ?? payload['type'] ?? '')
+        .toString();
+    normalized['accountId'] = (payload['accountId'] ?? '').toString();
+    normalized['balanceId'] = (payload['balanceId'] ?? '').toString();
+    normalized['balanceField'] = (payload['balanceField'] ?? '').toString();
+    normalized['journalEntryId'] = (payload['journalEntryId'] ?? '').toString();
+    normalized['referenceId'] = (payload['referenceId'] ?? '').toString();
+    normalized['userId'] = (payload['userId'] ?? '').toString();
+    normalized['assetType'] = (payload['assetType'] ?? 'CURRENCY')
+        .toString()
+        .toUpperCase();
+    normalized['assetSymbol'] = (payload['assetSymbol'] ?? '').toString();
+    normalized['note'] = (payload['note'] ?? '').toString();
+    normalized['status'] = (payload['status'] ?? '').toString();
+    normalized['direction'] = (payload['direction'] ?? '').toString();
+    normalized['createdAt'] = (payload['createdAt'] ?? '').toString();
+    normalized['updatedAt'] =
+        (payload['updatedAt'] ?? payload['timestamp'] ?? '').toString();
+
+    return Transaction.fromJson(normalized);
+  }
+
+  String? _localizedTextFromDynamic(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is Map) {
+      final localized = Map<String, dynamic>.from(value);
+      final preferred = state.languageCode.trim().toLowerCase();
+      final preferredValue = localized[preferred]?.toString().trim();
+      if (preferredValue != null && preferredValue.isNotEmpty) {
+        return preferredValue;
+      }
+      for (final fallbackKey in const ['en', 'ar', 'ku']) {
+        final fallbackValue = localized[fallbackKey]?.toString().trim();
+        if (fallbackValue != null && fallbackValue.isNotEmpty) {
+          return fallbackValue;
+        }
+      }
+      for (final entry in localized.values) {
+        final text = entry?.toString().trim();
+        if (text != null && text.isNotEmpty) {
+          return text;
+        }
+      }
+      return null;
+    }
+    return value.toString();
   }
 
   /// Banks
