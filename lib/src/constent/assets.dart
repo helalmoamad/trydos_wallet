@@ -64,6 +64,19 @@ class TrydosWalletAssets {
   static const String transferSend = '$_svgPath/transfer_send.svg';
   static const String trydos = '$_svgPath/trydos.svg';
   static const String youtube = '$_svgPath/youtube.svg';
+  static const String backSide = '$_svgPath/back_side.svg';
+  static const String closePage = '$_svgPath/close_page.svg';
+  static const String frontSide = '$_svgPath/front_side.svg';
+  static const String identity = '$_svgPath/identity.svg';
+  static const String liveFace = '$_svgPath/live_face.svg';
+  static const String nVerify = '$_svgPath/n_verify.svg';
+  static const String privacy = '$_svgPath/privacy.svg';
+  static const String successVerification =
+      '$_svgPath/success_verification.svg';
+  static const String bottomLeft = '$_svgPath/bottom_left.svg';
+  static const String bottomRight = '$_svgPath/bottom_right.svg';
+  static const String topLeft = '$_svgPath/top_left.svg';
+  static const String topRight = '$_svgPath/top_right.svg';
 
   // يمكنك إضافة المزيد من الـ SVG هنا مستقبلاً:
   // static const String walletIcon = '$_svgPath/wallet.svg';

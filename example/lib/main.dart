@@ -92,7 +92,9 @@ class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp> {
                 locale: Locale(TrydosWallet.config.languageCode),
                 theme: AppTheme.light,
                 builder: (context, child) => ApiErrorListener(child: child!),
-                home: const TrydosWalletWelcomeScreen(),
+                home: const FirstPageKyc(),
+
+                //const TrydosWalletWelcomeScreen(),
               );
             },
           );

@@ -28,6 +28,7 @@ dependencies:
   pointycastle: ^3.9.1
   flutter_screenutil: ^5.9.0
   cupertino_back_gesture: ^0.1.0
+  dotted_border: ^2.1.0
 
 
 dev_dependencies:

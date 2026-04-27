@@ -31,3 +31,4 @@ export 'src/services/transfers_api_service.dart';
 export 'src/localization/localization.dart';
 export 'src/screens/widgets/api_error_listener.dart';
 export 'src/utils/ui_utils.dart';
+export 'src/screens/kyc/first_page_kyc.dart';
