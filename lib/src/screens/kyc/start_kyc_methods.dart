@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
-import 'package:trydos_wallet/src/bloc/wallet_event.dart';
 import 'package:trydos_wallet/src/bloc/wallet_state.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
@@ -22,152 +21,166 @@ class StartKycMethods extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    WalletBloc? existingBloc;
+    try {
+      existingBloc = BlocProvider.of<WalletBloc>(context);
+    } catch (_) {
+      existingBloc = null;
+    }
+
+    if (existingBloc != null) {
+      return BlocProvider.value(
+        value: existingBloc,
+        child: const _StartKycMethodsContent(),
+      );
+    }
+
+    return BlocProvider(
+      create: (context) => WalletBloc(),
+      child: const _StartKycMethodsContent(),
+    );
+  }
+}
+
+class _StartKycMethodsContent extends StatelessWidget {
+  const _StartKycMethodsContent();
+
+  @override
+  Widget build(BuildContext context) {
     final ValueNotifier<int> pageContent = ValueNotifier(0);
     PageController pageController = PageController();
-    return BlocProvider(
-      create: (context) {
-        var parentLang = 'en';
-        try {
-          parentLang = context.read<WalletBloc>().state.languageCode;
-        } catch (_) {
-          // Keep default language when launched without a parent WalletBloc.
-        }
-        return WalletBloc()..add(WalletLanguageChanged(parentLang));
-      },
-      child: BlocBuilder<WalletBloc, WalletState>(
-        builder: (context, state) {
-          final isRtl =
-              state.languageCode == 'ar' || state.languageCode == 'ku';
-          return Directionality(
-            textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
-            child: Scaffold(
-              backgroundColor: Color(0xffFFFFFF),
-              body: Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    height: 1.sh,
-                    width: 1.sw,
-                    // ignore: deprecated_member_use
-                    child: WillPopScope(
-                      child: PageView(
-                        physics: const NeverScrollableScrollPhysics(),
-                        onPageChanged: (value) {},
-                        controller: pageController,
-                        children: [
-                          IdentityVerification(
-                            onSuccessTap: () {
-                              pageController.nextPage(
-                                duration: const Duration(milliseconds: 500),
-                                curve: Curves.easeInOut,
-                              );
-                              pageContent.value = 1;
-                            },
-                          ),
-                          SuccessIdCard(
-                            onTapNextPage: () {
-                              pageController.nextPage(
-                                duration: const Duration(milliseconds: 500),
-                                curve: Curves.easeInOut,
-                              );
-                              pageContent.value = 2;
-                            },
-                          ),
-                          LiveFaceDetection(
-                            onTapNextPage: () {
-                              pageController.nextPage(
-                                duration: const Duration(milliseconds: 500),
-                                curve: Curves.easeInOut,
-                              );
-                              pageContent.value = 3;
-                            },
-                          ),
-                          IdMatchingWithPhoto(
-                            onTapNextPage: () {
-                              pageController.nextPage(
-                                duration: const Duration(milliseconds: 500),
-                                curve: Curves.easeInOut,
-                              );
-                              pageContent.value = 4;
-                            },
-                          ),
-                          VideoCallRequest(
-                            onTapNextPage: () {
-                              pageController.nextPage(
-                                duration: const Duration(milliseconds: 500),
-                                curve: Curves.easeInOut,
-                              );
-                              pageContent.value = 5;
-                            },
-                          ),
-                          StartVideo(
-                            onTapNextPage: () {
-                              pageController.nextPage(
-                                duration: const Duration(milliseconds: 500),
-                                curve: Curves.easeInOut,
-                              );
-                              pageContent.value = 6;
-                            },
-                          ),
-                          SuccessVerification(
-                            onDone: () {
-                              Navigator.of(context).pushAndRemoveUntil(
-                                MaterialPageRoute(
-                                  builder: (_) => const TrydosWalletHomePage(),
-                                ),
-                                (route) => false,
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      onWillPop: () async {
-                        return true;
-                      },
+    return BlocBuilder<WalletBloc, WalletState>(
+      builder: (context, state) {
+        final isRtl = state.languageCode == 'ar' || state.languageCode == 'ku';
+        return Directionality(
+          textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+          child: Scaffold(
+            backgroundColor: Color(0xffFFFFFF),
+            body: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  height: 1.sh,
+                  width: 1.sw,
+                  // ignore: deprecated_member_use
+                  child: WillPopScope(
+                    child: PageView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      onPageChanged: (value) {},
+                      controller: pageController,
+                      children: [
+                        IdentityVerification(
+                          onSuccessTap: () {
+                            pageController.nextPage(
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeInOut,
+                            );
+                            pageContent.value = 1;
+                          },
+                        ),
+                        SuccessIdCard(
+                          onTapNextPage: () {
+                            pageController.nextPage(
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeInOut,
+                            );
+                            pageContent.value = 2;
+                          },
+                        ),
+                        LiveFaceDetection(
+                          onTapNextPage: () {
+                            pageController.nextPage(
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeInOut,
+                            );
+                            pageContent.value = 3;
+                          },
+                        ),
+                        IdMatchingWithPhoto(
+                          onTapNextPage: () {
+                            pageController.nextPage(
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeInOut,
+                            );
+                            pageContent.value = 4;
+                          },
+                        ),
+                        VideoCallRequest(
+                          onTapNextPage: () {
+                            pageController.nextPage(
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeInOut,
+                            );
+                            pageContent.value = 5;
+                          },
+                        ),
+                        StartVideo(
+                          onTapNextPage: () {
+                            pageController.nextPage(
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeInOut,
+                            );
+                            pageContent.value = 6;
+                          },
+                        ),
+                        SuccessVerification(
+                          onDone: () {
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(
+                                builder: (_) => const TrydosWalletHomePage(),
+                              ),
+                              (route) => false,
+                            );
+                          },
+                        ),
+                      ],
                     ),
+                    onWillPop: () async {
+                      return true;
+                    },
                   ),
-                  PositionedDirectional(
-                    top: 10.w,
-                    end: 0,
-                    child: ValueListenableBuilder<int>(
-                      valueListenable: pageContent,
-                      builder: (context, index, _) {
-                        return index > 3
-                            ? SizedBox.shrink()
-                            : InkWell(
-                                highlightColor: Colors.transparent,
-                                splashColor: Colors.transparent,
-                                onTap: () async {
-                                  pageController.nextPage(
-                                    duration: const Duration(milliseconds: 500),
-                                    curve: Curves.easeInOut,
-                                  );
+                ),
+                PositionedDirectional(
+                  top: 10.w,
+                  end: 0,
+                  child: ValueListenableBuilder<int>(
+                    valueListenable: pageContent,
+                    builder: (context, index, _) {
+                      return index > 3
+                          ? SizedBox.shrink()
+                          : InkWell(
+                              highlightColor: Colors.transparent,
+                              splashColor: Colors.transparent,
+                              onTap: () async {
+                                pageController.nextPage(
+                                  duration: const Duration(milliseconds: 500),
+                                  curve: Curves.easeInOut,
+                                );
 
-                                  //////////////////////////
-                                },
-                                child: Padding(
-                                  padding: EdgeInsetsGeometry.only(
-                                    top: 60.h,
-                                    right: 30.w,
-                                    left: 30.w,
-                                    bottom: 60.h,
-                                  ),
-                                  child: SvgPicture.asset(
-                                    TrydosWalletAssets.closePage,
-                                    package: TrydosWalletStyles.packageName,
-                                    height: 15.h,
-                                  ),
+                                //////////////////////////
+                              },
+                              child: Padding(
+                                padding: EdgeInsetsGeometry.only(
+                                  top: 60.h,
+                                  right: 30.w,
+                                  left: 30.w,
+                                  bottom: 60.h,
                                 ),
-                              );
-                      },
-                    ),
+                                child: SvgPicture.asset(
+                                  TrydosWalletAssets.closePage,
+                                  package: TrydosWalletStyles.packageName,
+                                  height: 15.h,
+                                ),
+                              ),
+                            );
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }

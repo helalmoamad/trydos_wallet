@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
-import 'package:trydos_wallet/src/screens/kyc/first_page_kyc.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
 import '../widgets/widgets.dart';

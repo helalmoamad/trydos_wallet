@@ -18,6 +18,32 @@ class FirstPageKyc extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    WalletBloc? existingBloc;
+    try {
+      existingBloc = BlocProvider.of<WalletBloc>(context);
+    } catch (_) {
+      existingBloc = null;
+    }
+
+    if (existingBloc != null) {
+      return BlocProvider.value(
+        value: existingBloc,
+        child: const _FirstPageKycContent(),
+      );
+    }
+
+    return BlocProvider(
+      create: (context) => WalletBloc(),
+      child: const _FirstPageKycContent(),
+    );
+  }
+}
+
+class _FirstPageKycContent extends StatelessWidget {
+  const _FirstPageKycContent();
+
+  @override
+  Widget build(BuildContext context) {
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
         final lang = state.languageCode;
@@ -125,13 +151,9 @@ class FirstPageKyc extends StatelessWidget {
                     highlightColor: Colors.transparent,
                     splashColor: Colors.transparent,
                     onTap: () {
-                      final walletBloc = context.read<WalletBloc>();
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => BlocProvider.value(
-                            value: walletBloc,
-                            child: const StartKycMethods(),
-                          ),
+                          builder: (_) => const StartKycMethods(),
                         ),
                       );
                     },
