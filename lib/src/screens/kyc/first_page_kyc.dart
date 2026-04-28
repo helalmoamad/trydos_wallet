@@ -125,9 +125,13 @@ class FirstPageKyc extends StatelessWidget {
                     highlightColor: Colors.transparent,
                     splashColor: Colors.transparent,
                     onTap: () {
+                      final walletBloc = context.read<WalletBloc>();
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) => const StartKycMethods(),
+                          builder: (_) => BlocProvider.value(
+                            value: walletBloc,
+                            child: const StartKycMethods(),
+                          ),
                         ),
                       );
                     },

@@ -26,7 +26,12 @@ class StartKycMethods extends StatelessWidget {
     PageController pageController = PageController();
     return BlocProvider(
       create: (context) {
-        final parentLang = context.read<WalletBloc>().state.languageCode;
+        var parentLang = 'en';
+        try {
+          parentLang = context.read<WalletBloc>().state.languageCode;
+        } catch (_) {
+          // Keep default language when launched without a parent WalletBloc.
+        }
         return WalletBloc()..add(WalletLanguageChanged(parentLang));
       },
       child: BlocBuilder<WalletBloc, WalletState>(
