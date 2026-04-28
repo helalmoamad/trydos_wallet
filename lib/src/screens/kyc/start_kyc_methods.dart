@@ -125,12 +125,24 @@ class _StartKycMethodsContent extends StatelessWidget {
                         ),
                         SuccessVerification(
                           onDone: () {
-                            Navigator.of(context).pushAndRemoveUntil(
-                              MaterialPageRoute(
-                                builder: (_) => const TrydosWalletHomePage(),
-                              ),
-                              (route) => false,
-                            );
+                            final navigator = Navigator.of(context);
+                            try {
+                              if (navigator.canPop()) {
+                                navigator.popUntil((route) => route.isFirst);
+                              } else {
+                                navigator.pushReplacement(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const TrydosWalletHomePage(),
+                                  ),
+                                );
+                              }
+                            } catch (_) {
+                              Navigator.of(
+                                context,
+                                rootNavigator: true,
+                              ).popUntil((route) => route.isFirst);
+                            }
                           },
                         ),
                       ],
