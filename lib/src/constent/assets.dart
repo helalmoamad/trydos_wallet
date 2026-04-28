@@ -81,3 +81,15 @@ class TrydosWalletAssets {
   // يمكنك إضافة المزيد من الـ SVG هنا مستقبلاً:
   // static const String walletIcon = '$_svgPath/wallet.svg';
 }
+
+class TrydosWalletPngAssets {
+  /// مسار مجلد الـ PNG الأساسي
+  static const String _pngPath = 'assets/png';
+
+  static const String backImage = '$_pngPath/back_image.png';
+  static const String frontImage = '$_pngPath/front_image.png';
+  static const String personImage = '$_pngPath/person_image.png';
+
+  /// يمكنك إضافة المزيد من الـ PNG هنا مستقبلاً:
+  // static const String walletIcon = '$_pngPath/wallet.png';
+}

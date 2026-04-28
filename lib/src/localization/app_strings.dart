@@ -241,6 +241,45 @@ class AppStrings {
       'send_label': 'Send',
       'receive_label': 'Receive',
       'chart': 'Chart',
+
+      // KYC
+      'kyc_identity_verification': 'Identity Verification !',
+      'kyc_protect_account': 'Protect Your Account & Get Full Access',
+      'kyc_verify_description':
+          'We Need To Verify Your Identity Once To Protect Your Account From Fraud And Comply With Security Regulations One-Time Process To Confirm That You. It Helps Keep Your Account Secure, Prevents Fraud, And Ensures Safe Transactions Just Like Showing Your ID When Opening A Bank Account.',
+      'kyc_privacy_safe': 'Your Privacy Is Completely Safe',
+      'kyc_start_verification': 'Start Verification',
+      'kyc_later_limited': 'Later, Use The Limited Version',
+      'kyc_live_detection_id': 'Live Detection Your ID',
+      'kyc_start_live_detection': 'Start Live Detection Your ID',
+      'kyc_id_matching_not_correct': 'ID Matching With Your Photo Not Correct',
+      'kyc_id_discrepancy':
+          'We Noticed A Discrepancy In The Image And There Is Also Doubt About The Personal Identity.',
+      'kyc_try_again_correction': 'Try Again With The Correction',
+      'kyc_rematch': 'Rematch',
+      'kyc_live_face_detection': 'Live Face Detection',
+      'kyc_face_centered':
+          'Please Keep Your Face Centered On The Screen And Facing Forward',
+      'kyc_live_id_done': 'Live ID Detection Done',
+      'kyc_information_detected': 'Information Detected',
+      'kyc_id_type': 'Id Type',
+      'kyc_country': 'Country',
+      'kyc_name': 'Name',
+      'kyc_national_number': 'National Number',
+      'kyc_birthday': 'Birthday',
+      'kyc_correct_next': 'Correct, Next',
+      'kyc_incorrect_try_again': 'Incorrect, Try Again',
+      'kyc_success_verification': 'Success Verification !',
+      'kyc_full_access': 'You Have Enjoy With Our Full Access',
+      'kyc_video_call_from_our_side': 'Video Call From Our Side',
+      'kyc_ai_call_description':
+          'A 15-Second AI Call, Fully Encrypted To Ensure Your Account Is Secure',
+      'kyc_start_video_call': 'Start Video Call',
+      'kyc_later': 'Later',
+      'kyc_end_video_call': 'End Video Call',
+      'kyc_front_side': 'Front Side ',
+      'kyc_back_side': 'Back Side ',
+      'kyc_verify_identity_btn': 'Verify Identity',
     },
     'ar': {
       // Home Tab
@@ -487,6 +526,44 @@ class AppStrings {
       'refund_type': 'استرداد',
       'order_type': 'طلب',
       'invoice_type': 'فاتورة',
+
+      // KYC
+      'kyc_identity_verification': 'التحقق من الهوية !',
+      'kyc_protect_account': 'احمِ حسابك واحصل على الوصول الكامل',
+      'kyc_verify_description':
+          'نحتاج إلى التحقق من هويتك مرة واحدة لحماية حسابك من الاحتيال والامتثال لأنظمة الأمان، وهي عملية لمرة واحدة لتأكيد هويتك. تساعد على إبقاء حسابك آمناً ومنع الاحتيال وضمان المعاملات الآمنة تماماً مثل تقديم هويتك عند فتح حساب مصرفي.',
+      'kyc_privacy_safe': 'خصوصيتك آمنة تماماً',
+      'kyc_start_verification': 'بدء التحقق',
+      'kyc_later_limited': 'لاحقاً، استخدم النسخة المحدودة',
+      'kyc_live_detection_id': 'الكشف المباشر عن هويتك',
+      'kyc_start_live_detection': 'بدء الكشف المباشر عن هويتك',
+      'kyc_id_matching_not_correct': 'الهوية لا تتطابق مع صورتك',
+      'kyc_id_discrepancy':
+          'لاحظنا وجود تباين في الصورة وهناك أيضاً شك في الهوية الشخصية.',
+      'kyc_try_again_correction': 'حاول مرة أخرى مع التصحيح',
+      'kyc_rematch': 'إعادة المطابقة',
+      'kyc_live_face_detection': 'الكشف المباشر عن الوجه',
+      'kyc_face_centered': 'يرجى إبقاء وجهك في وسط الشاشة والنظر للأمام',
+      'kyc_live_id_done': 'اكتمل الكشف المباشر عن الهوية',
+      'kyc_information_detected': 'المعلومات المكتشفة',
+      'kyc_id_type': 'نوع الهوية',
+      'kyc_country': 'البلد',
+      'kyc_name': 'الاسم',
+      'kyc_national_number': 'الرقم الوطني',
+      'kyc_birthday': 'تاريخ الميلاد',
+      'kyc_correct_next': 'صحيح، التالي',
+      'kyc_incorrect_try_again': 'غير صحيح، حاول مرة أخرى',
+      'kyc_success_verification': 'تم التحقق بنجاح !',
+      'kyc_full_access': 'يمكنك الآن الاستمتاع بالوصول الكامل',
+      'kyc_video_call_from_our_side': 'مكالمة فيديو من جانبنا',
+      'kyc_ai_call_description':
+          'مكالمة ذكاء اصطناعي لمدة 15 ثانية، مشفرة بالكامل لضمان أمان حسابك',
+      'kyc_start_video_call': 'بدء مكالمة الفيديو',
+      'kyc_later': 'لاحقاً',
+      'kyc_end_video_call': 'إنهاء مكالمة الفيديو',
+      'kyc_front_side': 'الوجه الأمامي ',
+      'kyc_back_side': 'الوجه الخلفي ',
+      'kyc_verify_identity_btn': 'التحقق من الهوية',
     },
     'ku': {
       // Home Tab
@@ -735,6 +812,46 @@ class AppStrings {
       'refund_type': 'گێڕانەوە',
       'order_type': 'داواکاری',
       'invoice_type': 'وەسڵ',
+
+      // KYC
+      'kyc_identity_verification': 'پشتڕاستکردنەوەی ناسنامە !',
+      'kyc_protect_account': 'هەژمارەکەت بپارێزە و دەستگەیشتنی تەواو بەدەبهێنە',
+      'kyc_verify_description':
+          'پێویستمانە ناسنامەت یەک جار پشتڕاست بکرێتەوە بۆ پاراستنی هەژمارەکەت لە خەڵەتکاری و پابەندبوون بە ڕێسا ئەمنیەتەکان، پرۆسەیەکی یەک جارانە بۆ دڵنیاکردنەوە لە ناسنامەکەت. یارمەتی دەدات هەژمارەکەت ئیمن بمێنێتەوە، خەڵەتکاری ڕابگرێت، و مامەڵە ئیمنەکان دڵنیا بکات.',
+      'kyc_privacy_safe': 'نهێنیەکەت بە تەواوی ئیمنە',
+      'kyc_start_verification': 'دەستپێکردنی پشتڕاستکردنەوە',
+      'kyc_later_limited': 'دواتر، وەشانی سنوردارەکە بەکاربهێنە',
+      'kyc_live_detection_id': 'کەشفی ڕاستەوخۆی ناسنامەکەت',
+      'kyc_start_live_detection': 'دەستپێکردنی کەشفی ڕاستەوخۆی ناسنامەکەت',
+      'kyc_id_matching_not_correct': 'ناسنامەکە لەگەڵ وێنەکەت دەگونجێت نییە',
+      'kyc_id_discrepancy':
+          'جیاوازییەکمان تێبینی کرد لە وێنەکەدا و هەروەها گومانیش هەیە لەسەر ناسنامەی کەسیەکە.',
+      'kyc_try_again_correction': 'دووبارە هەوڵ بدە لەگەڵ سەرستکردنەوە',
+      'kyc_rematch': 'دووبارە تەقنەکردن',
+      'kyc_live_face_detection': 'کەشفی ڕووخساری ڕاستەوخۆ',
+      'kyc_face_centered':
+          'تکایە ڕووخسارەکەت لە ناوەندی ئەکرانەکەدا بهێڵەوە و ڕووبەرووی پێشەوە بێت',
+      'kyc_live_id_done': 'کەشفی ڕاستەوخۆی ناسنامە تەواو بوو',
+      'kyc_information_detected': 'زانیارییەکانی کەشفکراو',
+      'kyc_id_type': 'جۆری ناسنامە',
+      'kyc_country': 'وڵات',
+      'kyc_name': 'ناو',
+      'kyc_national_number': 'ژمارەی نیشتیمانی',
+      'kyc_birthday': 'بەرواری لەدایکبوون',
+      'kyc_correct_next': 'دروستە، دواتر',
+      'kyc_incorrect_try_again': 'هەڵەیە، دووبارە هەوڵ بدە',
+      'kyc_success_verification': 'پشتڕاستکردنەوە سەرکەوتوو بوو !',
+      'kyc_full_access':
+          'ئێستا دەتوانیت تەواو سود لە دەستگەیشتنی تەواو وەربگریت',
+      'kyc_video_call_from_our_side': 'ویدیۆ کۆلێج لە لایمانەوە',
+      'kyc_ai_call_description':
+          'کۆلێجی زیرەکی دەستکرد بۆ ١٥ چرکە، بە تەواوی نهێنی بۆ دڵنیاکردنەوە لە ئیمنی هەژمارەکەت',
+      'kyc_start_video_call': 'دەستپێکردنی ویدیۆ کۆلێج',
+      'kyc_later': 'دواتر',
+      'kyc_end_video_call': 'کۆتایی ویدیۆ کۆلێج',
+      'kyc_front_side': 'لای پێشەوە ',
+      'kyc_back_side': 'لای دواوە ',
+      'kyc_verify_identity_btn': 'پشتڕاستکردنەوەی ناسنامە',
     },
     'tr': {
       // Home Tab
@@ -982,6 +1099,45 @@ class AppStrings {
       'refund_type': 'İade',
       'order_type': 'Sipariş',
       'invoice_type': 'Fatura',
+
+      // KYC
+      'kyc_identity_verification': 'Kimlik Doğrulama !',
+      'kyc_protect_account': 'Hesabınızı Koruyun ve Tam Erişim Kazanın',
+      'kyc_verify_description':
+          'Hesabınızı dolandırıcılıktan korumak ve güvenlik düzenlemelerine uymak için kimliğinizi yalnızca bir kez doğrulamamız gerekiyor. Bu, kimliğinizi onaylamak için tek seferlik bir işlemdir. Hesabınızın güvende kalmasına, dolandırıcılığın önlenmesine ve güvenli işlemler yapılmasına yardımcı olur.',
+      'kyc_privacy_safe': 'Gizliliğiniz Tamamen Güvende',
+      'kyc_start_verification': 'Doğrulamayı Başlat',
+      'kyc_later_limited': 'Daha Sonra, Sınırlı Sürümü Kullan',
+      'kyc_live_detection_id': 'Kimliğinizi Canlı Tespit Et',
+      'kyc_start_live_detection': 'Kimliğinizi Canlı Tespiti Başlat',
+      'kyc_id_matching_not_correct': 'Kimlik Fotoğrafınızla Eşleşmiyor',
+      'kyc_id_discrepancy':
+          'Görüntüde Bir Tutarsızlık Fark Ettik Ve Kişisel Kimlik Konusunda Da Şüphe Var.',
+      'kyc_try_again_correction': 'Düzeltmeyle Tekrar Deneyin',
+      'kyc_rematch': 'Yeniden Eşleştir',
+      'kyc_live_face_detection': 'Canlı Yüz Tespiti',
+      'kyc_face_centered':
+          'Lütfen Yüzünüzü Ekranın Ortasında Tutun ve Öne Bakın',
+      'kyc_live_id_done': 'Canlı Kimlik Tespiti Tamamlandı',
+      'kyc_information_detected': 'Tespit Edilen Bilgiler',
+      'kyc_id_type': 'Kimlik Türü',
+      'kyc_country': 'Ülke',
+      'kyc_name': 'Ad',
+      'kyc_national_number': 'Ulusal Numara',
+      'kyc_birthday': 'Doğum Tarihi',
+      'kyc_correct_next': 'Doğru, İleri',
+      'kyc_incorrect_try_again': 'Yanlış, Tekrar Dene',
+      'kyc_success_verification': 'Doğrulama Başarılı !',
+      'kyc_full_access': 'Tam Erişimin Keyfini Çıkarabilirsiniz',
+      'kyc_video_call_from_our_side': 'Bizim Tarafımızdan Video Görüşme',
+      'kyc_ai_call_description':
+          '15 Saniyelik Yapay Zeka Görüşmesi, Hesabınızın Güvenliğini Sağlamak İçin Tamamen Şifrelenmiş',
+      'kyc_start_video_call': 'Video Görüşmeyi Başlat',
+      'kyc_later': 'Daha Sonra',
+      'kyc_end_video_call': 'Video Görüşmeyi Bitir',
+      'kyc_front_side': 'Ön Yüz ',
+      'kyc_back_side': 'Arka Yüz ',
+      'kyc_verify_identity_btn': 'Kimliği Doğrula',
     },
   };
 

@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
+import 'package:trydos_wallet/src/screens/kyc/first_page_kyc.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
 import '../widgets/widgets.dart';
@@ -170,6 +171,8 @@ class SettingsTab extends StatelessWidget {
                   SizedBox(height: 10.h),
                   _LanguageCard(state: state),
                   SizedBox(height: 24.h),
+                  _KycButton(languageCode: state.languageCode),
+                  SizedBox(height: 12.h),
                   _LogoutButton(languageCode: state.languageCode),
                 ],
               ),
@@ -524,6 +527,44 @@ class _LanguageSelector extends StatelessWidget {
               size: 20.h,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _KycButton extends StatelessWidget {
+  const _KycButton({required this.languageCode});
+
+  final String languageCode;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const FirstPageKyc()));
+        },
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: const Color(0xFF2E6AE8),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        icon: const Icon(Icons.verified_user_outlined, size: 20),
+        label: Text(
+          AppStrings.get(languageCode, 'kyc_verify_identity_btn'),
+          style: context.textTheme.bodyMedium?.mq.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 14.sp,
+          ),
         ),
       ),
     );
