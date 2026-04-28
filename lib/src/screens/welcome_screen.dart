@@ -7,7 +7,7 @@ import 'package:trydos_wallet/src/screens/widgets/splash_widget.dart';
 
 /// Wallet splash screen. Preloads home page data during 5 seconds.
 class TrydosWalletWelcomeScreen extends StatefulWidget {
-  //////1.0.8
+  //////1.0.9
   const TrydosWalletWelcomeScreen({super.key});
 
   @override
@@ -36,14 +36,13 @@ class _TrydosWalletWelcomeScreenState extends State<TrydosWalletWelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (TrydosWallet.config.skipSplash) {
-      return const TrydosWalletHomePage();
-    }
-
     return ScreenUtilInit(
       designSize: kDesignSize,
       minTextAdapt: true,
       builder: (context, child) {
+        if (TrydosWallet.config.skipSplash) {
+          return const TrydosWalletHomePage();
+        }
         return Stack(
           children: [
             const TrydosWalletHomePage(),
