@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -20,12 +22,20 @@ class SuccessVerification extends StatefulWidget {
 }
 
 class _SuccessVerificationState extends State<SuccessVerification> {
+  Timer? _doneTimer;
+
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), () {
+    _doneTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) widget.onDone?.call();
     });
+  }
+
+  @override
+  void dispose() {
+    _doneTimer?.cancel();
+    super.dispose();
   }
 
   @override

@@ -42,13 +42,48 @@ class StartKycMethods extends StatelessWidget {
   }
 }
 
-class _StartKycMethodsContent extends StatelessWidget {
+class _StartKycMethodsContent extends StatefulWidget {
   const _StartKycMethodsContent();
 
   @override
+  State<_StartKycMethodsContent> createState() =>
+      _StartKycMethodsContentState();
+}
+
+class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
+  late final ValueNotifier<int> _pageContent;
+  late final PageController _pageController;
+  bool _isTransitioning = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageContent = ValueNotifier(0);
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _pageContent.dispose();
+    super.dispose();
+  }
+
+  Future<void> _goToNextPage() async {
+    if (_isTransitioning || !_pageController.hasClients || !mounted) return;
+    _isTransitioning = true;
+    try {
+      await _pageController.nextPage(
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    } finally {
+      _isTransitioning = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final ValueNotifier<int> pageContent = ValueNotifier(0);
-    PageController pageController = PageController();
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
         final isRtl = state.languageCode == 'ar' || state.languageCode == 'ku';
@@ -66,71 +101,28 @@ class _StartKycMethodsContent extends StatelessWidget {
                   child: WillPopScope(
                     child: PageView(
                       physics: const NeverScrollableScrollPhysics(),
-                      onPageChanged: (value) {},
-                      controller: pageController,
+                      onPageChanged: (value) {
+                        _pageContent.value = value;
+                      },
+                      controller: _pageController,
                       children: [
-                        IdentityVerification(
-                          onSuccessTap: () {
-                            pageController.nextPage(
-                              duration: const Duration(milliseconds: 500),
-                              curve: Curves.easeInOut,
-                            );
-                            pageContent.value = 1;
-                          },
-                        ),
-                        SuccessIdCard(
-                          onTapNextPage: () {
-                            pageController.nextPage(
-                              duration: const Duration(milliseconds: 500),
-                              curve: Curves.easeInOut,
-                            );
-                            pageContent.value = 2;
-                          },
-                        ),
-                        LiveFaceDetection(
-                          onTapNextPage: () {
-                            pageController.nextPage(
-                              duration: const Duration(milliseconds: 500),
-                              curve: Curves.easeInOut,
-                            );
-                            pageContent.value = 3;
-                          },
-                        ),
-                        IdMatchingWithPhoto(
-                          onTapNextPage: () {
-                            pageController.nextPage(
-                              duration: const Duration(milliseconds: 500),
-                              curve: Curves.easeInOut,
-                            );
-                            pageContent.value = 4;
-                          },
-                        ),
-                        VideoCallRequest(
-                          onTapNextPage: () {
-                            pageController.nextPage(
-                              duration: const Duration(milliseconds: 500),
-                              curve: Curves.easeInOut,
-                            );
-                            pageContent.value = 5;
-                          },
-                        ),
-                        StartVideo(
-                          onTapNextPage: () {
-                            pageController.nextPage(
-                              duration: const Duration(milliseconds: 500),
-                              curve: Curves.easeInOut,
-                            );
-                            pageContent.value = 6;
-                          },
-                        ),
+                        IdentityVerification(onSuccessTap: _goToNextPage),
+                        SuccessIdCard(onTapNextPage: _goToNextPage),
+                        LiveFaceDetection(onTapNextPage: _goToNextPage),
+                        IdMatchingWithPhoto(onTapNextPage: _goToNextPage),
+                        VideoCallRequest(onTapNextPage: _goToNextPage),
+                        StartVideo(onTapNextPage: _goToNextPage),
                         SuccessVerification(
                           onDone: () {
-                            final navigator = Navigator.of(context);
+                            final navigator = Navigator.of(
+                              context,
+                              rootNavigator: true,
+                            );
                             try {
                               if (navigator.canPop()) {
                                 navigator.popUntil((route) => route.isFirst);
                               } else {
-                                navigator.pushReplacement(
+                                navigator.push(
                                   MaterialPageRoute(
                                     builder: (_) =>
                                         const TrydosWalletHomePage(),
@@ -156,7 +148,7 @@ class _StartKycMethodsContent extends StatelessWidget {
                   top: 10.w,
                   end: 0,
                   child: ValueListenableBuilder<int>(
-                    valueListenable: pageContent,
+                    valueListenable: _pageContent,
                     builder: (context, index, _) {
                       return index > 3
                           ? SizedBox.shrink()
@@ -164,11 +156,7 @@ class _StartKycMethodsContent extends StatelessWidget {
                               highlightColor: Colors.transparent,
                               splashColor: Colors.transparent,
                               onTap: () async {
-                                pageController.nextPage(
-                                  duration: const Duration(milliseconds: 500),
-                                  curve: Curves.easeInOut,
-                                );
-
+                                await _goToNextPage();
                                 //////////////////////////
                               },
                               child: Padding(
