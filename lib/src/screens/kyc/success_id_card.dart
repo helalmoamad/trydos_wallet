@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,7 +16,18 @@ import 'package:trydos_wallet/src/localization/app_strings.dart';
 /// Digital wallet home page.
 class SuccessIdCard extends StatelessWidget {
   final Function()? onTapNextPage;
-  const SuccessIdCard({super.key, this.onTapNextPage});
+  final Function()? onTapRetry;
+  final bool isFinalAttempt;
+  final String? frontImagePath;
+  final String? backImagePath;
+  const SuccessIdCard({
+    super.key,
+    this.onTapNextPage,
+    this.onTapRetry,
+    this.isFinalAttempt = false,
+    this.frontImagePath,
+    this.backImagePath,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -77,13 +90,20 @@ class SuccessIdCard extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(15.r),
-                      child: Image.asset(
-                        TrydosWalletPngAssets.frontImage,
-                        package: TrydosWalletStyles.packageName,
-                        height: 109.h,
-                        width: 192.w,
-                        fit: BoxFit.fitWidth,
-                      ),
+                      child: frontImagePath != null
+                          ? Image.file(
+                              File(frontImagePath!),
+                              height: 109.h,
+                              width: 192.w,
+                              fit: BoxFit.cover,
+                            )
+                          : Image.asset(
+                              TrydosWalletPngAssets.frontImage,
+                              package: TrydosWalletStyles.packageName,
+                              height: 109.h,
+                              width: 192.w,
+                              fit: BoxFit.fitWidth,
+                            ),
                     ),
                   ),
                   SizedBox(width: 5.w),
@@ -96,13 +116,20 @@ class SuccessIdCard extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(15.r),
-                      child: Image.asset(
-                        TrydosWalletPngAssets.backImage,
-                        package: TrydosWalletStyles.packageName,
-                        height: 109.h,
-                        fit: BoxFit.fitWidth,
-                        width: 192.w,
-                      ),
+                      child: backImagePath != null
+                          ? Image.file(
+                              File(backImagePath!),
+                              height: 109.h,
+                              width: 192.w,
+                              fit: BoxFit.cover,
+                            )
+                          : Image.asset(
+                              TrydosWalletPngAssets.backImage,
+                              package: TrydosWalletStyles.packageName,
+                              height: 109.h,
+                              fit: BoxFit.fitWidth,
+                              width: 192.w,
+                            ),
                     ),
                   ),
                 ],
@@ -196,9 +223,7 @@ class SuccessIdCard extends StatelessWidget {
               child: InkWell(
                 highlightColor: Colors.transparent,
                 splashColor: Colors.transparent,
-                onTap: () {
-                  onTapNextPage?.call();
-                },
+                onTap: isFinalAttempt ? null : () => onTapNextPage?.call(),
                 child: DottedBorder(
                   padding: EdgeInsets.zero,
                   borderType: BorderType.RRect,
@@ -206,16 +231,27 @@ class SuccessIdCard extends StatelessWidget {
                   strokeWidth: 0.5,
                   dashPattern: const [3, 3],
                   radius: Radius.circular(20.r),
-                  color: const Color(0xff5D5C5D),
+                  color: isFinalAttempt
+                      ? const Color(0xffFFFFFF)
+                      : const Color(0xff5D5C5D),
                   child: Container(
                     width: 1.sw,
                     height: 60.h,
+
                     decoration: BoxDecoration(
+                      color: isFinalAttempt
+                          ? const Color(0xffFCFCFC)
+                          : const Color(0xffFFFFFF),
                       borderRadius: BorderRadius.circular(20.r),
                     ),
                     child: Center(
                       child: Text(
-                        AppStrings.get(lang, 'kyc_correct_next'),
+                        AppStrings.get(
+                          lang,
+                          isFinalAttempt
+                              ? 'kyc_contact_you_soon'
+                              : 'kyc_correct_next',
+                        ),
                         style: context.textTheme.displayMedium?.mq.copyWith(
                           color: const Color(0xff1D1D1D),
                           letterSpacing: 0.16,
@@ -233,13 +269,15 @@ class SuccessIdCard extends StatelessWidget {
               child: InkWell(
                 highlightColor: Colors.transparent,
                 splashColor: Colors.transparent,
-                onTap: () async {},
+                onTap: isFinalAttempt ? null : () => onTapRetry?.call(),
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 10.h),
                   child: Text(
                     AppStrings.get(lang, 'kyc_incorrect_try_again'),
                     style: context.textTheme.titleLarge?.rq.copyWith(
-                      color: const Color(0xff4D84FF),
+                      color: isFinalAttempt
+                          ? const Color(0xffBDBDBD)
+                          : const Color(0xff4D84FF),
                       letterSpacing: 0.14,
                       height: 1.43,
                       fontSize: 14.sp,

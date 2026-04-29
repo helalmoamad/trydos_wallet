@@ -51,6 +51,11 @@ abstract class ApiPaths {
   /// Body: file (required), type (required), metadata (optional)
   static const String mediaUploadDirect = '/media/upload/direct';
 
+  // ─── KYC ───
+  /// Analyze front/back ID image (POST).
+  /// Body: imageData (data URL), side (front|back), sessionHint?
+  static const String kycAnalyzeId = '/api/kyc/analyze-id';
+
   // ─── Payment Requests ───
   /// Create payment request (POST).
   /// Body: accountNumber, assetType, assetSymbol, amount, purposeId, reference, note?, expiryMinutes?, isPermanent, idempotencyKey

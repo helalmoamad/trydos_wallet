@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -13,7 +14,14 @@ import 'package:trydos_wallet/src/localization/app_strings.dart';
 /// Digital wallet home page.
 class VideoCallRequest extends StatelessWidget {
   final Function()? onTapNextPage;
-  const VideoCallRequest({super.key, this.onTapNextPage});
+  final String? selfiePath;
+  final String? backIdPath;
+  const VideoCallRequest({
+    super.key,
+    this.onTapNextPage,
+    this.selfiePath,
+    this.backIdPath,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +66,7 @@ class VideoCallRequest extends StatelessWidget {
                     Opacity(
                       opacity: 0.3,
                       child: Container(
+                        width: 1.sw,
                         decoration: BoxDecoration(
                           border: Border.all(
                             color: const Color(0xff34D317),
@@ -67,12 +76,19 @@ class VideoCallRequest extends StatelessWidget {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(30.r),
-                          child: Image.asset(
-                            TrydosWalletPngAssets.personImage,
-                            package: TrydosWalletStyles.packageName,
-                            height: 400.h,
-                            fit: BoxFit.fitWidth,
-                          ),
+                          child: selfiePath != null
+                              ? Image.file(
+                                  File(selfiePath!),
+                                  height: 400.h,
+                                  fit: BoxFit.fitWidth,
+                                )
+                              : Image.asset(
+                                  TrydosWalletPngAssets.personImage,
+                                  package: TrydosWalletStyles.packageName,
+                                  height: 400.h,
+                                  width: 1.sw,
+                                  fit: BoxFit.fitWidth,
+                                ),
                         ),
                       ),
                     ),
@@ -94,13 +110,20 @@ class VideoCallRequest extends StatelessWidget {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(30.r),
-                            child: Image.asset(
-                              TrydosWalletPngAssets.backImage,
-                              package: TrydosWalletStyles.packageName,
-                              fit: BoxFit.fitWidth,
-                              height: 157.h,
-                              width: 280.w,
-                            ),
+                            child: backIdPath != null
+                                ? Image.file(
+                                    File(backIdPath!),
+                                    fit: BoxFit.fitWidth,
+                                    height: 157.h,
+                                    width: 280.w,
+                                  )
+                                : Image.asset(
+                                    TrydosWalletPngAssets.backImage,
+                                    package: TrydosWalletStyles.packageName,
+                                    fit: BoxFit.fitWidth,
+                                    height: 157.h,
+                                    width: 280.w,
+                                  ),
                           ),
                         ),
                       ),
@@ -108,8 +131,8 @@ class VideoCallRequest extends StatelessWidget {
                     Positioned(
                       child: Container(
                         height: 340.h,
-                        width: 280.w,
-                        margin: EdgeInsets.symmetric(horizontal: 40.w),
+                        width: 1.sw,
+                        margin: EdgeInsets.symmetric(horizontal: 30.w),
 
                         decoration: BoxDecoration(
                           color: const Color(0xff000000),

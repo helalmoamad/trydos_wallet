@@ -119,6 +119,23 @@ class WalletImageResetRequested extends WalletEvent {
   const WalletImageResetRequested();
 }
 
+/// KYC ID Analyze (front/back)
+class WalletKycAnalyzeIdRequested extends WalletEvent {
+  const WalletKycAnalyzeIdRequested({
+    required this.imagePath,
+    required this.side,
+    this.sessionHint,
+  });
+
+  final String imagePath;
+  final String side; // front | back
+  final String? sessionHint;
+}
+
+class WalletKycAnalyzeIdResetRequested extends WalletEvent {
+  const WalletKycAnalyzeIdResetRequested();
+}
+
 class BalanceCardIsSelected extends WalletEvent {
   final bool isSelected;
   final String? assetId;

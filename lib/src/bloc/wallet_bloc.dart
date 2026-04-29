@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trydos_wallet/src/models/models.dart';
 import 'package:trydos_wallet/src/services/balances_api_service.dart';
@@ -6,6 +8,7 @@ import 'package:trydos_wallet/src/services/bank_deposits_api_service.dart';
 import 'package:trydos_wallet/src/services/banks_api_service.dart';
 import 'package:trydos_wallet/src/services/currencies_api_service.dart';
 import 'package:trydos_wallet/src/services/media_api_service.dart';
+import 'package:trydos_wallet/src/services/kyc_api_service.dart';
 import 'package:trydos_wallet/src/services/payment_requests_api_service.dart';
 import 'package:trydos_wallet/src/services/transfer_purposes_api_service.dart';
 import 'package:trydos_wallet/src/services/transactions_api_service.dart';
@@ -23,6 +26,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     BanksApiService? banksApi,
     BankDepositsApiService? depositApi,
     MediaApiService? mediaApi,
+    KycApiService? kycApi,
     TransferPurposesApiService? transferPurposesApi,
     PaymentRequestsApiService? paymentRequestsApi,
     WalletWebSocketService? walletWebSocketService,
@@ -43,6 +47,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
        _banksApi = banksApi ?? BanksApiService(),
        _depositApi = depositApi ?? BankDepositsApiService(),
        _mediaApi = mediaApi ?? MediaApiService(),
+       _kycApi = kycApi ?? KycApiService(),
        _transferPurposesApi =
            transferPurposesApi ?? TransferPurposesApiService(),
        _paymentRequestsApi = paymentRequestsApi ?? PaymentRequestsApiService(),
@@ -81,6 +86,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletDepositSubmitted>(_onDepositSubmitted);
     on<WalletImageUploadRequested>(_onImageUploadRequested);
     on<WalletImageResetRequested>(_onImageResetRequested);
+    on<WalletKycAnalyzeIdRequested>(_onKycAnalyzeIdRequested);
+    on<WalletKycAnalyzeIdResetRequested>(_onKycAnalyzeIdResetRequested);
     on<BalanceCardIsSelected>(_onBalanceCardIsSelected);
     on<WalletDepositFeesRequested>(_onDepositFeesRequested);
     on<WalletDepositRequestsRequested>(_onDepositRequestsRequested);
@@ -100,6 +107,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   final BanksApiService _banksApi;
   final BankDepositsApiService _depositApi;
   final MediaApiService _mediaApi;
+  final KycApiService _kycApi;
   final TransferPurposesApiService _transferPurposesApi;
   final PaymentRequestsApiService _paymentRequestsApi;
   WalletWebSocketService? _walletWebSocketService;
@@ -911,6 +919,157 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         uploadErrorMessage: null,
       ),
     );
+  }
+
+  Future<void> _onKycAnalyzeIdRequested(
+    WalletKycAnalyzeIdRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    final side = event.side.toLowerCase();
+    final isFront = side == 'front';
+
+    emit(
+      state.copyWith(
+        kycFrontAnalyzeStatus: isFront
+            ? WalletStatus.loading
+            : state.kycFrontAnalyzeStatus,
+        kycBackAnalyzeStatus: isFront
+            ? state.kycBackAnalyzeStatus
+            : WalletStatus.loading,
+        kycFrontAnalyzeErrorMessage: isFront
+            ? null
+            : state.kycFrontAnalyzeErrorMessage,
+        kycBackAnalyzeErrorMessage: isFront
+            ? state.kycBackAnalyzeErrorMessage
+            : null,
+      ),
+    );
+
+    try {
+      final bytes = await File(event.imagePath).readAsBytes();
+      final imageData = base64Encode(bytes);
+      final result = await _kycApi.analyzeId(
+        imageData: imageData,
+        side: side,
+        sessionHint: event.sessionHint,
+      );
+
+      if (result.isFailure || result.data == null) {
+        emit(
+          state.copyWith(
+            kycFrontAnalyzeStatus: isFront
+                ? WalletStatus.failure
+                : state.kycFrontAnalyzeStatus,
+            kycBackAnalyzeStatus: isFront
+                ? state.kycBackAnalyzeStatus
+                : WalletStatus.failure,
+            kycFrontAnalyzeErrorMessage: isFront
+                ? (result.errorMessage ?? 'Upload failed')
+                : state.kycFrontAnalyzeErrorMessage,
+            kycBackAnalyzeErrorMessage: isFront
+                ? state.kycBackAnalyzeErrorMessage
+                : (result.errorMessage ?? 'Upload failed'),
+          ),
+        );
+        return;
+      }
+
+      final data = result.data!;
+
+      if (data.isSuccess) {
+        final croppedImageData = data.croppedImageData;
+        if (croppedImageData != null && croppedImageData.isNotEmpty) {
+          await _writeBase64ToFile(croppedImageData, event.imagePath);
+        }
+
+        emit(
+          state.copyWith(
+            kycFrontAnalyzeStatus: isFront
+                ? WalletStatus.success
+                : state.kycFrontAnalyzeStatus,
+            kycBackAnalyzeStatus: isFront
+                ? state.kycBackAnalyzeStatus
+                : WalletStatus.success,
+            kycFrontImagePath: isFront
+                ? event.imagePath
+                : state.kycFrontImagePath,
+            kycBackImagePath: isFront
+                ? state.kycBackImagePath
+                : event.imagePath,
+            kycFrontAnalyzeErrorMessage: isFront
+                ? null
+                : state.kycFrontAnalyzeErrorMessage,
+            kycBackAnalyzeErrorMessage: isFront
+                ? state.kycBackAnalyzeErrorMessage
+                : null,
+          ),
+        );
+        return;
+      }
+
+      final errorMessage = data.isError
+          ? (data.message ?? data.code ?? 'Upload failed')
+          : 'Document not found. Try again.';
+
+      emit(
+        state.copyWith(
+          kycFrontAnalyzeStatus: isFront
+              ? WalletStatus.failure
+              : state.kycFrontAnalyzeStatus,
+          kycBackAnalyzeStatus: isFront
+              ? state.kycBackAnalyzeStatus
+              : WalletStatus.failure,
+          kycFrontAnalyzeErrorMessage: isFront
+              ? errorMessage
+              : state.kycFrontAnalyzeErrorMessage,
+          kycBackAnalyzeErrorMessage: isFront
+              ? state.kycBackAnalyzeErrorMessage
+              : errorMessage,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          kycFrontAnalyzeStatus: isFront
+              ? WalletStatus.failure
+              : state.kycFrontAnalyzeStatus,
+          kycBackAnalyzeStatus: isFront
+              ? state.kycBackAnalyzeStatus
+              : WalletStatus.failure,
+          kycFrontAnalyzeErrorMessage: isFront
+              ? e.toString()
+              : state.kycFrontAnalyzeErrorMessage,
+          kycBackAnalyzeErrorMessage: isFront
+              ? state.kycBackAnalyzeErrorMessage
+              : e.toString(),
+        ),
+      );
+    }
+  }
+
+  void _onKycAnalyzeIdResetRequested(
+    WalletKycAnalyzeIdResetRequested event,
+    Emitter<WalletState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        kycFrontAnalyzeStatus: WalletStatus.initial,
+        kycBackAnalyzeStatus: WalletStatus.initial,
+        kycFrontImagePath: null,
+        kycBackImagePath: null,
+        kycFrontAnalyzeErrorMessage: null,
+        kycBackAnalyzeErrorMessage: null,
+      ),
+    );
+  }
+
+  Future<void> _writeBase64ToFile(String base64Data, String outputPath) async {
+    try {
+      final decoded = base64Decode(base64Data);
+      await File(outputPath).writeAsBytes(decoded, flush: true);
+    } catch (_) {
+      // If decoding fails keep original file
+    }
   }
 
   Future<void> _onDepositRequestsRequested(

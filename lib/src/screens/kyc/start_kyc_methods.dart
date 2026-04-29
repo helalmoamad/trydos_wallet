@@ -54,6 +54,11 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
   late final ValueNotifier<int> _pageContent;
   late final PageController _pageController;
   bool _isTransitioning = false;
+  String? _frontImagePath;
+  String? _backImagePath;
+  String? _selfiePath;
+  int _idCaptureAttempts = 0;
+  int _identitySession = 0;
 
   @override
   void initState() {
@@ -82,6 +87,42 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
     }
   }
 
+  Future<void> _goToPreviousPage() async {
+    if (_isTransitioning || !_pageController.hasClients || !mounted) return;
+    _isTransitioning = true;
+    try {
+      await _pageController.previousPage(
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    } finally {
+      _isTransitioning = false;
+    }
+  }
+
+  Future<void> _onIdCaptured(String frontPath, String backPath) async {
+    setState(() {
+      _frontImagePath = frontPath;
+      _backImagePath = backPath;
+      _idCaptureAttempts++;
+    });
+    await _goToNextPage();
+  }
+
+  Future<void> _retryIdCapture() async {
+    setState(() {
+      _frontImagePath = null;
+      _backImagePath = null;
+      _identitySession++;
+    });
+    await _goToPreviousPage();
+  }
+
+  Future<void> _onLivenessDone(String selfiePath) async {
+    setState(() => _selfiePath = selfiePath);
+    await _goToNextPage();
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<WalletBloc, WalletState>(
@@ -106,11 +147,30 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
                       },
                       controller: _pageController,
                       children: [
-                        IdentityVerification(onSuccessTap: _goToNextPage),
-                        SuccessIdCard(onTapNextPage: _goToNextPage),
-                        LiveFaceDetection(onTapNextPage: _goToNextPage),
-                        IdMatchingWithPhoto(onTapNextPage: _goToNextPage),
-                        VideoCallRequest(onTapNextPage: _goToNextPage),
+                        IdentityVerification(
+                          key: ValueKey(_identitySession),
+                          onSuccessTap: _onIdCaptured,
+                        ),
+                        SuccessIdCard(
+                          onTapNextPage: _idCaptureAttempts >= 3
+                              ? null
+                              : _goToNextPage,
+                          onTapRetry: _retryIdCapture,
+                          isFinalAttempt: _idCaptureAttempts >= 3,
+                          frontImagePath: _frontImagePath,
+                          backImagePath: _backImagePath,
+                        ),
+                        LiveFaceDetection(onSuccessTap: _onLivenessDone),
+                        IdMatchingWithPhoto(
+                          onTapNextPage: _goToNextPage,
+                          selfiePath: _selfiePath,
+                          frontIdPath: _frontImagePath,
+                        ),
+                        VideoCallRequest(
+                          onTapNextPage: _goToNextPage,
+                          selfiePath: _selfiePath,
+                          backIdPath: _backImagePath,
+                        ),
                         StartVideo(onTapNextPage: _goToNextPage),
                         SuccessVerification(
                           onDone: () {
@@ -140,7 +200,7 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
                       ],
                     ),
                     onWillPop: () async {
-                      return true;
+                      return false;
                     },
                   ),
                 ),
@@ -156,7 +216,29 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
                               highlightColor: Colors.transparent,
                               splashColor: Colors.transparent,
                               onTap: () async {
-                                await _goToNextPage();
+                                final navigator = Navigator.of(
+                                  context,
+                                  rootNavigator: true,
+                                );
+                                try {
+                                  if (navigator.canPop()) {
+                                    navigator.popUntil(
+                                      (route) => route.isFirst,
+                                    );
+                                  } else {
+                                    navigator.push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const TrydosWalletHomePage(),
+                                      ),
+                                    );
+                                  }
+                                } catch (_) {
+                                  Navigator.of(
+                                    context,
+                                    rootNavigator: true,
+                                  ).popUntil((route) => route.isFirst);
+                                }
                                 //////////////////////////
                               },
                               child: Padding(

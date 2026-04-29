@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 //import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
@@ -16,7 +17,14 @@ import 'package:trydos_wallet/src/localization/app_strings.dart';
 /// Digital wallet home page.
 class IdMatchingWithPhoto extends StatefulWidget {
   final Function()? onTapNextPage;
-  const IdMatchingWithPhoto({super.key, this.onTapNextPage});
+  final String? selfiePath;
+  final String? frontIdPath;
+  const IdMatchingWithPhoto({
+    super.key,
+    this.onTapNextPage,
+    this.selfiePath,
+    this.frontIdPath,
+  });
 
   @override
   State<IdMatchingWithPhoto> createState() => _IdMatchingWithPhotoState();
@@ -122,12 +130,7 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
                 decoration: BoxDecoration(
                   border: _isMatched
                       ? Border.all(color: const Color(0xff34D317), width: 2)
-                      : (outerIsFaded
-                            ? Border.all(
-                                color: const Color(0xff388CFF),
-                                width: 2,
-                              )
-                            : null),
+                      : null,
                   borderRadius: BorderRadius.circular(30.r),
                 ),
                 child: Stack(
@@ -136,13 +139,38 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
                     AnimatedOpacity(
                       duration: const Duration(milliseconds: 220),
                       opacity: _isMatched ? 1 : (_showPersonStrong ? 1 : 0.35),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(30.r),
-                        child: Image.asset(
-                          TrydosWalletPngAssets.personImage,
-                          package: TrydosWalletStyles.packageName,
-                          height: 400.h,
-                          fit: BoxFit.fitWidth,
+                      child: Container(
+                        height: 400.h,
+                        width: 1.sw,
+
+                        decoration: BoxDecoration(
+                          border: _isMatched
+                              ? null
+                              : (outerIsFaded
+                                    ? Border.all(
+                                        color: const Color(0xff388CFF),
+                                        width: 2,
+                                      )
+                                    : null),
+                          borderRadius: BorderRadius.circular(30.r),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(30.r),
+                          child:
+                              widget.selfiePath != null &&
+                                  widget.selfiePath!.isNotEmpty
+                              ? Image.file(
+                                  File(widget.selfiePath!),
+                                  height: 400.h,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                )
+                              : Image.asset(
+                                  TrydosWalletPngAssets.personImage,
+                                  package: TrydosWalletStyles.packageName,
+                                  height: 400.h,
+                                  fit: BoxFit.fitWidth,
+                                ),
                         ),
                       ),
                     ),
@@ -174,13 +202,22 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(30.r),
-                            child: Image.asset(
-                              TrydosWalletPngAssets.frontImage,
-                              package: TrydosWalletStyles.packageName,
-                              height: 157.h,
-                              width: 280.w,
-                              fit: BoxFit.cover,
-                            ),
+                            child:
+                                widget.frontIdPath != null &&
+                                    widget.frontIdPath!.isNotEmpty
+                                ? Image.file(
+                                    File(widget.frontIdPath!),
+                                    height: 157.h,
+                                    width: 280.w,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.asset(
+                                    TrydosWalletPngAssets.frontImage,
+                                    package: TrydosWalletStyles.packageName,
+                                    height: 157.h,
+                                    width: 280.w,
+                                    fit: BoxFit.cover,
+                                  ),
                           ),
                         ),
                       ),

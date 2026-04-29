@@ -41,6 +41,13 @@ class WalletState {
     this.uploadStatus = WalletStatus.initial,
     this.uploadUrl,
     this.uploadErrorMessage,
+    // KYC Analyze ID
+    this.kycFrontAnalyzeStatus = WalletStatus.initial,
+    this.kycBackAnalyzeStatus = WalletStatus.initial,
+    this.kycFrontImagePath,
+    this.kycBackImagePath,
+    this.kycFrontAnalyzeErrorMessage,
+    this.kycBackAnalyzeErrorMessage,
     // Fees
     this.depositFees,
     this.depositFeesStatus = WalletStatus.initial,
@@ -127,6 +134,14 @@ class WalletState {
   final String? uploadUrl;
   final String? uploadErrorMessage;
 
+  // KYC Analyze ID
+  final WalletStatus kycFrontAnalyzeStatus;
+  final WalletStatus kycBackAnalyzeStatus;
+  final String? kycFrontImagePath;
+  final String? kycBackImagePath;
+  final String? kycFrontAnalyzeErrorMessage;
+  final String? kycBackAnalyzeErrorMessage;
+
   // Fees
   final DepositFeesResult? depositFees;
   final WalletStatus depositFeesStatus;
@@ -186,6 +201,12 @@ class WalletState {
     bool? balanceCardIsSelected,
     String? uploadUrl,
     String? uploadErrorMessage,
+    WalletStatus? kycFrontAnalyzeStatus,
+    WalletStatus? kycBackAnalyzeStatus,
+    Object? kycFrontImagePath = _unset,
+    Object? kycBackImagePath = _unset,
+    Object? kycFrontAnalyzeErrorMessage = _unset,
+    Object? kycBackAnalyzeErrorMessage = _unset,
     DepositFeesResult? depositFees,
     WalletStatus? depositFeesStatus,
     String? depositFeesErrorMessage,
@@ -250,6 +271,21 @@ class WalletState {
       uploadStatus: uploadStatus ?? this.uploadStatus,
       uploadUrl: uploadUrl ?? this.uploadUrl,
       uploadErrorMessage: uploadErrorMessage ?? this.uploadErrorMessage,
+      kycFrontAnalyzeStatus:
+          kycFrontAnalyzeStatus ?? this.kycFrontAnalyzeStatus,
+      kycBackAnalyzeStatus: kycBackAnalyzeStatus ?? this.kycBackAnalyzeStatus,
+      kycFrontImagePath: kycFrontImagePath == _unset
+          ? this.kycFrontImagePath
+          : kycFrontImagePath as String?,
+      kycBackImagePath: kycBackImagePath == _unset
+          ? this.kycBackImagePath
+          : kycBackImagePath as String?,
+      kycFrontAnalyzeErrorMessage: kycFrontAnalyzeErrorMessage == _unset
+          ? this.kycFrontAnalyzeErrorMessage
+          : kycFrontAnalyzeErrorMessage as String?,
+      kycBackAnalyzeErrorMessage: kycBackAnalyzeErrorMessage == _unset
+          ? this.kycBackAnalyzeErrorMessage
+          : kycBackAnalyzeErrorMessage as String?,
       depositFees: depositFees ?? this.depositFees,
       depositFeesStatus: depositFeesStatus ?? this.depositFeesStatus,
       depositFeesErrorMessage:
