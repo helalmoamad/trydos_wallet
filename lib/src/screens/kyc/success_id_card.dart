@@ -34,6 +34,12 @@ class SuccessIdCard extends StatelessWidget {
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
         final lang = state.languageCode;
+        final extracted = state.kycExtractedData;
+        final fullName = extracted?.name?.trim().isNotEmpty == true
+            ? extracted!.name!.trim()
+            : '${extracted?.firstName ?? ''} ${extracted?.lastName ?? ''}'
+                  .trim();
+
         return Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
@@ -79,61 +85,78 @@ class SuccessIdCard extends StatelessWidget {
             SizedBox(height: 12.h),
             Padding(
               padding: EdgeInsetsGeometry.symmetric(horizontal: 20.w),
-              child: Row(
-                children: [
-                  Container(
-                    height: 109.h,
-                    width: 192.w,
-
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(15.r),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(15.r),
-                      child: frontImagePath != null
-                          ? Image.file(
-                              File(frontImagePath!),
-                              height: 109.h,
-                              width: 192.w,
-                              fit: BoxFit.cover,
-                            )
-                          : Image.asset(
-                              TrydosWalletPngAssets.frontImage,
-                              package: TrydosWalletStyles.packageName,
-                              height: 109.h,
-                              width: 192.w,
-                              fit: BoxFit.fitWidth,
-                            ),
-                    ),
-                  ),
-                  SizedBox(width: 5.w),
-                  Container(
-                    height: 109.h,
-                    width: 192.w,
-
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(15.r),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(15.r),
-                      child: backImagePath != null
-                          ? Image.file(
+              child: backImagePath != null
+                  ? Row(
+                      children: [
+                        Container(
+                          height: 109.h,
+                          width: 192.w,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(15.r),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(15.r),
+                            child: frontImagePath != null
+                                ? Image.file(
+                                    File(frontImagePath!),
+                                    height: 109.h,
+                                    width: 192.w,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.asset(
+                                    TrydosWalletPngAssets.frontImage,
+                                    package: TrydosWalletStyles.packageName,
+                                    height: 109.h,
+                                    width: 192.w,
+                                    fit: BoxFit.fitWidth,
+                                  ),
+                          ),
+                        ),
+                        SizedBox(width: 5.w),
+                        Container(
+                          height: 109.h,
+                          width: 192.w,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(15.r),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(15.r),
+                            child: Image.file(
                               File(backImagePath!),
                               height: 109.h,
                               width: 192.w,
                               fit: BoxFit.cover,
-                            )
-                          : Image.asset(
-                              TrydosWalletPngAssets.backImage,
-                              package: TrydosWalletStyles.packageName,
-                              height: 109.h,
-                              fit: BoxFit.fitWidth,
-                              width: 192.w,
                             ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Center(
+                      child: Container(
+                        height: 109.h,
+                        width: 192.w,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(15.r),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(15.r),
+                          child: frontImagePath != null
+                              ? Image.file(
+                                  File(frontImagePath!),
+                                  height: 109.h,
+                                  width: 192.w,
+                                  fit: BoxFit.cover,
+                                )
+                              : Image.asset(
+                                  TrydosWalletPngAssets.frontImage,
+                                  package: TrydosWalletStyles.packageName,
+                                  height: 109.h,
+                                  width: 192.w,
+                                  fit: BoxFit.fitWidth,
+                                ),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
             ),
             SizedBox(height: 10.h),
 
@@ -169,35 +192,41 @@ class SuccessIdCard extends StatelessWidget {
               context,
               lang,
               AppStrings.get(lang, 'kyc_id_type'),
-              "Personal Identity ID",
+              _fallbackValue(
+                extracted?.idType ?? extracted?.idName,
+                'Personal Identity ID',
+              ),
             ),
             SizedBox(height: 5.h),
             _fieldInfo(
               context,
               lang,
               AppStrings.get(lang, 'kyc_country'),
-              "Syria",
+              _fallbackValue(extracted?.country, 'Syria'),
             ),
             SizedBox(height: 5.h),
             _fieldInfo(
               context,
               lang,
               AppStrings.get(lang, 'kyc_name'),
-              "De Bruijn",
+              _fallbackValue(fullName, 'De Bruijn'),
             ),
             SizedBox(height: 5.h),
             _fieldInfo(
               context,
               lang,
               AppStrings.get(lang, 'kyc_national_number'),
-              "09982111123332",
+              _fallbackValue(
+                extracted?.nationalNumber ?? extracted?.documentNumber,
+                '09982111123332',
+              ),
             ),
             SizedBox(height: 5.h),
             _fieldInfo(
               context,
               lang,
               AppStrings.get(lang, 'kyc_birthday'),
-              "01.01.1999",
+              _fallbackValue(extracted?.birthday, '01.01.1999'),
             ),
             SizedBox(height: 5.h),
 
@@ -291,6 +320,11 @@ class SuccessIdCard extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _fallbackValue(String? value, String fallback) {
+    if (value == null || value.trim().isEmpty) return fallback;
+    return value.trim();
   }
 
   Widget _fieldInfo(

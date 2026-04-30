@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math';
+import 'dart:convert';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -8,18 +9,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
-import 'package:trydos_wallet/src/bloc/wallet_state.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
-import 'package:trydos_wallet/src/localization/app_strings.dart';
+import 'package:trydos_wallet/trydos_wallet.dart';
 
 /// Digital wallet home page.
 class LiveFaceDetection extends StatefulWidget {
   final Function(String selfiePath)? onSuccessTap;
-  const LiveFaceDetection({super.key, this.onSuccessTap});
+  final bool isActive;
+  const LiveFaceDetection({super.key, this.onSuccessTap, this.isActive = true});
 
   @override
   State<LiveFaceDetection> createState() => _LiveFaceDetectionState();
@@ -37,6 +37,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
   bool _isStreamActive = false;
   bool _isCompleted = false;
   bool _hasFailed = false;
+  int _frameCounter = 0;
 
   final List<_LivenessChallenge> _challenges = [];
   int _currentChallengeIndex = 0;
@@ -48,12 +49,14 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
   // Selfie captured right after the blink challenge (eyes reopen = best photo)
   String? _capturedSelfiePath;
   bool _selfieCapturing = false; // true while takePicture is in progress
+  WalletStatus _lastKycLivenessStatus = WalletStatus.initial;
 
   // Face confirmed = challenges may begin (set synchronously on first face frame)
   bool _selfieCaptured = false;
 
   static const int _totalChallenges = 3;
   static const int _maxFailedChallenges = 2;
+  static const int _kProcessEveryNFrames = 3;
   static const Duration _holdDuration = Duration(milliseconds: 800);
   static const Duration _challengeTimeout = Duration(seconds: 8);
 
@@ -62,7 +65,42 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
     super.initState();
     _setupChallenges();
     _initDetector();
-    _initCamera();
+    if (widget.isActive) {
+      _initCamera();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant LiveFaceDetection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive != widget.isActive) {
+      _handlePageActivityChange(widget.isActive);
+    }
+  }
+
+  Future<void> _handlePageActivityChange(bool isActive) async {
+    if (!mounted) return;
+    if (isActive) {
+      if (_cameraController == null ||
+          !_cameraController!.value.isInitialized) {
+        await _initCamera();
+        return;
+      }
+      if (!_isStreamActive && !_isCompleted && !_hasFailed) {
+        try {
+          await _cameraController!.startImageStream(_onCameraImage);
+          _isStreamActive = true;
+        } catch (_) {}
+      }
+      return;
+    }
+
+    if (_isStreamActive) {
+      try {
+        await _cameraController?.stopImageStream();
+      } catch (_) {}
+      _isStreamActive = false;
+    }
   }
 
   void _setupChallenges() {
@@ -104,7 +142,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
 
       _cameraController = CameraController(
         frontCamera,
-        ResolutionPreset.high,
+        ResolutionPreset.medium,
         enableAudio: false,
         imageFormatGroup: Platform.isAndroid
             ? ImageFormatGroup.nv21
@@ -115,6 +153,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
       if (!mounted) return;
       setState(() => _isCameraInitialized = true);
 
+      if (!widget.isActive) return;
       await _cameraController!.startImageStream(_onCameraImage);
       _isStreamActive = true;
     } catch (_) {
@@ -123,7 +162,10 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
   }
 
   Future<void> _onCameraImage(CameraImage image) async {
+    if (!widget.isActive) return;
     if (_isProcessing || _isCompleted || _hasFailed) return;
+    _frameCounter++;
+    if (_frameCounter % _kProcessEveryNFrames != 0) return;
     _isProcessing = true;
     try {
       // Timeout check only runs once challenges have actually started
@@ -172,8 +214,9 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
             Future.microtask(
               () => _capturePostBlinkSelfie(proceedToComplete: isLast),
             );
-            if (isLast)
+            if (isLast) {
               return; // _capturePostBlinkSelfie will call _completeLiveness
+            }
           }
 
           if (isLast) {
@@ -254,6 +297,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
     }
 
     if (!_isStreamActive) {
+      if (!widget.isActive) return;
       await _cameraController!.startImageStream(_onCameraImage);
       _isStreamActive = true;
     }
@@ -300,6 +344,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
       if (proceedToComplete) {
         await _completeLiveness();
       } else if (!_isCompleted &&
+          widget.isActive &&
           !_hasFailed &&
           _cameraController != null &&
           _cameraController!.value.isInitialized) {
@@ -334,8 +379,24 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
     }
 
     if (mounted) setState(() {}); // show captured photo in green frame
-    await Future.delayed(const Duration(seconds: 3));
-    if (mounted) widget.onSuccessTap?.call(_capturedSelfiePath ?? '');
+
+    // قراءة الصورة وإرسال الطلب بدون الانتظار
+    if (_capturedSelfiePath != null && mounted) {
+      try {
+        final bytes = await File(_capturedSelfiePath!).readAsBytes();
+        final base64Image = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+        if (mounted) {
+          context.read<WalletBloc>().add(
+            WalletKycLivenessRequested(
+              faceImageData: base64Image,
+              challengeStep: 'look_straight',
+            ),
+          );
+        }
+      } catch (_) {
+        // خطأ في قراءة الملف
+      }
+    }
   }
 
   InputImage? _convertToInputImage(CameraImage image) {
@@ -401,7 +462,19 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<WalletBloc, WalletState>(
+    return BlocConsumer<WalletBloc, WalletState>(
+      listener: (context, state) {
+        final livenessStatus = state.kycLivenessStatus;
+        if (livenessStatus != _lastKycLivenessStatus) {
+          _lastKycLivenessStatus = livenessStatus;
+          // عند النجاح: انتقل للصفحة التالية
+          if (livenessStatus == WalletStatus.success &&
+              _isCompleted &&
+              mounted) {
+            widget.onSuccessTap?.call(_capturedSelfiePath ?? '');
+          }
+        }
+      },
       builder: (context, state) {
         final lang = state.languageCode;
         return Column(
@@ -663,6 +736,32 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                   ),
                 ),
                 SizedBox(height: 35.h),
+              ],
+            ] else ...[
+              // ---- After green frame (liveness verification) ----
+              if (state.kycLivenessStatus == WalletStatus.failure) ...[
+                SizedBox(height: 10.h),
+                InkWell(
+                  highlightColor: Colors.transparent,
+                  splashColor: Colors.transparent,
+                  onTap: () {
+                    _isCompleted = false;
+                    setState(() {});
+                    context.read<WalletBloc>().add(
+                      const WalletKycLivenessResetRequested(),
+                    );
+                    _restartLiveness();
+                  },
+                  child: Text(
+                    AppStrings.get(lang, 'kyc_incorrect_try_again'),
+                    style: context.textTheme.titleLarge?.rq.copyWith(
+                      color: const Color(0xffFF6B6B),
+                      letterSpacing: 0.14,
+                      height: 1.43,
+                      fontSize: 14.sp,
+                    ),
+                  ),
+                ),
               ],
             ],
           ],

@@ -56,6 +56,14 @@ abstract class ApiPaths {
   /// Body: imageData (data URL), side (front|back), sessionHint?
   static const String kycAnalyzeId = '/api/kyc/analyze-id';
 
+  /// Liveness detection with selfie (POST).
+  /// Body: faceImageData (data URL), challengeStep, crop
+  static const String kycLiveness = '/api/kyc/liveness';
+
+  /// Compare selfie against ID face image (POST).
+  /// Body: selfieImageData (data URL), idFaceImageData (data URL)
+  static const String kycCompareFace = '/api/kyc/compare-face';
+
   // ─── Payment Requests ───
   /// Create payment request (POST).
   /// Body: accountNumber, assetType, assetSymbol, amount, purposeId, reference, note?, expiryMinutes?, isPermanent, idempotencyKey

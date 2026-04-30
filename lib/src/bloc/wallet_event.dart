@@ -136,6 +136,36 @@ class WalletKycAnalyzeIdResetRequested extends WalletEvent {
   const WalletKycAnalyzeIdResetRequested();
 }
 
+/// KYC Liveness Detection
+class WalletKycLivenessRequested extends WalletEvent {
+  const WalletKycLivenessRequested({
+    required this.faceImageData,
+    required this.challengeStep,
+  });
+
+  final String faceImageData;
+  final String challengeStep;
+}
+
+class WalletKycLivenessResetRequested extends WalletEvent {
+  const WalletKycLivenessResetRequested();
+}
+
+/// KYC Compare Face (selfie vs ID)
+class WalletKycCompareFaceRequested extends WalletEvent {
+  const WalletKycCompareFaceRequested({
+    required this.selfieImageData,
+    required this.idFaceImageData,
+  });
+
+  final String selfieImageData;
+  final String idFaceImageData;
+}
+
+class WalletKycCompareFaceResetRequested extends WalletEvent {
+  const WalletKycCompareFaceResetRequested();
+}
+
 class BalanceCardIsSelected extends WalletEvent {
   final bool isSelected;
   final String? assetId;

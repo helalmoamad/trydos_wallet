@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
+import 'package:trydos_wallet/src/bloc/wallet_event.dart';
 import 'package:trydos_wallet/src/bloc/wallet_state.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
@@ -59,6 +60,7 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
   String? _selfiePath;
   int _idCaptureAttempts = 0;
   int _identitySession = 0;
+  int _currentPage = 0;
 
   @override
   void initState() {
@@ -100,10 +102,26 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
     }
   }
 
+  Future<void> _goToFirstPageAndReset() async {
+    if (!_pageController.hasClients || !mounted) return;
+    context.read<WalletBloc>().add(const WalletKycAnalyzeIdResetRequested());
+    context.read<WalletBloc>().add(const WalletKycLivenessResetRequested());
+    context.read<WalletBloc>().add(const WalletKycCompareFaceResetRequested());
+    setState(() {
+      _isTransitioning = false;
+      _frontImagePath = null;
+      _backImagePath = null;
+      _selfiePath = null;
+      _idCaptureAttempts = 0;
+      _identitySession++;
+    });
+    _pageController.jumpToPage(0);
+  }
+
   Future<void> _onIdCaptured(String frontPath, String backPath) async {
     setState(() {
       _frontImagePath = frontPath;
-      _backImagePath = backPath;
+      _backImagePath = backPath.isNotEmpty ? backPath : null;
       _idCaptureAttempts++;
     });
     await _goToNextPage();
@@ -144,11 +162,13 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
                       physics: const NeverScrollableScrollPhysics(),
                       onPageChanged: (value) {
                         _pageContent.value = value;
+                        setState(() => _currentPage = value);
                       },
                       controller: _pageController,
                       children: [
                         IdentityVerification(
                           key: ValueKey(_identitySession),
+                          isActive: _currentPage == 0,
                           onSuccessTap: _onIdCaptured,
                         ),
                         SuccessIdCard(
@@ -160,9 +180,13 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
                           frontImagePath: _frontImagePath,
                           backImagePath: _backImagePath,
                         ),
-                        LiveFaceDetection(onSuccessTap: _onLivenessDone),
+                        LiveFaceDetection(
+                          isActive: _currentPage == 2,
+                          onSuccessTap: _onLivenessDone,
+                        ),
                         IdMatchingWithPhoto(
                           onTapNextPage: _goToNextPage,
+                          onMatchError: (_) => _goToFirstPageAndReset(),
                           selfiePath: _selfiePath,
                           frontIdPath: _frontImagePath,
                         ),

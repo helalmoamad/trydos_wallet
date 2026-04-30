@@ -10,6 +10,7 @@ import '../api/api_interceptors.dart';
 class TrydosWalletConfig {
   TrydosWalletConfig({
     required this.baseUrl,
+    this.kycBaseUrl,
     this.token,
     this.languageCode = 'ar',
     this.isKurdish = false,
@@ -31,6 +32,7 @@ class TrydosWalletConfig {
   });
 
   final String baseUrl;
+  final String? kycBaseUrl;
   final String? token;
   final String languageCode;
   final bool isKurdish;
@@ -64,12 +66,20 @@ class TrydosWalletConfig {
     debug: debug,
     allowBadCertificate: allowBadCertificate,
   );
+
+  ApiClient createKycApiClient() => ApiClient(
+    baseUrl: kycBaseUrl ?? baseUrl,
+    headersConfig: headersConfig,
+    debug: debug,
+    allowBadCertificate: allowBadCertificate,
+  );
 }
 
 /// Global config store - set once at app startup.
 class TrydosWallet {
   static TrydosWalletConfig? _config;
   static ApiClient? _apiClient;
+  static ApiClient? _kycApiClient;
 
   static TrydosWalletConfig get config {
     if (_config == null) {
@@ -89,10 +99,20 @@ class TrydosWallet {
     return _apiClient!;
   }
 
+  static ApiClient get kycApiClient {
+    if (_kycApiClient == null) {
+      throw StateError(
+        'TrydosWallet not initialized. Call TrydosWallet.init(config) first.',
+      );
+    }
+    return _kycApiClient!;
+  }
+
   /// Initialize the library - call in main() or at app startup.
   static void init(TrydosWalletConfig config) {
     _config = config;
     _apiClient = config.createApiClient();
+    _kycApiClient = config.createKycApiClient();
   }
 
   /// Trigger logout event for the host app.
@@ -105,6 +125,7 @@ class TrydosWallet {
     if (_config == null) return;
     _config = TrydosWalletConfig(
       baseUrl: _config!.baseUrl,
+      kycBaseUrl: _config!.kycBaseUrl,
       token: token,
       languageCode: _config!.languageCode,
       isKurdish: _config!.isKurdish,
@@ -126,6 +147,7 @@ class TrydosWallet {
           _config!.disableWalletOverscrollIndicator,
     );
     _apiClient?.updateHeaders(_config!.headersConfig);
+    _kycApiClient?.updateHeaders(_config!.headersConfig);
   }
 
   /// Update the language later.
@@ -134,6 +156,7 @@ class TrydosWallet {
     final kurdish = isKurdish ?? (languageCode == 'ku');
     _config = TrydosWalletConfig(
       baseUrl: _config!.baseUrl,
+      kycBaseUrl: _config!.kycBaseUrl,
       token: _config!.token,
       languageCode: languageCode,
       isKurdish: kurdish,
@@ -155,6 +178,7 @@ class TrydosWallet {
           _config!.disableWalletOverscrollIndicator,
     );
     _apiClient?.updateHeaders(_config!.headersConfig);
+    _kycApiClient?.updateHeaders(_config!.headersConfig);
     emitLanguageChangeEvent(
       LanguageChangeEvent(
         languageCode,
@@ -186,6 +210,7 @@ class TrydosWallet {
     if (_config == null) return;
     _config = TrydosWalletConfig(
       baseUrl: _config!.baseUrl,
+      kycBaseUrl: _config!.kycBaseUrl,
       token: _config!.token,
       languageCode: _config!.languageCode,
       isKurdish: _config!.isKurdish,

@@ -46,8 +46,19 @@ class WalletState {
     this.kycBackAnalyzeStatus = WalletStatus.initial,
     this.kycFrontImagePath,
     this.kycBackImagePath,
+    this.kycExtractedData,
+    this.kycNextStep,
+    this.kycIdFaceImageData,
     this.kycFrontAnalyzeErrorMessage,
     this.kycBackAnalyzeErrorMessage,
+    // KYC Liveness
+    this.kycLivenessStatus = WalletStatus.initial,
+    this.selfieImageData,
+    this.kycLivenessErrorMessage,
+    // KYC Compare Face
+    this.kycCompareFaceStatus = WalletStatus.initial,
+    this.kycCompareFaceErrorMessage,
+    this.kycCompareFaceErrorCode,
     // Fees
     this.depositFees,
     this.depositFeesStatus = WalletStatus.initial,
@@ -139,8 +150,21 @@ class WalletState {
   final WalletStatus kycBackAnalyzeStatus;
   final String? kycFrontImagePath;
   final String? kycBackImagePath;
+  final KycExtractedData? kycExtractedData;
+  final String? kycNextStep;
+  final String? kycIdFaceImageData;
   final String? kycFrontAnalyzeErrorMessage;
   final String? kycBackAnalyzeErrorMessage;
+
+  // KYC Liveness
+  final WalletStatus kycLivenessStatus;
+  final String? selfieImageData;
+  final String? kycLivenessErrorMessage;
+
+  // KYC Compare Face
+  final WalletStatus kycCompareFaceStatus;
+  final String? kycCompareFaceErrorMessage;
+  final String? kycCompareFaceErrorCode;
 
   // Fees
   final DepositFeesResult? depositFees;
@@ -205,8 +229,17 @@ class WalletState {
     WalletStatus? kycBackAnalyzeStatus,
     Object? kycFrontImagePath = _unset,
     Object? kycBackImagePath = _unset,
+    Object? kycExtractedData = _unset,
+    Object? kycNextStep = _unset,
+    Object? kycIdFaceImageData = _unset,
     Object? kycFrontAnalyzeErrorMessage = _unset,
     Object? kycBackAnalyzeErrorMessage = _unset,
+    WalletStatus? kycLivenessStatus,
+    Object? selfieImageData = _unset,
+    Object? kycLivenessErrorMessage = _unset,
+    WalletStatus? kycCompareFaceStatus,
+    Object? kycCompareFaceErrorMessage = _unset,
+    Object? kycCompareFaceErrorCode = _unset,
     DepositFeesResult? depositFees,
     WalletStatus? depositFeesStatus,
     String? depositFeesErrorMessage,
@@ -280,12 +313,35 @@ class WalletState {
       kycBackImagePath: kycBackImagePath == _unset
           ? this.kycBackImagePath
           : kycBackImagePath as String?,
+      kycExtractedData: kycExtractedData == _unset
+          ? this.kycExtractedData
+          : kycExtractedData as KycExtractedData?,
+      kycNextStep: kycNextStep == _unset
+          ? this.kycNextStep
+          : kycNextStep as String?,
+      kycIdFaceImageData: kycIdFaceImageData == _unset
+          ? this.kycIdFaceImageData
+          : kycIdFaceImageData as String?,
       kycFrontAnalyzeErrorMessage: kycFrontAnalyzeErrorMessage == _unset
           ? this.kycFrontAnalyzeErrorMessage
           : kycFrontAnalyzeErrorMessage as String?,
       kycBackAnalyzeErrorMessage: kycBackAnalyzeErrorMessage == _unset
           ? this.kycBackAnalyzeErrorMessage
           : kycBackAnalyzeErrorMessage as String?,
+      kycLivenessStatus: kycLivenessStatus ?? this.kycLivenessStatus,
+      selfieImageData: selfieImageData == _unset
+          ? this.selfieImageData
+          : selfieImageData as String?,
+      kycLivenessErrorMessage: kycLivenessErrorMessage == _unset
+          ? this.kycLivenessErrorMessage
+          : kycLivenessErrorMessage as String?,
+      kycCompareFaceStatus: kycCompareFaceStatus ?? this.kycCompareFaceStatus,
+      kycCompareFaceErrorMessage: kycCompareFaceErrorMessage == _unset
+          ? this.kycCompareFaceErrorMessage
+          : kycCompareFaceErrorMessage as String?,
+      kycCompareFaceErrorCode: kycCompareFaceErrorCode == _unset
+          ? this.kycCompareFaceErrorCode
+          : kycCompareFaceErrorCode as String?,
       depositFees: depositFees ?? this.depositFees,
       depositFeesStatus: depositFeesStatus ?? this.depositFeesStatus,
       depositFeesErrorMessage:

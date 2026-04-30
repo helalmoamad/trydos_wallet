@@ -5,7 +5,7 @@ import '../models/kyc/kyc_analyze_id_response.dart';
 /// API service for KYC ID analysis (front/back).
 class KycApiService {
   KycApiService({ApiClient? client})
-    : _client = client ?? TrydosWallet.apiClient;
+    : _client = client ?? TrydosWallet.kycApiClient;
 
   final ApiClient _client;
 

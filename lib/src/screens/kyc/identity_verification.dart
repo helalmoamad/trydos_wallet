@@ -25,7 +25,12 @@ enum _DistanceStatus { ok, tooFar, tooClose }
 /// using Google ML Kit Object Detection on both iOS and Android.
 class IdentityVerification extends StatefulWidget {
   final Function(String frontPath, String backPath)? onSuccessTap;
-  const IdentityVerification({super.key, this.onSuccessTap});
+  final bool isActive;
+  const IdentityVerification({
+    super.key,
+    this.onSuccessTap,
+    this.isActive = true,
+  });
 
   @override
   State<IdentityVerification> createState() => _IdentityVerificationState();
@@ -41,6 +46,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
   bool _isProcessing = false;
   bool _isStreamActive = false;
   bool _isCapturing = false;
+  int _frameCounter = 0;
 
   _DistanceStatus _distanceStatus = _DistanceStatus.tooFar;
 
@@ -60,6 +66,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
 
   // Consecutive document-like frames needed before progress starts
   static const int _kConsecutiveRequired = 3;
+  static const int _kProcessEveryNFrames = 3;
   int _consecutiveDocFrames = 0;
 
   @override
@@ -68,7 +75,42 @@ class _IdentityVerificationState extends State<IdentityVerification> {
     _sessionHint = DateTime.now().millisecondsSinceEpoch.toString();
     context.read<WalletBloc>().add(const WalletKycAnalyzeIdResetRequested());
     _initDetector();
-    _initCamera();
+    if (widget.isActive) {
+      _initCamera();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant IdentityVerification oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive != widget.isActive) {
+      _handlePageActivityChange(widget.isActive);
+    }
+  }
+
+  Future<void> _handlePageActivityChange(bool isActive) async {
+    if (!mounted) return;
+    if (isActive) {
+      if (_cameraController == null ||
+          !_cameraController!.value.isInitialized) {
+        await _initCamera();
+        return;
+      }
+      if (!_isStreamActive && !_isCapturing && _step != _ScanStep.done) {
+        try {
+          await _cameraController!.startImageStream(_onCameraImage);
+          _isStreamActive = true;
+        } catch (_) {}
+      }
+      return;
+    }
+
+    if (_isStreamActive) {
+      try {
+        await _cameraController?.stopImageStream();
+      } catch (_) {}
+      _isStreamActive = false;
+    }
   }
 
   void _initDetector() {
@@ -90,7 +132,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
       }
       _cameraController = CameraController(
         cameras.first,
-        ResolutionPreset.high,
+        ResolutionPreset.medium,
         enableAudio: false,
         imageFormatGroup: Platform.isAndroid
             ? ImageFormatGroup.nv21
@@ -100,7 +142,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
       if (!mounted) return;
       setState(() => _isCameraInitialized = true);
       await Future.delayed(const Duration(seconds: 3));
-      if (!mounted) return;
+      if (!mounted || !widget.isActive) return;
       await _cameraController!.startImageStream(_onCameraImage);
       _isStreamActive = true;
     } catch (_) {
@@ -109,7 +151,10 @@ class _IdentityVerificationState extends State<IdentityVerification> {
   }
 
   void _onCameraImage(CameraImage image) async {
+    if (!widget.isActive) return;
     if (_isProcessing || _isCapturing || _step == _ScanStep.done) return;
+    _frameCounter++;
+    if (_frameCounter % _kProcessEveryNFrames != 0) return;
     _isProcessing = true;
     try {
       _checkLuminance(image);
@@ -383,6 +428,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
       await Future.delayed(const Duration(seconds: 3));
       if (!mounted) return;
       if (!_isStreamActive) {
+        if (!widget.isActive) return;
         await _cameraController!.startImageStream(_onCameraImage);
         _isStreamActive = true;
       }
@@ -539,7 +585,25 @@ class _IdentityVerificationState extends State<IdentityVerification> {
           if (frontStatus == WalletStatus.success &&
               _step == _ScanStep.front &&
               state.kycFrontImagePath != null) {
-            _handleFrontAnalyzeSuccess(state.kycFrontImagePath!);
+            // Check if nextStep requires back side
+            final nextStep = state.kycNextStep?.toUpperCase() ?? '';
+            if (nextStep == 'REQUIRE_BACK') {
+              // Normal flow: proceed to back side
+              _handleFrontAnalyzeSuccess(state.kycFrontImagePath!);
+            } else {
+              // Single-document flow: skip back, go directly to done
+              setState(() {
+                _frontImagePath = state.kycFrontImagePath;
+                _step = _ScanStep.done;
+                _detectProgress = 1.0;
+              });
+              Future.delayed(const Duration(seconds: 1)).then((_) {
+                if (mounted && _frontImagePath != null) {
+                  // Single-document (passport): pass empty string for back
+                  widget.onSuccessTap?.call(_frontImagePath!, '');
+                }
+              });
+            }
           }
         }
 
@@ -671,6 +735,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
                             vertical: 8.h,
                           ),
                           decoration: BoxDecoration(
+                            // ignore: deprecated_member_use
                             color: Colors.orange.withOpacity(0.88),
                             borderRadius: BorderRadius.circular(10.r),
                           ),

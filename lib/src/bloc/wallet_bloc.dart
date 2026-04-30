@@ -9,6 +9,8 @@ import 'package:trydos_wallet/src/services/banks_api_service.dart';
 import 'package:trydos_wallet/src/services/currencies_api_service.dart';
 import 'package:trydos_wallet/src/services/media_api_service.dart';
 import 'package:trydos_wallet/src/services/kyc_api_service.dart';
+import 'package:trydos_wallet/src/services/kyc_liveness_api_service.dart';
+import 'package:trydos_wallet/src/services/kyc_compare_face_api_service.dart';
 import 'package:trydos_wallet/src/services/payment_requests_api_service.dart';
 import 'package:trydos_wallet/src/services/transfer_purposes_api_service.dart';
 import 'package:trydos_wallet/src/services/transactions_api_service.dart';
@@ -27,6 +29,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     BankDepositsApiService? depositApi,
     MediaApiService? mediaApi,
     KycApiService? kycApi,
+    KycLivenessApiService? kycLivenessApi,
+    KycCompareFaceApiService? kycCompareFaceApi,
     TransferPurposesApiService? transferPurposesApi,
     PaymentRequestsApiService? paymentRequestsApi,
     WalletWebSocketService? walletWebSocketService,
@@ -48,6 +52,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
        _depositApi = depositApi ?? BankDepositsApiService(),
        _mediaApi = mediaApi ?? MediaApiService(),
        _kycApi = kycApi ?? KycApiService(),
+       _kycLivenessApi = kycLivenessApi ?? KycLivenessApiService(),
+       _kycCompareFaceApi = kycCompareFaceApi ?? KycCompareFaceApiService(),
        _transferPurposesApi =
            transferPurposesApi ?? TransferPurposesApiService(),
        _paymentRequestsApi = paymentRequestsApi ?? PaymentRequestsApiService(),
@@ -88,6 +94,10 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletImageResetRequested>(_onImageResetRequested);
     on<WalletKycAnalyzeIdRequested>(_onKycAnalyzeIdRequested);
     on<WalletKycAnalyzeIdResetRequested>(_onKycAnalyzeIdResetRequested);
+    on<WalletKycLivenessRequested>(_onKycLivenessRequested);
+    on<WalletKycLivenessResetRequested>(_onKycLivenessResetRequested);
+    on<WalletKycCompareFaceRequested>(_onKycCompareFaceRequested);
+    on<WalletKycCompareFaceResetRequested>(_onKycCompareFaceResetRequested);
     on<BalanceCardIsSelected>(_onBalanceCardIsSelected);
     on<WalletDepositFeesRequested>(_onDepositFeesRequested);
     on<WalletDepositRequestsRequested>(_onDepositRequestsRequested);
@@ -108,6 +118,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   final BankDepositsApiService _depositApi;
   final MediaApiService _mediaApi;
   final KycApiService _kycApi;
+  final KycLivenessApiService _kycLivenessApi;
+  final KycCompareFaceApiService _kycCompareFaceApi;
   final TransferPurposesApiService _transferPurposesApi;
   final PaymentRequestsApiService _paymentRequestsApi;
   WalletWebSocketService? _walletWebSocketService;
@@ -942,12 +954,14 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         kycBackAnalyzeErrorMessage: isFront
             ? state.kycBackAnalyzeErrorMessage
             : null,
+        kycExtractedData: isFront ? null : state.kycExtractedData,
       ),
     );
 
     try {
       final bytes = await File(event.imagePath).readAsBytes();
-      final imageData = base64Encode(bytes);
+      final imageData = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
       final result = await _kycApi.analyzeId(
         imageData: imageData,
         side: side,
@@ -969,6 +983,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
             kycBackAnalyzeErrorMessage: isFront
                 ? state.kycBackAnalyzeErrorMessage
                 : (result.errorMessage ?? 'Upload failed'),
+            kycExtractedData: isFront ? null : state.kycExtractedData,
           ),
         );
         return;
@@ -996,6 +1011,13 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
             kycBackImagePath: isFront
                 ? state.kycBackImagePath
                 : event.imagePath,
+            kycExtractedData: isFront
+                ? data.extractedData
+                : state.kycExtractedData,
+            kycNextStep: data.nextStep,
+            kycIdFaceImageData: isFront
+                ? (data.idFaceImageData ?? state.kycIdFaceImageData)
+                : state.kycIdFaceImageData,
             kycFrontAnalyzeErrorMessage: isFront
                 ? null
                 : state.kycFrontAnalyzeErrorMessage,
@@ -1025,6 +1047,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           kycBackAnalyzeErrorMessage: isFront
               ? state.kycBackAnalyzeErrorMessage
               : errorMessage,
+          kycExtractedData: isFront ? null : state.kycExtractedData,
         ),
       );
     } catch (e) {
@@ -1042,6 +1065,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           kycBackAnalyzeErrorMessage: isFront
               ? state.kycBackAnalyzeErrorMessage
               : e.toString(),
+          kycExtractedData: isFront ? null : state.kycExtractedData,
         ),
       );
     }
@@ -1057,6 +1081,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         kycBackAnalyzeStatus: WalletStatus.initial,
         kycFrontImagePath: null,
         kycBackImagePath: null,
+        kycExtractedData: null,
+        kycNextStep: null,
+        kycIdFaceImageData: null,
         kycFrontAnalyzeErrorMessage: null,
         kycBackAnalyzeErrorMessage: null,
       ),
@@ -1070,6 +1097,146 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     } catch (_) {
       // If decoding fails keep original file
     }
+  }
+
+  Future<void> _onKycLivenessRequested(
+    WalletKycLivenessRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(state.copyWith(kycLivenessStatus: WalletStatus.loading));
+
+    try {
+      final result = await _kycLivenessApi.liveness(
+        faceImageData: event.faceImageData,
+        challengeStep: event.challengeStep,
+        crop: true,
+      );
+
+      if (result.isFailure || result.data == null) {
+        emit(
+          state.copyWith(
+            kycLivenessStatus: WalletStatus.failure,
+            kycLivenessErrorMessage:
+                result.errorMessage ?? 'Liveness check failed',
+          ),
+        );
+        return;
+      }
+
+      final data = result.data!;
+
+      if (data.isLive && data.faceImageData != null) {
+        emit(
+          state.copyWith(
+            kycLivenessStatus: WalletStatus.success,
+            selfieImageData: data.faceImageData,
+            kycLivenessErrorMessage: null,
+          ),
+        );
+      } else {
+        emit(
+          state.copyWith(
+            kycLivenessStatus: WalletStatus.failure,
+            kycLivenessErrorMessage: 'Liveness verification failed',
+            selfieImageData: null,
+          ),
+        );
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          kycLivenessStatus: WalletStatus.failure,
+          kycLivenessErrorMessage: e.toString(),
+          selfieImageData: null,
+        ),
+      );
+    }
+  }
+
+  void _onKycLivenessResetRequested(
+    WalletKycLivenessResetRequested event,
+    Emitter<WalletState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        kycLivenessStatus: WalletStatus.initial,
+        selfieImageData: null,
+        kycLivenessErrorMessage: null,
+      ),
+    );
+  }
+
+  Future<void> _onKycCompareFaceRequested(
+    WalletKycCompareFaceRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        kycCompareFaceStatus: WalletStatus.loading,
+        kycCompareFaceErrorMessage: null,
+        kycCompareFaceErrorCode: null,
+      ),
+    );
+
+    try {
+      final result = await _kycCompareFaceApi.compareFace(
+        selfieImageData: event.selfieImageData,
+        idFaceImageData: event.idFaceImageData,
+      );
+
+      if (result.isFailure || result.data == null) {
+        emit(
+          state.copyWith(
+            kycCompareFaceStatus: WalletStatus.failure,
+            kycCompareFaceErrorMessage:
+                result.errorMessage ?? 'Face comparison failed',
+            kycCompareFaceErrorCode: null,
+          ),
+        );
+        return;
+      }
+
+      final data = result.data!;
+
+      if (data.isSuccess) {
+        emit(
+          state.copyWith(
+            kycCompareFaceStatus: WalletStatus.success,
+            kycCompareFaceErrorMessage: null,
+            kycCompareFaceErrorCode: null,
+          ),
+        );
+      } else {
+        emit(
+          state.copyWith(
+            kycCompareFaceStatus: WalletStatus.failure,
+            kycCompareFaceErrorMessage: data.message ?? 'Face match failed',
+            kycCompareFaceErrorCode: data.code,
+          ),
+        );
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          kycCompareFaceStatus: WalletStatus.failure,
+          kycCompareFaceErrorMessage: e.toString(),
+          kycCompareFaceErrorCode: null,
+        ),
+      );
+    }
+  }
+
+  void _onKycCompareFaceResetRequested(
+    WalletKycCompareFaceResetRequested event,
+    Emitter<WalletState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        kycCompareFaceStatus: WalletStatus.initial,
+        kycCompareFaceErrorMessage: null,
+        kycCompareFaceErrorCode: null,
+      ),
+    );
   }
 
   Future<void> _onDepositRequestsRequested(
