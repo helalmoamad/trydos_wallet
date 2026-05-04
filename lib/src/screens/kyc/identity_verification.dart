@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:image/image.dart' as img;
 import 'package:flutter/foundation.dart';
@@ -39,6 +40,7 @@ class IdentityVerification extends StatefulWidget {
 class _IdentityVerificationState extends State<IdentityVerification> {
   CameraController? _cameraController;
   ObjectDetector? _objectDetector;
+  static const double _defaultRearZoomLevel = 1.05;
 
   bool _isCameraInitialized = false;
   bool _isCameraError = false;
@@ -91,6 +93,9 @@ class _IdentityVerificationState extends State<IdentityVerification> {
   Future<void> _handlePageActivityChange(bool isActive) async {
     if (!mounted) return;
     if (isActive) {
+      if (_objectDetector == null) {
+        _initDetector();
+      }
       if (_cameraController == null ||
           !_cameraController!.value.isInitialized) {
         await _initCamera();
@@ -105,12 +110,36 @@ class _IdentityVerificationState extends State<IdentityVerification> {
       return;
     }
 
-    if (_isStreamActive) {
-      try {
-        await _cameraController?.stopImageStream();
-      } catch (_) {}
-      _isStreamActive = false;
+    // Fully release camera when page is not active to avoid contention
+    // with subsequent liveness camera sessions.
+    await _releaseCamera();
+    try {
+      _objectDetector?.close();
+    } catch (_) {}
+    _objectDetector = null;
+    if (mounted) {
+      setState(() {
+        _isCameraInitialized = false;
+      });
     }
+  }
+
+  Future<void> _releaseCamera() async {
+    final controller = _cameraController;
+    _cameraController = null;
+    _isStreamActive = false;
+    _isCameraInitialized = false;
+    if (controller == null) return;
+
+    try {
+      if (controller.value.isStreamingImages) {
+        await controller.stopImageStream();
+      }
+    } catch (_) {}
+
+    try {
+      await controller.dispose();
+    } catch (_) {}
   }
 
   void _initDetector() {
@@ -130,8 +159,17 @@ class _IdentityVerificationState extends State<IdentityVerification> {
         if (mounted) setState(() => _isCameraError = true);
         return;
       }
+
+      final rearCamera = cameras.firstWhere(
+        (cam) => cam.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.firstWhere(
+          (cam) => cam.lensDirection != CameraLensDirection.front,
+          orElse: () => cameras.first,
+        ),
+      );
+
       _cameraController = CameraController(
-        cameras.first,
+        rearCamera,
         ResolutionPreset.medium,
         enableAudio: false,
         imageFormatGroup: Platform.isAndroid
@@ -139,6 +177,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
             : ImageFormatGroup.bgra8888,
       );
       await _cameraController!.initialize();
+      await _configureCameraLens();
       if (!mounted) return;
       setState(() => _isCameraInitialized = true);
       await Future.delayed(const Duration(seconds: 3));
@@ -148,6 +187,53 @@ class _IdentityVerificationState extends State<IdentityVerification> {
     } catch (_) {
       if (mounted) setState(() => _isCameraError = true);
     }
+  }
+
+  Future<void> _configureCameraLens() async {
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized) {
+      return;
+    }
+
+    try {
+      await controller.setFocusMode(FocusMode.auto);
+    } catch (_) {}
+
+    try {
+      await controller.setExposureMode(ExposureMode.auto);
+    } catch (_) {}
+
+    try {
+      final minZoom = await controller.getMinZoomLevel();
+      final maxZoom = await controller.getMaxZoomLevel();
+      final targetZoom = _defaultRearZoomLevel
+          .clamp(minZoom, maxZoom)
+          .toDouble();
+      await controller.setZoomLevel(targetZoom);
+    } catch (_) {
+      // Keep device defaults when zoom controls are not available.
+    }
+  }
+
+  Widget _buildCameraPreview() {
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized) {
+      return const SizedBox.shrink();
+    }
+
+    final previewSize = controller.value.previewSize;
+    if (previewSize == null) {
+      return CameraPreview(controller);
+    }
+
+    return FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        width: previewSize.height,
+        height: previewSize.width,
+        child: CameraPreview(controller),
+      ),
+    );
   }
 
   void _onCameraImage(CameraImage image) async {
@@ -450,10 +536,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
 
   @override
   void dispose() {
-    if (_isStreamActive) {
-      _cameraController?.stopImageStream();
-    }
-    _cameraController?.dispose();
+    unawaited(_releaseCamera());
     _objectDetector?.close();
     super.dispose();
   }
@@ -698,8 +781,11 @@ class _IdentityVerificationState extends State<IdentityVerification> {
                     Positioned.fill(
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(30.r),
-                        child: _isCameraInitialized && _cameraController != null
-                            ? CameraPreview(_cameraController!)
+                        child:
+                            _isCameraInitialized &&
+                                _cameraController != null &&
+                                _cameraController!.value.isInitialized
+                            ? _buildCameraPreview()
                             : _isCameraError
                             ? Center(
                                 child: Padding(

@@ -1,14 +1,11 @@
-import 'dart:io';
-import 'dart:math';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:camera/camera.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
@@ -25,46 +22,44 @@ class LiveFaceDetection extends StatefulWidget {
   State<LiveFaceDetection> createState() => _LiveFaceDetectionState();
 }
 
-enum _LivenessChallenge { lookLeft, lookRight, blink }
+enum _LivenessChallenge { lookStraight, turnRight, turnLeft }
 
 class _LiveFaceDetectionState extends State<LiveFaceDetection> {
   CameraController? _cameraController;
-  FaceDetector? _faceDetector;
+  static const double _defaultFrontZoomLevel = 1.15;
 
   bool _isCameraInitialized = false;
   bool _isCameraError = false;
-  bool _isProcessing = false;
-  bool _isStreamActive = false;
   bool _isCompleted = false;
   bool _hasFailed = false;
-  int _frameCounter = 0;
-
-  final List<_LivenessChallenge> _challenges = [];
-  int _currentChallengeIndex = 0;
-  int _failedChallengeCount = 0;
-  double _progress = 0.0;
-  DateTime? _holdStart;
-  DateTime? _challengeStart;
-
-  // Selfie captured right after the blink challenge (eyes reopen = best photo)
-  String? _capturedSelfiePath;
-  bool _selfieCapturing = false; // true while takePicture is in progress
-  WalletStatus _lastKycLivenessStatus = WalletStatus.initial;
-
-  // Face confirmed = challenges may begin (set synchronously on first face frame)
+  bool _isRequestInFlight = false;
   bool _selfieCaptured = false;
 
-  static const int _totalChallenges = 3;
-  static const int _maxFailedChallenges = 2;
-  static const int _kProcessEveryNFrames = 3;
-  static const Duration _holdDuration = Duration(milliseconds: 800);
-  static const Duration _challengeTimeout = Duration(seconds: 8);
+  final List<_LivenessChallenge> _challenges = <_LivenessChallenge>[
+    _LivenessChallenge.lookStraight,
+    _LivenessChallenge.turnRight,
+    _LivenessChallenge.turnLeft,
+  ];
+
+  int _currentChallengeIndex = 0;
+  double _progress = 0.0;
+
+  String? _capturedSelfiePath;
+  String? _firstChallengeFaceImageData;
+  String? _firstChallengeSelfiePath;
+  WalletStatus _lastKycLivenessStatus = WalletStatus.initial;
+
+  int _flowToken = 0;
+  bool _isFlowRunning = false;
+  bool _didNotifySuccess = false;
+
+  static const int _maxAttemptsPerChallenge = 3;
+  static const Duration _initialDelay = Duration(seconds: 2);
+  static const Duration _attemptInterval = Duration(seconds: 2);
 
   @override
   void initState() {
     super.initState();
-    _setupChallenges();
-    _initDetector();
     if (widget.isActive) {
       _initCamera();
     }
@@ -80,51 +75,28 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
 
   Future<void> _handlePageActivityChange(bool isActive) async {
     if (!mounted) return;
-    if (isActive) {
-      if (_cameraController == null ||
-          !_cameraController!.value.isInitialized) {
-        await _initCamera();
-        return;
-      }
-      if (!_isStreamActive && !_isCompleted && !_hasFailed) {
-        try {
-          await _cameraController!.startImageStream(_onCameraImage);
-          _isStreamActive = true;
-        } catch (_) {}
+
+    if (!isActive) {
+      _flowToken++;
+      _isFlowRunning = false;
+      try {
+        await _cameraController?.dispose();
+      } catch (_) {}
+      _cameraController = null;
+      if (mounted) {
+        setState(() {
+          _isCameraInitialized = false;
+        });
       }
       return;
     }
 
-    if (_isStreamActive) {
-      try {
-        await _cameraController?.stopImageStream();
-      } catch (_) {}
-      _isStreamActive = false;
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      await _initCamera();
+      return;
     }
-  }
 
-  void _setupChallenges() {
-    final all = [
-      _LivenessChallenge.lookLeft,
-      _LivenessChallenge.lookRight,
-      _LivenessChallenge.blink,
-    ];
-    all.shuffle(Random());
-    _challenges
-      ..clear()
-      ..addAll(all.take(_totalChallenges));
-    _challengeStart = DateTime.now();
-  }
-
-  void _initDetector() {
-    _faceDetector = FaceDetector(
-      options: FaceDetectorOptions(
-        performanceMode: FaceDetectorMode.accurate,
-        enableClassification: true, // needed for eye open probability (blink)
-        enableLandmarks: false,
-        enableContours: false,
-      ),
-    );
+    _startLivenessFlow();
   }
 
   Future<void> _initCamera() async {
@@ -150,283 +122,321 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
       );
 
       await _cameraController!.initialize();
+      await _applyDefaultCameraZoom();
       if (!mounted) return;
       setState(() => _isCameraInitialized = true);
 
-      if (!widget.isActive) return;
-      await _cameraController!.startImageStream(_onCameraImage);
-      _isStreamActive = true;
+      _startLivenessFlow();
     } catch (_) {
       if (mounted) setState(() => _isCameraError = true);
     }
   }
 
-  Future<void> _onCameraImage(CameraImage image) async {
-    if (!widget.isActive) return;
-    if (_isProcessing || _isCompleted || _hasFailed) return;
-    _frameCounter++;
-    if (_frameCounter % _kProcessEveryNFrames != 0) return;
-    _isProcessing = true;
-    try {
-      // Timeout check only runs once challenges have actually started
-      if (_selfieCaptured &&
-          _challengeStart != null &&
-          DateTime.now().difference(_challengeStart!) >= _challengeTimeout) {
-        await _registerChallengeFailure();
-        return;
-      }
-
-      final input = _convertToInputImage(image);
-      if (input == null || _faceDetector == null) return;
-
-      final faces = await _faceDetector!.processImage(input);
-      if (!mounted) return;
-
-      if (faces.isEmpty) {
-        _holdStart = null;
-        return;
-      }
-
-      // Confirm face presence synchronously — no photo needed here
-      if (!_selfieCaptured) {
-        _selfieCaptured = true;
-        _challengeStart = DateTime.now();
-        if (mounted) setState(() {});
-        return;
-      }
-
-      final face = faces.first;
-      final ok = _isChallengeSatisfied(face);
-      if (ok) {
-        _holdStart ??= DateTime.now();
-        final held = DateTime.now().difference(_holdStart!);
-        if (held >= _holdDuration) {
-          final justCompleted = _challenges[_currentChallengeIndex];
-          _holdStart = null;
-          _currentChallengeIndex++;
-          final isLast = _currentChallengeIndex >= _totalChallenges;
-
-          // After blink: wait 1 s then take photo (eyes fully reopen = best frame)
-          if (justCompleted == _LivenessChallenge.blink &&
-              !_selfieCapturing &&
-              _capturedSelfiePath == null) {
-            _selfieCapturing = true;
-            Future.microtask(
-              () => _capturePostBlinkSelfie(proceedToComplete: isLast),
-            );
-            if (isLast) {
-              return; // _capturePostBlinkSelfie will call _completeLiveness
-            }
-          }
-
-          if (isLast) {
-            await _completeLiveness();
-            return;
-          }
-          _challengeStart = DateTime.now();
-        }
-      } else {
-        _holdStart = null;
-      }
-
-      final baseProgress = _currentChallengeIndex / _totalChallenges;
-      final holdPart = _holdStart == null
-          ? 0.0
-          : (DateTime.now().difference(_holdStart!).inMilliseconds /
-                        _holdDuration.inMilliseconds)
-                    .clamp(0.0, 1.0) /
-                _totalChallenges;
-      final next = (baseProgress + holdPart).clamp(0.0, 1.0);
-      if ((_progress - next).abs() > 0.001) {
-        setState(() => _progress = next);
-      }
-    } finally {
-      _isProcessing = false;
-    }
-  }
-
-  Future<void> _registerChallengeFailure() async {
-    _failedChallengeCount++;
-    _holdStart = null;
-
-    if (_failedChallengeCount >= _maxFailedChallenges) {
-      await _failLiveness();
+  Future<void> _applyDefaultCameraZoom() async {
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized) {
       return;
     }
 
-    _challengeStart = DateTime.now();
+    try {
+      final minZoom = await controller.getMinZoomLevel();
+      final maxZoom = await controller.getMaxZoomLevel();
+      final targetZoom = _defaultFrontZoomLevel
+          .clamp(minZoom, maxZoom)
+          .toDouble();
+      await controller.setZoomLevel(targetZoom);
+    } catch (_) {
+      // Keep default device zoom if zoom levels are unavailable.
+    }
+  }
+
+  Widget _buildCameraPreview() {
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized) {
+      return Container(color: const Color(0xffF5F5F5));
+    }
+
+    final previewSize = controller.value.previewSize;
+    if (previewSize == null) {
+      return CameraPreview(controller);
+    }
+
+    return FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        width: previewSize.height,
+        height: previewSize.width,
+        child: CameraPreview(controller),
+      ),
+    );
+  }
+
+  void _startLivenessFlow() {
+    if (!mounted || !widget.isActive) return;
+    if (_isFlowRunning || _hasFailed || _isCompleted || !_isCameraInitialized) {
+      return;
+    }
+
+    final token = ++_flowToken;
+    _isFlowRunning = true;
+    _runLivenessFlow(token);
+  }
+
+  Future<void> _runLivenessFlow(int token) async {
+    await _delayWithToken(_initialDelay, token);
+    if (!_isTokenValid(token)) {
+      _isFlowRunning = false;
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _selfieCaptured = true;
+      });
+    }
+
+    for (
+      var challengeIndex = _currentChallengeIndex;
+      challengeIndex < _challenges.length;
+      challengeIndex++
+    ) {
+      if (!_isTokenValid(token)) {
+        _isFlowRunning = false;
+        return;
+      }
+
+      var success = false;
+      for (var attempt = 1; attempt <= _maxAttemptsPerChallenge; attempt++) {
+        final attemptSuccess = await _executeChallengeAttempt(
+          challenge: _challenges[challengeIndex],
+          token: token,
+        );
+
+        if (!_isTokenValid(token)) {
+          _isFlowRunning = false;
+          return;
+        }
+
+        if (attemptSuccess) {
+          success = true;
+          break;
+        }
+
+        if (attempt < _maxAttemptsPerChallenge) {
+          await _delayWithToken(_attemptInterval, token);
+          if (!_isTokenValid(token)) {
+            _isFlowRunning = false;
+            return;
+          }
+        }
+      }
+
+      if (!success) {
+        await _failLiveness();
+        _isFlowRunning = false;
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _currentChallengeIndex = challengeIndex + 1;
+          _progress = (_currentChallengeIndex / _challenges.length).clamp(
+            0.0,
+            1.0,
+          );
+        });
+      }
+
+      if (_currentChallengeIndex < _challenges.length) {
+        await _delayWithToken(_attemptInterval, token);
+      }
+    }
+
+    if (_isTokenValid(token)) {
+      await _completeLivenessSuccessfully();
+    }
+    _isFlowRunning = false;
+  }
+
+  Future<bool> _executeChallengeAttempt({
+    required _LivenessChallenge challenge,
+    required int token,
+  }) async {
+    if (!_isTokenValid(token)) return false;
+
+    if (mounted) {
+      setState(() => _isRequestInFlight = true);
+    }
+
+    try {
+      final selfiePath = await _captureSelfie();
+      if (selfiePath == null || !_isTokenValid(token)) {
+        return false;
+      }
+
+      final bytes = await File(selfiePath).readAsBytes();
+      final faceImageData = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+      final state = await _sendLivenessRequest(
+        faceImageData: faceImageData,
+        challengeStep: _apiChallengeStep(challenge),
+      );
+
+      if (!_isTokenValid(token)) return false;
+
+      final success =
+          state.kycLivenessStatus == WalletStatus.success &&
+          state.selfieImageData != null;
+
+      if (success) {
+        if (_currentChallengeIndex == 0 &&
+            _firstChallengeFaceImageData == null) {
+          _firstChallengeFaceImageData = state.selfieImageData;
+          _firstChallengeSelfiePath = selfiePath;
+        }
+      }
+
+      return success;
+    } catch (_) {
+      return false;
+    } finally {
+      if (mounted) {
+        setState(() => _isRequestInFlight = false);
+      }
+    }
+  }
+
+  Future<WalletState> _sendLivenessRequest({
+    required String faceImageData,
+    required String challengeStep,
+  }) async {
+    final bloc = context.read<WalletBloc>();
+    bloc.add(const WalletKycLivenessResetRequested());
+    bloc.add(
+      WalletKycLivenessRequested(
+        faceImageData: faceImageData,
+        challengeStep: challengeStep,
+      ),
+    );
+
+    return bloc.stream.firstWhere(
+      (state) =>
+          state.kycLivenessStatus == WalletStatus.success ||
+          state.kycLivenessStatus == WalletStatus.failure,
+    );
+  }
+
+  Future<void> _completeLivenessSuccessfully() async {
+    if (_isCompleted || _hasFailed) return;
+
+    final savedPath = await _saveApiFaceImageToFile(
+      _firstChallengeFaceImageData,
+    );
+    if (savedPath != null) {
+      _capturedSelfiePath = savedPath;
+    } else if (_firstChallengeSelfiePath != null) {
+      _capturedSelfiePath = _firstChallengeSelfiePath;
+    }
+
+    if (!mounted) return;
+
     setState(() {
-      _progress = (_currentChallengeIndex / _totalChallenges).clamp(0.0, 1.0);
+      _isCompleted = true;
+      _progress = 1.0;
     });
+
+    if (!_didNotifySuccess) {
+      _didNotifySuccess = true;
+      widget.onSuccessTap?.call(_capturedSelfiePath ?? '');
+    }
   }
 
   Future<void> _failLiveness() async {
     if (_hasFailed || _isCompleted) return;
-    _hasFailed = true;
+    if (!mounted) return;
 
-    if (_isStreamActive) {
-      await _cameraController?.stopImageStream();
-      _isStreamActive = false;
-    }
-
-    if (mounted) {
-      setState(() {});
-    }
+    setState(() {
+      _hasFailed = true;
+      _progress = (_currentChallengeIndex / _challenges.length).clamp(0.0, 1.0);
+    });
   }
 
   Future<void> _restartLiveness() async {
-    _holdStart = null;
-    _challengeStart = null;
-    _currentChallengeIndex = 0;
-    _failedChallengeCount = 0;
+    _flowToken++;
+    _isFlowRunning = false;
+    _didNotifySuccess = false;
+    _firstChallengeFaceImageData = null;
+    _firstChallengeSelfiePath = null;
     _capturedSelfiePath = null;
-    _selfieCaptured = false;
-    _selfieCapturing = false;
+
+    context.read<WalletBloc>().add(const WalletKycLivenessResetRequested());
+
+    if (!mounted) return;
 
     setState(() {
-      _hasFailed = false;
       _isCompleted = false;
+      _hasFailed = false;
+      _selfieCaptured = false;
+      _isRequestInFlight = false;
+      _currentChallengeIndex = 0;
       _progress = 0.0;
     });
 
-    _setupChallenges();
-
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      await _initCamera();
-      return;
-    }
-
-    if (!_isStreamActive) {
-      if (!widget.isActive) return;
-      await _cameraController!.startImageStream(_onCameraImage);
-      _isStreamActive = true;
-    }
+    _startLivenessFlow();
   }
 
-  bool _isChallengeSatisfied(Face face) {
-    if (_currentChallengeIndex >= _challenges.length) return false;
-    final challenge = _challenges[_currentChallengeIndex];
-    final yaw = face.headEulerAngleY ?? 0.0;
-
-    switch (challenge) {
-      case _LivenessChallenge.lookLeft:
-        return yaw > 15;
-      case _LivenessChallenge.lookRight:
-        return yaw < -15;
-      case _LivenessChallenge.blink:
-        // Both eyes closed: open probability < 0.3
-        final leftOpen = face.leftEyeOpenProbability ?? 1.0;
-        final rightOpen = face.rightEyeOpenProbability ?? 1.0;
-        return leftOpen < 0.3 && rightOpen < 0.3;
-    }
-  }
-
-  /// Stops the stream, waits 1 s for eyes to fully reopen after blink,
-  /// takes the selfie, then restarts stream (or completes liveness if last).
-  Future<void> _capturePostBlinkSelfie({
-    required bool proceedToComplete,
-  }) async {
+  Future<String?> _captureSelfie() async {
     try {
-      if (_isStreamActive) {
-        await _cameraController?.stopImageStream();
-        _isStreamActive = false;
+      if (_cameraController == null ||
+          !_cameraController!.value.isInitialized) {
+        return null;
       }
-      // Let eyes fully reopen before capturing
-      await Future.delayed(const Duration(seconds: 1));
-      if (_cameraController != null && _cameraController!.value.isInitialized) {
-        final xFile = await _cameraController!.takePicture();
-        _capturedSelfiePath = xFile.path;
-      }
+      final file = await _cameraController!.takePicture();
+      return file.path;
     } catch (_) {
-      // selfie stays null — completeLiveness has a fallback
-    } finally {
-      _selfieCapturing = false;
-      if (proceedToComplete) {
-        await _completeLiveness();
-      } else if (!_isCompleted &&
-          widget.isActive &&
-          !_hasFailed &&
-          _cameraController != null &&
-          _cameraController!.value.isInitialized) {
-        try {
-          await _cameraController!.startImageStream(_onCameraImage);
-          _isStreamActive = true;
-          _challengeStart = DateTime.now();
-        } catch (_) {}
-      }
+      return null;
     }
   }
 
-  Future<void> _completeLiveness() async {
-    if (_isCompleted) return;
-    _isCompleted = true;
-    setState(() => _progress = 1.0);
-
-    if (_isStreamActive) {
-      await _cameraController?.stopImageStream();
-      _isStreamActive = false;
+  Future<String?> _saveApiFaceImageToFile(String? rawFaceImageData) async {
+    if (rawFaceImageData == null || rawFaceImageData.trim().isEmpty) {
+      return null;
     }
 
-    // Use the pre-challenge selfie if available; fallback to capturing now
-    if (_capturedSelfiePath == null) {
-      try {
-        if (_cameraController != null &&
-            _cameraController!.value.isInitialized) {
-          final xFile = await _cameraController!.takePicture();
-          _capturedSelfiePath = xFile.path;
-        }
-      } catch (_) {}
-    }
+    try {
+      final commaIndex = rawFaceImageData.indexOf(',');
+      final base64Part = commaIndex >= 0
+          ? rawFaceImageData.substring(commaIndex + 1)
+          : rawFaceImageData;
 
-    if (mounted) setState(() {}); // show captured photo in green frame
-
-    // قراءة الصورة وإرسال الطلب بدون الانتظار
-    if (_capturedSelfiePath != null && mounted) {
-      try {
-        final bytes = await File(_capturedSelfiePath!).readAsBytes();
-        final base64Image = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-        if (mounted) {
-          context.read<WalletBloc>().add(
-            WalletKycLivenessRequested(
-              faceImageData: base64Image,
-              challengeStep: 'look_straight',
-            ),
-          );
-        }
-      } catch (_) {
-        // خطأ في قراءة الملف
-      }
+      final bytes = base64Decode(base64Part);
+      final path =
+          '${Directory.systemTemp.path}${Platform.pathSeparator}kyc_liveness_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final file = File(path);
+      await file.writeAsBytes(bytes, flush: true);
+      return file.path;
+    } catch (_) {
+      return null;
     }
   }
 
-  InputImage? _convertToInputImage(CameraImage image) {
-    if (_cameraController == null) return null;
-    final camera = _cameraController!.description;
-    final rotation = InputImageRotationValue.fromRawValue(
-      camera.sensorOrientation,
-    );
-    if (rotation == null) return null;
-
-    final format = InputImageFormatValue.fromRawValue(image.format.raw);
-    if (format == null) return null;
-
-    final metadata = InputImageMetadata(
-      size: Size(image.width.toDouble(), image.height.toDouble()),
-      rotation: rotation,
-      format: format,
-      bytesPerRow: image.planes.first.bytesPerRow,
-    );
-
-    final bytes = _concatenatePlanes(image.planes);
-    return InputImage.fromBytes(bytes: bytes, metadata: metadata);
+  String _apiChallengeStep(_LivenessChallenge challenge) {
+    switch (challenge) {
+      case _LivenessChallenge.lookStraight:
+        return 'look_straight';
+      case _LivenessChallenge.turnRight:
+        return 'turn_right';
+      case _LivenessChallenge.turnLeft:
+        return 'turn_left';
+    }
   }
 
-  Uint8List _concatenatePlanes(List<Plane> planes) {
-    final allBytes = WriteBuffer();
-    for (final plane in planes) {
-      allBytes.putUint8List(plane.bytes);
-    }
-    return allBytes.done().buffer.asUint8List();
+  bool _isTokenValid(int token) =>
+      mounted && widget.isActive && _flowToken == token;
+
+  Future<void> _delayWithToken(Duration duration, int token) async {
+    await Future.delayed(duration);
+    if (!_isTokenValid(token)) return;
   }
 
   String _currentChallengeText(String lang) {
@@ -436,27 +446,28 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
     if (_isCompleted) {
       return AppStrings.get(lang, 'kyc_liveness_done');
     }
+    if (_isRequestInFlight) {
+      return AppStrings.get(lang, 'kyc_liveness_verifying');
+    }
     if (_currentChallengeIndex >= _challenges.length) {
       return AppStrings.get(lang, 'kyc_liveness_verifying');
     }
+
     final challenge = _challenges[_currentChallengeIndex];
     switch (challenge) {
-      case _LivenessChallenge.lookLeft:
-        return AppStrings.get(lang, 'kyc_liveness_turn_left');
-      case _LivenessChallenge.lookRight:
+      case _LivenessChallenge.lookStraight:
+        return AppStrings.get(lang, 'kyc_align_face');
+      case _LivenessChallenge.turnRight:
         return AppStrings.get(lang, 'kyc_liveness_turn_right');
-      case _LivenessChallenge.blink:
-        return AppStrings.get(lang, 'kyc_liveness_blink');
+      case _LivenessChallenge.turnLeft:
+        return AppStrings.get(lang, 'kyc_liveness_turn_left');
     }
   }
 
   @override
   void dispose() {
-    if (_isStreamActive) {
-      _cameraController?.stopImageStream();
-    }
+    _flowToken++;
     _cameraController?.dispose();
-    _faceDetector?.close();
     super.dispose();
   }
 
@@ -467,12 +478,6 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
         final livenessStatus = state.kycLivenessStatus;
         if (livenessStatus != _lastKycLivenessStatus) {
           _lastKycLivenessStatus = livenessStatus;
-          // عند النجاح: انتقل للصفحة التالية
-          if (livenessStatus == WalletStatus.success &&
-              _isCompleted &&
-              mounted) {
-            widget.onSuccessTap?.call(_capturedSelfiePath ?? '');
-          }
         }
       },
       builder: (context, state) {
@@ -556,7 +561,6 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                                     ),
                               ),
                             )
-                          // Show the captured photo (not live camera) in success frame
                           : _isCompleted && _capturedSelfiePath != null
                           ? SizedBox.expand(
                               child: Image.file(
@@ -565,9 +569,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                               ),
                             )
                           : _isCameraInitialized && _cameraController != null
-                          ? SizedBox.expand(
-                              child: CameraPreview(_cameraController!),
-                            )
+                          ? SizedBox.expand(child: _buildCameraPreview())
                           : Container(color: const Color(0xffF5F5F5)),
                     ),
                     Positioned(
@@ -612,7 +614,6 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
             ),
             SizedBox(height: 10.h),
             if (!_isCompleted) ...[
-              // ---- Phase 1: waiting for face / capturing selfie ----
               if (!_selfieCaptured) ...[
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 60.w),
@@ -628,7 +629,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                   ),
                 ),
                 SizedBox(height: 12.h),
-                if (_selfieCapturing)
+                if (_isRequestInFlight)
                   SizedBox(
                     width: 22.r,
                     height: 22.r,
@@ -639,7 +640,6 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                   ),
                 const Spacer(),
               ] else ...[
-                // ---- Phase 2: challenges ----
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 60.w),
                   child: Text(
@@ -738,20 +738,12 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                 SizedBox(height: 35.h),
               ],
             ] else ...[
-              // ---- After green frame (liveness verification) ----
               if (state.kycLivenessStatus == WalletStatus.failure) ...[
                 SizedBox(height: 10.h),
                 InkWell(
                   highlightColor: Colors.transparent,
                   splashColor: Colors.transparent,
-                  onTap: () {
-                    _isCompleted = false;
-                    setState(() {});
-                    context.read<WalletBloc>().add(
-                      const WalletKycLivenessResetRequested(),
-                    );
-                    _restartLiveness();
-                  },
+                  onTap: _restartLiveness,
                   child: Text(
                     AppStrings.get(lang, 'kyc_incorrect_try_again'),
                     style: context.textTheme.titleLarge?.rq.copyWith(

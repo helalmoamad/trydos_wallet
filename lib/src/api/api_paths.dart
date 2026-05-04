@@ -64,6 +64,13 @@ abstract class ApiPaths {
   /// Body: selfieImageData (data URL), idFaceImageData (data URL)
   static const String kycCompareFace = '/api/kyc/compare-face';
 
+  /// AWS liveness session lifecycle (POST create session, GET result by sessionId).
+  static const String kycAwsLiveness = '/api/kyc/liveness-aws';
+
+  /// AWS liveness temporary credentials (GET).
+  static const String kycAwsLivenessCredentials =
+      '/api/kyc/liveness-credentials';
+
   // ─── Payment Requests ───
   /// Create payment request (POST).
   /// Body: accountNumber, assetType, assetSymbol, amount, purposeId, reference, note?, expiryMinutes?, isPermanent, idempotencyKey

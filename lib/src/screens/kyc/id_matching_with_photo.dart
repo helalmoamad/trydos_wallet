@@ -89,6 +89,8 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
   }
 
   void _onRetry() {
+    /* widget.onTapNextPage?.call();
+    return;*/
     if (!mounted) return;
     final bloc = context.read<WalletBloc>();
     // Read selfie/idFace before resetting (reset clears nothing here but ensures clean status)
