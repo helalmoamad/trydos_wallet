@@ -112,6 +112,7 @@ class ReceiptWidget extends StatelessWidget {
               AppStrings.get(languageCode, 'sender_account'),
               senderAccount,
               context,
+              forceLtrValue: true,
             ),
             SizedBox(height: 5.h),
 
@@ -142,6 +143,7 @@ class ReceiptWidget extends StatelessWidget {
                 recipientAccount,
                 context,
                 qrData: isFromQr ? _receiptQrPayload() : null,
+                forceLtrValue: true,
               ),
               SizedBox(height: 5.h),
             ],
@@ -236,6 +238,7 @@ class ReceiptWidget extends StatelessWidget {
     String value,
     BuildContext context, {
     String? qrData,
+    bool forceLtrValue = false,
   }) {
     return Container(
       width: double.infinity,
@@ -272,6 +275,7 @@ class ReceiptWidget extends StatelessWidget {
                   color: const Color(0xff1D1D1D),
                   fontSize: 13.sp,
                 ),
+                textDirection: forceLtrValue ? TextDirection.ltr : null,
               ),
             ],
           ),

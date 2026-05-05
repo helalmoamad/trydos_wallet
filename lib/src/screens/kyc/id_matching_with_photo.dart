@@ -52,18 +52,20 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
     _startBlinking();
     // Send compare-face request on first frame using BLoC state data
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
       final state = context.read<WalletBloc>().state;
       final selfie = state.selfieImageData ?? '';
       final idFace = state.kycIdFaceImageData ?? '';
       if (selfie.isNotEmpty && idFace.isNotEmpty && !_requestSent) {
         _requestSent = true;
-        context.read<WalletBloc>().add(
-          WalletKycCompareFaceRequested(
-            selfieImageData: selfie,
-            idFaceImageData: idFace,
-          ),
-        );
+        Future.delayed(const Duration(seconds: 1), () {
+          if (!mounted) return;
+          context.read<WalletBloc>().add(
+            WalletKycCompareFaceRequested(
+              selfieImageData: selfie,
+              idFaceImageData: idFace,
+            ),
+          );
+        });
       }
     });
   }

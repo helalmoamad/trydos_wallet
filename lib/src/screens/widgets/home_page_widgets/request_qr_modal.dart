@@ -654,6 +654,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                   color: const Color(0xff404040),
                   fontSize: 16.sp,
                 ),
+                textDirection: TextDirection.ltr,
               ),
             ],
           ),
@@ -678,6 +679,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                   _buildInfoBox(
                     AppStrings.get(state.languageCode, 'account_number'),
                     '$_accountNumber  ${_currencyDisplayName(state)}',
+                    forceLtrValue: true,
                     state: state,
                   ),
                   SizedBox(height: 5.h),
@@ -802,6 +804,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                     color: const Color(0xff1D1D1D),
                     fontSize: 16.sp,
                   ),
+                  textDirection: _isFinalQrExpired ? null : TextDirection.ltr,
                 ),
               ],
             ),
@@ -826,6 +829,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                   _buildSummaryBox(
                     AppStrings.get(state.languageCode, 'account_number'),
                     '${response.requesterAccountNumber}  ${_currencyDisplayName(state)}',
+                    forceLtrValue: true,
                     backgroundColor: fieldBackground,
                   ),
                   SizedBox(height: 5.h),
@@ -1073,6 +1077,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
     bool isMaskedNow = false,
     Color backgroundColor = const Color(0xffFCFCFC),
     WalletState? state,
+    bool forceLtrValue = false,
   }) {
     return Stack(
       children: [
@@ -1105,6 +1110,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                   color: const Color(0xff1D1D1D),
                   fontSize: 13.sp,
                 ),
+                textDirection: forceLtrValue ? TextDirection.ltr : null,
               ),
             ],
           ),
@@ -1242,6 +1248,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
     bool isBold = false,
     int maxLines = 1,
     Color backgroundColor = const Color(0xffFCFCFC),
+    bool forceLtrValue = false,
   }) {
     return Container(
       width: double.infinity,
@@ -1270,6 +1277,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
               fontSize: 13.sp,
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             ),
+            textDirection: forceLtrValue ? TextDirection.ltr : null,
             maxLines: maxLines,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1570,6 +1578,7 @@ class _CleanRequestQRCard extends StatelessWidget {
                 color: const Color(0xff1D1D1D),
                 fontSize: 16.sp,
               ),
+              textDirection: TextDirection.ltr,
             ),
             SizedBox(height: 20.h),
             _buildInfoBox(
@@ -1582,6 +1591,7 @@ class _CleanRequestQRCard extends StatelessWidget {
               AppStrings.get(languageCode, 'account_number'),
               '$accountNumber  $currencyDisplayName',
               context,
+              forceLtrValue: true,
             ),
             SizedBox(height: 5.h),
             Row(
@@ -1693,7 +1703,12 @@ class _CleanRequestQRCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoBox(String label, String value, BuildContext context) {
+  Widget _buildInfoBox(
+    String label,
+    String value,
+    BuildContext context, {
+    bool forceLtrValue = false,
+  }) {
     return Container(
       width: double.infinity,
 
@@ -1721,6 +1736,7 @@ class _CleanRequestQRCard extends StatelessWidget {
               color: const Color(0xff1D1D1D),
               fontSize: 13.sp,
             ),
+            textDirection: forceLtrValue ? TextDirection.ltr : null,
           ),
         ],
       ),

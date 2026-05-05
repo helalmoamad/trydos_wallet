@@ -310,6 +310,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                                 'sender_account',
                               ),
                               widget.senderAccount,
+                              forceLtrValue: true,
                             ),
                             SizedBox(height: 5.h),
                             if (widget.recipientPhoneNumber != null &&
@@ -348,6 +349,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                                 qrData: widget.isFromQr
                                     ? _successQrPayload()
                                     : null,
+                                forceLtrValue: true,
                               ),
                             SizedBox(height: 5.h),
                             Row(
@@ -523,6 +525,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
     String value, {
     bool isBold = false,
     String? qrData,
+    bool forceLtrValue = false,
   }) {
     return SizedBox(
       height: 54.h,
@@ -560,6 +563,7 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                     fontSize: 13.sp,
                     fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
                   ),
+                  textDirection: forceLtrValue ? TextDirection.ltr : null,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),

@@ -270,7 +270,16 @@ class _HomeTabState extends State<HomeTab> {
     }
     if (party.accountNumber.isNotEmpty) {
       addSeparator();
-      children.add(TextSpan(text: party.accountNumber, style: regularStyle));
+      children.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.baseline,
+          baseline: TextBaseline.alphabetic,
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text(party.accountNumber, style: regularStyle),
+          ),
+        ),
+      );
     }
     if (party.name.isNotEmpty) {
       addSeparator();

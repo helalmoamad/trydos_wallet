@@ -105,10 +105,14 @@ class _TransferSendModalState extends State<TransferSendModal>
   bool _reportedSuccessToParent = false;
 
   TextEditingValue _formatAccountInput(TextEditingValue value) {
+    // Strip non-digits and cap at 8 digits maximum
     final digitsOnly = value.text.replaceAll(RegExp(r'\D'), '');
-    final formatted = digitsOnly.length <= 4
-        ? digitsOnly
-        : '${digitsOnly.substring(0, 4)}-${digitsOnly.substring(4)}';
+    final capped = digitsOnly.length > 8
+        ? digitsOnly.substring(0, 8)
+        : digitsOnly;
+    final formatted = capped.length <= 4
+        ? capped
+        : '${capped.substring(0, 4)}-${capped.substring(4)}';
 
     final selectionIndex = formatted.length;
     return TextEditingValue(
@@ -1520,6 +1524,7 @@ class _TransferSendModalState extends State<TransferSendModal>
                                 color: Colors.white,
                                 fontSize: 13.sp,
                               ),
+                              textDirection: TextDirection.ltr,
                             ),
                             SizedBox(height: 12.h),
 
@@ -1969,6 +1974,7 @@ class _TransferSendModalState extends State<TransferSendModal>
     VoidCallback? onEdit,
     bool showQuestionIcon = false,
     bool showMaskedName = false,
+    bool forceLtrValue = false,
     bool enabled = true,
     required FocusNode focusNode,
     TextEditingController? controller,
@@ -2047,6 +2053,9 @@ class _TransferSendModalState extends State<TransferSendModal>
                       if (inlineLabel != null) ...[
                         SizedBox(width: 10.w),
                         Text(
+                          textDirection: forceLtrValue
+                              ? TextDirection.ltr
+                              : null,
                           inlineLabel,
                           style: context.textTheme.bodyMedium?.mq.copyWith(
                             fontSize: 11.sp,
@@ -2169,6 +2178,9 @@ class _TransferSendModalState extends State<TransferSendModal>
                               enabled: enabled,
                               maxLines: 1,
                               keyboardType: keyboardType,
+                              textDirection: forceLtrValue
+                                  ? TextDirection.ltr
+                                  : null,
                               inputFormatters: inputFormatters,
                               cursorColor: const Color(0xff388CFF),
                               style: context.textTheme.bodyMedium?.mq.copyWith(
@@ -2488,6 +2500,7 @@ class _TransferSendModalState extends State<TransferSendModal>
           keyboardType: currentInputType == RecipientInputType.phone
               ? TextInputType.phone
               : TextInputType.number,
+          forceLtrValue: currentInputType == RecipientInputType.account,
           inputFormatters: currentInputType == RecipientInputType.account
               ? [
                   TextInputFormatter.withFunction((oldValue, newValue) {

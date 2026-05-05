@@ -1,5 +1,7 @@
 import 'dart:io' show Platform;
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../api/api_client.dart';
 import '../api/api_headers.dart';
 import '../api/api_interceptors.dart';
@@ -116,7 +118,9 @@ class TrydosWallet {
   }
 
   /// Trigger logout event for the host app.
-  static void logout() {
+  static void logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
     emitLogoutEvent(LogoutEvent('user_logout'));
   }
 

@@ -26,6 +26,7 @@ dependencies:
   pretty_qr_code: ^3.6.0
   shimmer: ^3.0.0
   shared_preferences: ^2.3.3
+  connectivity_plus: ^6.1.4
   pointycastle: ^3.9.1
   flutter_screenutil: ^5.9.0
   cupertino_back_gesture: ^0.1.0

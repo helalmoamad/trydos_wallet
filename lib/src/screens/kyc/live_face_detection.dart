@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -30,10 +31,12 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
 
   bool _isCameraInitialized = false;
   bool _isCameraError = false;
+  bool _isCameraTimedOut = false;
   bool _isCompleted = false;
   bool _hasFailed = false;
   bool _isRequestInFlight = false;
   bool _selfieCaptured = false;
+  Timer? _cameraInactivityTimer;
 
   final List<_LivenessChallenge> _challenges = <_LivenessChallenge>[
     _LivenessChallenge.lookStraight,
@@ -56,6 +59,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
   static const int _maxAttemptsPerChallenge = 3;
   static const Duration _initialDelay = Duration(seconds: 2);
   static const Duration _attemptInterval = Duration(seconds: 2);
+  static const Duration _cameraInactivityTimeout = Duration(seconds: 30);
 
   @override
   void initState() {
@@ -79,6 +83,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
     if (!isActive) {
       _flowToken++;
       _isFlowRunning = false;
+      _cameraInactivityTimer?.cancel();
       try {
         await _cameraController?.dispose();
       } catch (_) {}
@@ -101,6 +106,10 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
 
   Future<void> _initCamera() async {
     try {
+      _cameraInactivityTimer?.cancel();
+      if (_isCameraTimedOut && mounted) {
+        setState(() => _isCameraTimedOut = false);
+      }
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
         if (mounted) setState(() => _isCameraError = true);
@@ -125,11 +134,57 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
       await _applyDefaultCameraZoom();
       if (!mounted) return;
       setState(() => _isCameraInitialized = true);
+      _resetCameraInactivityTimer();
 
       _startLivenessFlow();
     } catch (_) {
       if (mounted) setState(() => _isCameraError = true);
     }
+  }
+
+  void _resetCameraInactivityTimer() {
+    _cameraInactivityTimer?.cancel();
+    if (!widget.isActive || _isCompleted || _hasFailed || _isCameraError) {
+      return;
+    }
+
+    _cameraInactivityTimer = Timer(
+      _cameraInactivityTimeout,
+      _handleCameraInactivityTimeout,
+    );
+  }
+
+  Future<void> _handleCameraInactivityTimeout() async {
+    if (!mounted || !widget.isActive || _isCompleted) return;
+
+    _flowToken++;
+    _isFlowRunning = false;
+    _cameraInactivityTimer?.cancel();
+
+    try {
+      await _cameraController?.dispose();
+    } catch (_) {}
+    _cameraController = null;
+
+    if (!mounted) return;
+    setState(() {
+      _isCameraInitialized = false;
+      _isCameraTimedOut = true;
+      _isCameraError = false;
+      _isRequestInFlight = false;
+    });
+  }
+
+  Future<void> _reopenCameraAfterTimeout() async {
+    if (!widget.isActive || _isCompleted) return;
+
+    if (mounted) {
+      setState(() {
+        _isCameraTimedOut = false;
+        _isCameraError = false;
+      });
+    }
+    await _initCamera();
   }
 
   Future<void> _applyDefaultCameraZoom() async {
@@ -176,6 +231,8 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
     if (_isFlowRunning || _hasFailed || _isCompleted || !_isCameraInitialized) {
       return;
     }
+
+    _resetCameraInactivityTimer();
 
     final token = ++_flowToken;
     _isFlowRunning = true;
@@ -289,6 +346,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
           state.selfieImageData != null;
 
       if (success) {
+        _resetCameraInactivityTimer();
         if (_currentChallengeIndex == 0 &&
             _firstChallengeFaceImageData == null) {
           _firstChallengeFaceImageData = state.selfieImageData;
@@ -345,10 +403,49 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
       _progress = 1.0;
     });
 
-    if (!_didNotifySuccess) {
-      _didNotifySuccess = true;
-      widget.onSuccessTap?.call(_capturedSelfiePath ?? '');
+    final selfieToUpload = _capturedSelfiePath;
+    if (selfieToUpload != null && selfieToUpload.isNotEmpty) {
+      await _uploadSelfieAndAdvance(selfieToUpload);
+    } else {
+      // No image path available — advance without upload as fallback
+      if (!_didNotifySuccess && mounted) {
+        _didNotifySuccess = true;
+        widget.onSuccessTap?.call(_capturedSelfiePath ?? '');
+      }
     }
+  }
+
+  Future<void> _uploadSelfieAndAdvance(String selfiePath) async {
+    if (!mounted) return;
+    final bloc = context.read<WalletBloc>();
+    bloc.add(const WalletKycSelfieUploadResetRequested());
+    bloc.add(WalletKycSelfieUploadRequested(imagePath: selfiePath));
+
+    try {
+      final uploadState = await bloc.stream.firstWhere(
+        (s) =>
+            s.kycSelfieUploadStatus == WalletStatus.success ||
+            s.kycSelfieUploadStatus == WalletStatus.failure,
+      );
+
+      if (!mounted) return;
+
+      if (uploadState.kycSelfieUploadStatus == WalletStatus.success) {
+        if (!_didNotifySuccess) {
+          _didNotifySuccess = true;
+          widget.onSuccessTap?.call(_capturedSelfiePath ?? '');
+        }
+      }
+      // On failure: UI shows retry via kycSelfieUploadStatus in builder
+    } catch (_) {
+      // Stream closed before upload completed
+    }
+  }
+
+  Future<void> _retrySelfieUpload() async {
+    final selfieToUpload = _capturedSelfiePath;
+    if (selfieToUpload == null || selfieToUpload.isEmpty) return;
+    await _uploadSelfieAndAdvance(selfieToUpload);
   }
 
   Future<void> _failLiveness() async {
@@ -365,11 +462,13 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
     _flowToken++;
     _isFlowRunning = false;
     _didNotifySuccess = false;
+    _cameraInactivityTimer?.cancel();
     _firstChallengeFaceImageData = null;
     _firstChallengeSelfiePath = null;
     _capturedSelfiePath = null;
 
     context.read<WalletBloc>().add(const WalletKycLivenessResetRequested());
+    context.read<WalletBloc>().add(const WalletKycSelfieUploadResetRequested());
 
     if (!mounted) return;
 
@@ -467,6 +566,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
   @override
   void dispose() {
     _flowToken++;
+    _cameraInactivityTimer?.cancel();
     _cameraController?.dispose();
     super.dispose();
   }
@@ -559,6 +659,61 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                                       color: const Color(0xff1D1D1D),
                                       fontSize: 14.sp,
                                     ),
+                              ),
+                            )
+                          : _isCameraTimedOut
+                          ? Container(
+                              color: Colors.black,
+                              alignment: Alignment.center,
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 24.w),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      AppStrings.get(
+                                        lang,
+                                        'kyc_camera_auto_closed',
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      style: context.textTheme.titleLarge?.rq
+                                          .copyWith(
+                                            color: Colors.white,
+                                            fontSize: 12.sp,
+                                          ),
+                                    ),
+                                    SizedBox(height: 12.h),
+                                    InkWell(
+                                      onTap: _reopenCameraAfterTimeout,
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 16.w,
+                                          vertical: 10.h,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xff388CFF),
+                                          borderRadius: BorderRadius.circular(
+                                            10.r,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          AppStrings.get(
+                                            lang,
+                                            'kyc_reopen_camera',
+                                          ),
+                                          style: context
+                                              .textTheme
+                                              .titleLarge
+                                              ?.rq
+                                              .copyWith(
+                                                color: Colors.white,
+                                                fontSize: 12.sp,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             )
                           : _isCompleted && _capturedSelfiePath != null
@@ -738,7 +893,23 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                 SizedBox(height: 35.h),
               ],
             ] else ...[
-              if (state.kycLivenessStatus == WalletStatus.failure) ...[
+              if (state.kycSelfieUploadStatus == WalletStatus.failure) ...[
+                SizedBox(height: 10.h),
+                InkWell(
+                  highlightColor: Colors.transparent,
+                  splashColor: Colors.transparent,
+                  onTap: _retrySelfieUpload,
+                  child: Text(
+                    AppStrings.get(lang, 'kyc_incorrect_try_again'),
+                    style: context.textTheme.titleLarge?.rq.copyWith(
+                      color: const Color(0xffFF6B6B),
+                      letterSpacing: 0.14,
+                      height: 1.43,
+                      fontSize: 14.sp,
+                    ),
+                  ),
+                ),
+              ] else if (state.kycLivenessStatus == WalletStatus.failure) ...[
                 SizedBox(height: 10.h),
                 InkWell(
                   highlightColor: Colors.transparent,

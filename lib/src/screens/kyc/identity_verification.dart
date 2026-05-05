@@ -44,11 +44,15 @@ class _IdentityVerificationState extends State<IdentityVerification> {
 
   bool _isCameraInitialized = false;
   bool _isCameraError = false;
+  bool _isCameraTimedOut = false;
   bool _isLowLight = false;
   bool _isProcessing = false;
   bool _isStreamActive = false;
   bool _isCapturing = false;
   int _frameCounter = 0;
+  Timer? _cameraInactivityTimer;
+
+  static const Duration _cameraInactivityTimeout = Duration(seconds: 30);
 
   _DistanceStatus _distanceStatus = _DistanceStatus.tooFar;
 
@@ -105,6 +109,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
         try {
           await _cameraController!.startImageStream(_onCameraImage);
           _isStreamActive = true;
+          _resetCameraInactivityTimer();
         } catch (_) {}
       }
       return;
@@ -125,6 +130,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
   }
 
   Future<void> _releaseCamera() async {
+    _cameraInactivityTimer?.cancel();
     final controller = _cameraController;
     _cameraController = null;
     _isStreamActive = false;
@@ -154,6 +160,9 @@ class _IdentityVerificationState extends State<IdentityVerification> {
 
   Future<void> _initCamera() async {
     try {
+      if (_isCameraTimedOut && mounted) {
+        setState(() => _isCameraTimedOut = false);
+      }
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
         if (mounted) setState(() => _isCameraError = true);
@@ -184,9 +193,45 @@ class _IdentityVerificationState extends State<IdentityVerification> {
       if (!mounted || !widget.isActive) return;
       await _cameraController!.startImageStream(_onCameraImage);
       _isStreamActive = true;
+      _resetCameraInactivityTimer();
     } catch (_) {
       if (mounted) setState(() => _isCameraError = true);
     }
+  }
+
+  void _resetCameraInactivityTimer() {
+    _cameraInactivityTimer?.cancel();
+    if (!widget.isActive || _step == _ScanStep.done || _isCameraError) {
+      return;
+    }
+
+    _cameraInactivityTimer = Timer(
+      _cameraInactivityTimeout,
+      _handleCameraInactivityTimeout,
+    );
+  }
+
+  Future<void> _handleCameraInactivityTimeout() async {
+    if (!mounted || _step == _ScanStep.done || !widget.isActive) return;
+
+    await _releaseCamera();
+    if (!mounted) return;
+    setState(() {
+      _isCameraTimedOut = true;
+      _isCameraError = false;
+    });
+  }
+
+  Future<void> _reopenCameraAfterTimeout() async {
+    if (_step == _ScanStep.done || !widget.isActive) return;
+
+    if (mounted) {
+      setState(() {
+        _isCameraTimedOut = false;
+        _isCameraError = false;
+      });
+    }
+    await _initCamera();
   }
 
   Future<void> _configureCameraLens() async {
@@ -479,6 +524,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
         try {
           await _cameraController!.startImageStream(_onCameraImage);
           _isStreamActive = true;
+          _resetCameraInactivityTimer();
         } catch (_) {}
       }
     } finally {
@@ -517,6 +563,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
         if (!widget.isActive) return;
         await _cameraController!.startImageStream(_onCameraImage);
         _isStreamActive = true;
+        _resetCameraInactivityTimer();
       }
     }
   }
@@ -536,6 +583,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
 
   @override
   void dispose() {
+    _cameraInactivityTimer?.cancel();
     unawaited(_releaseCamera());
     _objectDetector?.close();
     super.dispose();
@@ -786,6 +834,58 @@ class _IdentityVerificationState extends State<IdentityVerification> {
                                 _cameraController != null &&
                                 _cameraController!.value.isInitialized
                             ? _buildCameraPreview()
+                            : _isCameraTimedOut
+                            ? Container(
+                                color: Colors.black,
+                                alignment: Alignment.center,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 24.w,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        AppStrings.get(
+                                          lang,
+                                          'kyc_camera_auto_closed',
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12.sp,
+                                        ),
+                                      ),
+                                      SizedBox(height: 12.h),
+                                      InkWell(
+                                        onTap: _reopenCameraAfterTimeout,
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 16.w,
+                                            vertical: 10.h,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xff388CFF),
+                                            borderRadius: BorderRadius.circular(
+                                              10.r,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            AppStrings.get(
+                                              lang,
+                                              'kyc_reopen_camera',
+                                            ),
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12.sp,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
                             : _isCameraError
                             ? Center(
                                 child: Padding(

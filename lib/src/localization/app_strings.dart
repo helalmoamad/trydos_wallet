@@ -295,6 +295,11 @@ class AppStrings {
       'kyc_liveness_verifying': 'Verifying liveness...',
       'kyc_liveness_done': 'Liveness verified successfully',
       'kyc_liveness_failed': 'Liveness check failed. Please try again.',
+      'kyc_camera_auto_closed': 'Camera closed after 30 seconds of no activity',
+      'kyc_reopen_camera': 'Reopen Camera',
+      'no_internet_title': 'No Internet Connection',
+      'no_internet_subtitle':
+          'Please check your internet connection and make sure you are connected to Wi-Fi or mobile data.',
     },
     'ar': {
       // Home Tab
@@ -594,6 +599,12 @@ class AppStrings {
       'kyc_liveness_verifying': 'جارٍ التحقق من الحيوية...',
       'kyc_liveness_done': 'تم التحقق من الحيوية بنجاح',
       'kyc_liveness_failed': 'فشل التحقق من الحيوية. حاول مرة أخرى.',
+      'kyc_camera_auto_closed':
+          'تم إغلاق الكاميرا تلقائياً بعد 30 ثانية دون نشاط',
+      'kyc_reopen_camera': 'إعادة فتح الكاميرا',
+      'no_internet_title': 'لا يوجد اتصال بالإنترنت',
+      'no_internet_subtitle':
+          'يرجى التحقق من اتصالك بالإنترنت والتأكد من اتصالك بشبكة Wi-Fi أو بيانات الجوال.',
     },
     'ku': {
       // Home Tab
@@ -899,6 +910,12 @@ class AppStrings {
       'kyc_liveness_done': 'زیندوویی بە سەرکەوتوویی پشتڕاست کرایەوە',
       'kyc_liveness_failed':
           'پشکنینی زیندوویی سەرکەوتوو نەبوو. دووبارە هەوڵ بدە.',
+      'kyc_camera_auto_closed':
+          'کامێرا دوای 30 چرکە بێ چالاکی بە خۆکارانە داخرا',
+      'kyc_reopen_camera': 'کردنەوەی کامێرا',
+      'no_internet_title': 'هیچ پەیوەندییەکی ئینتەرنێت نییە',
+      'no_internet_subtitle':
+          'تکایە پەیوەندی ئینتەرنێتەکەت بپشکنە و دڵنیابە کە بە Wi-Fi یان داتای مۆبایل پەیوەندیت هەیە.',
     },
     'tr': {
       // Home Tab
@@ -1202,6 +1219,12 @@ class AppStrings {
       'kyc_liveness_done': 'Canlılık başarıyla doğrulandı',
       'kyc_liveness_failed':
           'Canlılık doğrulaması başarısız. Lütfen tekrar deneyin.',
+      'kyc_camera_auto_closed':
+          '30 saniye işlem olmadığı için kamera otomatik kapatıldı',
+      'kyc_reopen_camera': 'Kamerayı Yeniden Aç',
+      'no_internet_title': 'İnternet Bağlantısı Yok',
+      'no_internet_subtitle':
+          'Lütfen internet bağlantınızı kontrol edin ve Wi-Fi veya mobil veriye bağlı olduğunuzdan emin olun.',
     },
   };
 

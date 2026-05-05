@@ -426,6 +426,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
                   color: const Color(0xff1D1D1D),
                   fontSize: 16.sp,
                 ),
+                textDirection: TextDirection.ltr,
               ),
             ],
           ),
@@ -458,6 +459,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
                 _buildInfoSection(
                   AppStrings.get(state.languageCode, 'account_number'),
                   '$accountNumber  $currencyDisplayName',
+                  forceLtrValue: true,
                 ),
               ],
             ),
@@ -516,7 +518,12 @@ class _ReceiveModalState extends State<ReceiveModal> {
     );
   }
 
-  Widget _buildInfoSection(String label, String value, {Widget? trailing}) {
+  Widget _buildInfoSection(
+    String label,
+    String value, {
+    Widget? trailing,
+    bool forceLtrValue = false,
+  }) {
     return Container(
       width: double.infinity,
 
@@ -545,6 +552,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
                   color: const Color(0xff1D1D1D),
                   fontSize: 13.sp,
                 ),
+                textDirection: forceLtrValue ? TextDirection.ltr : null,
               ),
             ],
           ),
@@ -568,7 +576,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8.r),
       child: SizedBox(
-        height: 42,
+        height: 50.h,
         child: Column(
           children: [
             isLoading
@@ -655,6 +663,7 @@ class _CleanQRCard extends StatelessWidget {
                 fontSize: 16.sp,
                 fontWeight: FontWeight.bold,
               ),
+              textDirection: TextDirection.ltr,
             ),
             SizedBox(height: 20.h),
             _buildInfoBox(
@@ -667,6 +676,7 @@ class _CleanQRCard extends StatelessWidget {
               AppStrings.get(languageCode, 'account_number'),
               '$accountNumber  $currencyDisplayName',
               context,
+              forceLtrValue: true,
             ),
           ],
         ),
@@ -674,7 +684,12 @@ class _CleanQRCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoBox(String label, String value, BuildContext context) {
+  Widget _buildInfoBox(
+    String label,
+    String value,
+    BuildContext context, {
+    bool forceLtrValue = false,
+  }) {
     return Container(
       width: double.infinity,
 
@@ -700,6 +715,7 @@ class _CleanQRCard extends StatelessWidget {
               color: const Color(0xff1D1D1D),
               fontSize: 13.sp,
             ),
+            textDirection: forceLtrValue ? TextDirection.ltr : null,
           ),
         ],
       ),

@@ -77,6 +77,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
            memberSince: memberSince ?? TrydosWallet.config.memberSince,
          ),
        ) {
+    on<WalletResetRequested>(_onResetRequested);
+    on<WalletReconnectWebSocketRequested>(_onReconnectWebSocketRequested);
     on<WalletLanguageChanged>(_onLanguageChanged);
     on<WalletRefreshAllRequested>(_onRefreshAllRequested);
     on<WalletCurrenciesLoadRequested>(_onCurrenciesLoadRequested);
@@ -98,6 +100,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletKycLivenessResetRequested>(_onKycLivenessResetRequested);
     on<WalletKycCompareFaceRequested>(_onKycCompareFaceRequested);
     on<WalletKycCompareFaceResetRequested>(_onKycCompareFaceResetRequested);
+    on<WalletKycSelfieUploadRequested>(_onKycSelfieUploadRequested);
+    on<WalletKycSelfieUploadResetRequested>(_onKycSelfieUploadResetRequested);
     on<BalanceCardIsSelected>(_onBalanceCardIsSelected);
     on<WalletDepositFeesRequested>(_onDepositFeesRequested);
     on<WalletDepositRequestsRequested>(_onDepositRequestsRequested);
@@ -166,12 +170,37 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     return super.close();
   }
 
+  void _onReconnectWebSocketRequested(
+    WalletReconnectWebSocketRequested event,
+    Emitter<WalletState> emit,
+  ) {
+    // Ensure socket is recreated when needed and force a clean reconnect.
+    _walletWebSocketService ??= _createDefaultWalletWebSocketService();
+    _walletWebSocketService?.disconnect();
+    _walletWebSocketService?.connect();
+  }
+
+  void _onResetRequested(
+    WalletResetRequested event,
+    Emitter<WalletState> emit,
+  ) {
+    emit(WalletState(languageCode: state.languageCode));
+  }
+
   void _onLanguageChanged(
     WalletLanguageChanged event,
     Emitter<WalletState> emit,
   ) {
+    if (state.languageCode == event.languageCode) {
+      return;
+    }
+
     TrydosWallet.updateLanguage(event.languageCode);
     emit(state.copyWith(languageCode: event.languageCode));
+
+    // Refresh home data to ensure localized fields are up to date.
+    add(const WalletRefreshAllRequested());
+    add(const WalletTransferPurposesLoadRequested());
   }
 
   /// Currencies
@@ -997,6 +1026,35 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           await _writeBase64ToFile(croppedImageData, event.imagePath);
         }
 
+        // Upload the (possibly cropped) image to media server
+        final uploadResult = await _mediaApi.uploadDirect(
+          filePath: event.imagePath,
+          type: 'image',
+          metadata: {'purpose': 'kyc'},
+        );
+
+        if (uploadResult.isFailure || uploadResult.data == null) {
+          final uploadError = uploadResult.errorMessage ?? 'Upload failed';
+          emit(
+            state.copyWith(
+              kycFrontAnalyzeStatus: isFront
+                  ? WalletStatus.failure
+                  : state.kycFrontAnalyzeStatus,
+              kycBackAnalyzeStatus: isFront
+                  ? state.kycBackAnalyzeStatus
+                  : WalletStatus.failure,
+              kycFrontAnalyzeErrorMessage: isFront
+                  ? uploadError
+                  : state.kycFrontAnalyzeErrorMessage,
+              kycBackAnalyzeErrorMessage: isFront
+                  ? state.kycBackAnalyzeErrorMessage
+                  : uploadError,
+              kycExtractedData: isFront ? null : state.kycExtractedData,
+            ),
+          );
+          return;
+        }
+
         emit(
           state.copyWith(
             kycFrontAnalyzeStatus: isFront
@@ -1024,6 +1082,12 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
             kycBackAnalyzeErrorMessage: isFront
                 ? state.kycBackAnalyzeErrorMessage
                 : null,
+            kycFrontImageUrl: isFront
+                ? uploadResult.data!.url
+                : state.kycFrontImageUrl,
+            kycBackImageUrl: isFront
+                ? state.kycBackImageUrl
+                : uploadResult.data!.url,
           ),
         );
         return;
@@ -1086,6 +1150,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         kycIdFaceImageData: null,
         kycFrontAnalyzeErrorMessage: null,
         kycBackAnalyzeErrorMessage: null,
+        kycFrontImageUrl: null,
+        kycBackImageUrl: null,
       ),
     );
   }
@@ -1162,6 +1228,55 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         kycLivenessStatus: WalletStatus.initial,
         selfieImageData: null,
         kycLivenessErrorMessage: null,
+        kycSelfieUploadStatus: WalletStatus.initial,
+        kycSelfieImageUrl: null,
+        kycSelfieUploadErrorMessage: null,
+      ),
+    );
+  }
+
+  Future<void> _onKycSelfieUploadRequested(
+    WalletKycSelfieUploadRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        kycSelfieUploadStatus: WalletStatus.loading,
+        kycSelfieUploadErrorMessage: null,
+      ),
+    );
+    final result = await _mediaApi.uploadDirect(
+      filePath: event.imagePath,
+      type: 'image',
+      metadata: {'purpose': 'kyc'},
+    );
+    if (result.isSuccess && result.data != null) {
+      emit(
+        state.copyWith(
+          kycSelfieUploadStatus: WalletStatus.success,
+          kycSelfieImageUrl: result.data!.url,
+        ),
+      );
+    } else {
+      emit(
+        state.copyWith(
+          kycSelfieUploadStatus: WalletStatus.failure,
+          kycSelfieUploadErrorMessage:
+              result.errorMessage ?? 'Selfie upload failed',
+        ),
+      );
+    }
+  }
+
+  void _onKycSelfieUploadResetRequested(
+    WalletKycSelfieUploadResetRequested event,
+    Emitter<WalletState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        kycSelfieUploadStatus: WalletStatus.initial,
+        kycSelfieImageUrl: null,
+        kycSelfieUploadErrorMessage: null,
       ),
     );
   }
@@ -1199,6 +1314,41 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       final data = result.data!;
 
       if (data.isSuccess) {
+        final extracted = state.kycExtractedData;
+        final fullName = (extracted?.name?.trim().isNotEmpty ?? false)
+            ? extracted!.name!.trim()
+            : '${TrydosWallet.config.firstName} ${TrydosWallet.config.lastName}'
+                  .trim();
+
+        final submitPayload = <String, dynamic>{
+          'kycSessionId': '001',
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          'nonce': 'kyc_${DateTime.now().microsecondsSinceEpoch}',
+          'fullName': fullName,
+          'nationalityCountryId': extracted?.idName ?? '',
+          'documentType': extracted?.idType ?? 'national_id',
+          'nationalIdNumber':
+              extracted?.nationalNumber ?? extracted?.documentNumber ?? '',
+          'documentFrontImageUrl': state.kycFrontImageUrl ?? '',
+          'documentBackImageUrl': state.kycBackImageUrl ?? '',
+          'selfieImageUrl': state.kycSelfieImageUrl ?? '',
+          'selfieVsIdScore': data.matchScore ?? 0,
+          'documentExpiryDate': extracted?.expiryDate ?? '',
+        };
+
+        final submitResult = await _kycApi.submitKyc(payload: submitPayload);
+        if (submitResult.isFailure) {
+          emit(
+            state.copyWith(
+              kycCompareFaceStatus: WalletStatus.failure,
+              kycCompareFaceErrorMessage:
+                  submitResult.errorMessage ?? 'KYC submit failed',
+              kycCompareFaceErrorCode: null,
+            ),
+          );
+          return;
+        }
+
         emit(
           state.copyWith(
             kycCompareFaceStatus: WalletStatus.success,

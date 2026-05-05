@@ -22,6 +22,11 @@ sealed class WalletEvent {
   const WalletEvent();
 }
 
+/// Reset all state (logout)
+class WalletResetRequested extends WalletEvent {
+  const WalletResetRequested();
+}
+
 /// Localization
 class WalletLanguageChanged extends WalletEvent {
   const WalletLanguageChanged(this.languageCode);
@@ -43,6 +48,10 @@ class WalletCurrenciesRefreshRequested extends WalletEvent {
 
 class WalletRefreshAllRequested extends WalletEvent {
   const WalletRefreshAllRequested();
+}
+
+class WalletReconnectWebSocketRequested extends WalletEvent {
+  const WalletReconnectWebSocketRequested();
 }
 
 /// Balances
@@ -164,6 +173,16 @@ class WalletKycCompareFaceRequested extends WalletEvent {
 
 class WalletKycCompareFaceResetRequested extends WalletEvent {
   const WalletKycCompareFaceResetRequested();
+}
+
+/// KYC Selfie Upload (after all liveness challenges succeed)
+class WalletKycSelfieUploadRequested extends WalletEvent {
+  const WalletKycSelfieUploadRequested({required this.imagePath});
+  final String imagePath;
+}
+
+class WalletKycSelfieUploadResetRequested extends WalletEvent {
+  const WalletKycSelfieUploadResetRequested();
 }
 
 class BalanceCardIsSelected extends WalletEvent {

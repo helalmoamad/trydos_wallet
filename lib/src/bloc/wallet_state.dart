@@ -51,6 +51,13 @@ class WalletState {
     this.kycIdFaceImageData,
     this.kycFrontAnalyzeErrorMessage,
     this.kycBackAnalyzeErrorMessage,
+    // KYC Image Upload URLs
+    this.kycFrontImageUrl,
+    this.kycBackImageUrl,
+    // KYC Selfie Upload
+    this.kycSelfieUploadStatus = WalletStatus.initial,
+    this.kycSelfieImageUrl,
+    this.kycSelfieUploadErrorMessage,
     // KYC Liveness
     this.kycLivenessStatus = WalletStatus.initial,
     this.selfieImageData,
@@ -156,6 +163,15 @@ class WalletState {
   final String? kycFrontAnalyzeErrorMessage;
   final String? kycBackAnalyzeErrorMessage;
 
+  // KYC Image Upload URLs
+  final String? kycFrontImageUrl;
+  final String? kycBackImageUrl;
+
+  // KYC Selfie Upload
+  final WalletStatus kycSelfieUploadStatus;
+  final String? kycSelfieImageUrl;
+  final String? kycSelfieUploadErrorMessage;
+
   // KYC Liveness
   final WalletStatus kycLivenessStatus;
   final String? selfieImageData;
@@ -234,6 +250,11 @@ class WalletState {
     Object? kycIdFaceImageData = _unset,
     Object? kycFrontAnalyzeErrorMessage = _unset,
     Object? kycBackAnalyzeErrorMessage = _unset,
+    Object? kycFrontImageUrl = _unset,
+    Object? kycBackImageUrl = _unset,
+    WalletStatus? kycSelfieUploadStatus,
+    Object? kycSelfieImageUrl = _unset,
+    Object? kycSelfieUploadErrorMessage = _unset,
     WalletStatus? kycLivenessStatus,
     Object? selfieImageData = _unset,
     Object? kycLivenessErrorMessage = _unset,
@@ -328,6 +349,20 @@ class WalletState {
       kycBackAnalyzeErrorMessage: kycBackAnalyzeErrorMessage == _unset
           ? this.kycBackAnalyzeErrorMessage
           : kycBackAnalyzeErrorMessage as String?,
+      kycFrontImageUrl: kycFrontImageUrl == _unset
+          ? this.kycFrontImageUrl
+          : kycFrontImageUrl as String?,
+      kycBackImageUrl: kycBackImageUrl == _unset
+          ? this.kycBackImageUrl
+          : kycBackImageUrl as String?,
+      kycSelfieUploadStatus:
+          kycSelfieUploadStatus ?? this.kycSelfieUploadStatus,
+      kycSelfieImageUrl: kycSelfieImageUrl == _unset
+          ? this.kycSelfieImageUrl
+          : kycSelfieImageUrl as String?,
+      kycSelfieUploadErrorMessage: kycSelfieUploadErrorMessage == _unset
+          ? this.kycSelfieUploadErrorMessage
+          : kycSelfieUploadErrorMessage as String?,
       kycLivenessStatus: kycLivenessStatus ?? this.kycLivenessStatus,
       selfieImageData: selfieImageData == _unset
           ? this.selfieImageData

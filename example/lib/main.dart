@@ -21,7 +21,7 @@ void main() {
           "https://test-kyc-ramaaz-digital-banking.yazan-adnof.workers.dev",
       //   "https://kyc-verification-ramaaz-digital-banking.yazan-adnof.workers.dev/",
       token:
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZDEyMDNiOTQxMjM4NWRmMWU5ZmIwYiIsImVtYWlsIjoicGhvbmVfOTYzOTM0MzMwODg5QHRyeWRvcy1vdHAubG9jYWwiLCJ0eXBlIjoidXNlciIsImxhbmciOiJlbiIsImt5Y1N0YXR1cyI6Im5vdF9zdWJtaXR0ZWQiLCJ1c2VyVHlwZSI6InJlZ2lzdGVyZWQiLCJpYXQiOjE3NzUzNjUzNjYsImV4cCI6MTc3Nzk1NzM2Nn0.2cMqiIeiXWDSV4TH4nPHRs_RV2DqXRoAyQXqwbfiENw",
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZDEyMDNiOTQxMjM4NWRmMWU5ZmIwYiIsImVtYWlsIjoicGhvbmVfOTYzOTM0MzMwODg5QHRyeWRvcy1vdHAubG9jYWwiLCJ0eXBlIjoidXNlciIsImxhbmciOiJlbiIsImt5Y1N0YXR1cyI6Im5vdF9zdWJtaXR0ZWQiLCJ1c2VyVHlwZSI6InJlZ2lzdGVyZWQiLCJpYXQiOjE3Nzc5Nzg5MDgsImV4cCI6MTc4MDU3MDkwOH0.VyDWJCXahMp4DRCADiJ8fPJU4Dw1RfghMKeDN-XIfqQ",
       languageCode: 'en',
       isKurdish: false,
       applicationVersion: '1.0.0',
@@ -95,9 +95,11 @@ class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp> {
                 locale: Locale(TrydosWallet.config.languageCode),
                 theme: AppTheme.light,
                 builder: (context, child) => ApiErrorListener(child: child!),
-                home: const FirstPageKyc(),
+                home: const TrydosWalletWelcomeScreen(),
 
-                //const TrydosWalletWelcomeScreen(),
+                // const FirstPageKyc(),
+
+                //
               );
             },
           );

@@ -58,7 +58,10 @@ class _FirstPageKycContent extends StatelessWidget {
               children: [
                 SizedBox(height: 288.h),
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 30.w),
+                  padding: EdgeInsets.only(
+                    left: isRtl ? 0.w : 30.w,
+                    right: isRtl ? 30.w : 0.w,
+                  ),
                   child: Text(
                     AppStrings.get(lang, 'kyc_identity_verification'),
                     style: context.textTheme.titleLarge?.bq.copyWith(
@@ -124,7 +127,7 @@ class _FirstPageKycContent extends StatelessWidget {
                   ),
                 ),
 
-                SizedBox(height: 260.h),
+                Spacer(),
                 Center(
                   child: SvgPicture.asset(
                     TrydosWalletAssets.privacy,
@@ -208,6 +211,7 @@ class _FirstPageKycContent extends StatelessWidget {
                     ),
                   ),
                 ),
+                SizedBox(height: 35.h),
               ],
             ),
           ),

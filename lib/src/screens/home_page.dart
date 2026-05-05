@@ -5,10 +5,15 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
 
+import 'dart:async';
+
 import '../constent/assets.dart';
+import '../api/api_interceptors.dart';
 import '../bloc/bloc.dart';
 import '../localization/app_strings.dart';
 import '../constent/styles.dart';
+import '../services/connectivity_service.dart';
+import 'no_internet_screen.dart';
 import 'tabs/tabs.dart';
 
 /// Digital wallet home page.
@@ -49,16 +54,38 @@ class _TrydosWalletHomePageContent extends StatefulWidget {
 class _TrydosWalletHomePageContentState
     extends State<_TrydosWalletHomePageContent> {
   int _selectedIndex = 0;
+  StreamSubscription<LogoutEvent>? _logoutSubscription;
+  bool _isOffline = false;
 
   @override
   void initState() {
     super.initState();
+    _logoutSubscription = logoutEvents.listen((_) {
+      if (!mounted) return;
+      context.read<WalletBloc>().add(const WalletResetRequested());
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final bloc = context.read<WalletBloc>();
       bloc.add(const WalletRefreshAllRequested());
       bloc.add(const WalletTransferPurposesLoadRequested());
+      ConnectivityService.instance.initialize().then((_) {
+        if (!mounted) return;
+        setState(() {
+          _isOffline = !ConnectivityService.instance.isOnline.value;
+        });
+      });
+      ConnectivityService.instance.isOnline.addListener(_onConnectivityChanged);
     });
+  }
+
+  @override
+  void dispose() {
+    _logoutSubscription?.cancel();
+    ConnectivityService.instance.isOnline.removeListener(
+      _onConnectivityChanged,
+    );
+    super.dispose();
   }
 
   @override
@@ -68,20 +95,28 @@ class _TrydosWalletHomePageContentState
       builder: (context, state) {
         return Directionality(
           textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
-          child: Scaffold(
-            backgroundColor: Colors.white,
-            body: SafeArea(
-              child: IndexedStack(
-                index: _selectedIndex,
-                children: const [
-                  HomeTab(),
-                  WalletTab(),
-                  AddressesTab(),
-                  SettingsTab(),
-                ],
+          child: Stack(
+            children: [
+              Scaffold(
+                backgroundColor: Colors.white,
+                body: SafeArea(
+                  child: IndexedStack(
+                    index: _selectedIndex,
+                    children: const [
+                      HomeTab(),
+                      WalletTab(),
+                      AddressesTab(),
+                      SettingsTab(),
+                    ],
+                  ),
+                ),
+                bottomNavigationBar: _buildBottomNav(context, state),
               ),
-            ),
-            bottomNavigationBar: _buildBottomNav(context, state),
+              if (_isOffline)
+                Positioned.fill(
+                  child: NoInternetScreen(languageCode: state.languageCode),
+                ),
+            ],
           ),
         );
       },
@@ -183,5 +218,17 @@ class _TrydosWalletHomePageContentState
         ),
       ),
     );
+  }
+
+  void _onConnectivityChanged() {
+    final online = ConnectivityService.instance.isOnline.value;
+    if (!mounted) return;
+    setState(() => _isOffline = !online);
+    if (online) {
+      final bloc = context.read<WalletBloc>();
+      bloc.add(const WalletReconnectWebSocketRequested());
+      bloc.add(const WalletRefreshAllRequested());
+      bloc.add(const WalletTransferPurposesLoadRequested());
+    }
   }
 }
