@@ -64,9 +64,19 @@ class ApiClient {
 
   Dio get dio => _dio;
 
+  void updateBaseUrl(String baseUrl) {
+    _dio.options.baseUrl = baseUrl;
+  }
+
   /// تحديث هيدر الـ client (مثلاً بعد تغيير التوكن).
   void updateHeaders(ApiHeadersConfig config) {
     ApiHeaders.apply(_dio, config);
+  }
+
+  void updateAllowBadCertificate(bool allowBadCertificate) {
+    if (allowBadCertificate) {
+      api_io.configureAllowBadCertificate(_dio);
+    }
   }
 
   String? _extractErrorMessage(DioException e) {

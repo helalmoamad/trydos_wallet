@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trydos_wallet/src/models/models.dart';
@@ -109,6 +110,13 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletPaymentRequestCreated>(_onPaymentRequestCreated);
     on<WalletRealtimeBalanceUpdated>(_onRealtimeBalanceUpdated);
     on<WalletRealtimeTransactionReceived>(_onRealtimeTransactionReceived);
+    on<WalletConfigUpdated>(_onConfigUpdated);
+
+    _configSubscription = TrydosWallet.configChanges.listen((config) {
+      if (!isClosed) {
+        add(WalletConfigUpdated(config));
+      }
+    });
 
     _walletWebSocketService ??= _createDefaultWalletWebSocketService();
 
@@ -127,6 +135,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   final TransferPurposesApiService _transferPurposesApi;
   final PaymentRequestsApiService _paymentRequestsApi;
   WalletWebSocketService? _walletWebSocketService;
+  StreamSubscription<TrydosWalletConfig>? _configSubscription;
 
   int _currenciesPage = 0;
   int _banksPage = 0;
@@ -166,6 +175,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
 
   @override
   Future<void> close() {
+    _configSubscription?.cancel();
     _walletWebSocketService?.disconnect();
     return super.close();
   }
@@ -196,11 +206,36 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     }
 
     TrydosWallet.updateLanguage(event.languageCode);
-    emit(state.copyWith(languageCode: event.languageCode));
+  }
 
-    // Refresh home data to ensure localized fields are up to date.
-    add(const WalletRefreshAllRequested());
-    add(const WalletTransferPurposesLoadRequested());
+  void _onConfigUpdated(WalletConfigUpdated event, Emitter<WalletState> emit) {
+    final config = event.config;
+    final languageChanged = state.languageCode != config.languageCode;
+
+    emit(
+      state.copyWith(
+        languageCode: config.languageCode,
+        firstName: config.firstName,
+        lastName: config.lastName,
+        email: config.email,
+        phoneNumber: config.phoneNumber,
+        profileImageUrl: config.profileImageUrl,
+        userSubtitle: config.userSubtitle,
+        isPhoneVerified: config.isPhoneVerified,
+        isAccountActive: config.isAccountActive,
+        isTwoFactorEnabled: config.isTwoFactorEnabled,
+        memberSince: config.memberSince,
+      ),
+    );
+
+    _walletWebSocketService?.disconnect();
+    _walletWebSocketService = _createDefaultWalletWebSocketService();
+    _walletWebSocketService?.connect();
+
+    if (languageChanged) {
+      add(const WalletRefreshAllRequested());
+      add(const WalletTransferPurposesLoadRequested());
+    }
   }
 
   /// Currencies

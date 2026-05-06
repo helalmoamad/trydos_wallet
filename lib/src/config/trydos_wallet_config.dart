@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -82,6 +83,11 @@ class TrydosWallet {
   static TrydosWalletConfig? _config;
   static ApiClient? _apiClient;
   static ApiClient? _kycApiClient;
+  static final StreamController<TrydosWalletConfig> _configChangesController =
+      StreamController<TrydosWalletConfig>.broadcast();
+
+  static Stream<TrydosWalletConfig> get configChanges =>
+      _configChangesController.stream;
 
   static TrydosWalletConfig get config {
     if (_config == null) {
@@ -112,9 +118,56 @@ class TrydosWallet {
 
   /// Initialize the library - call in main() or at app startup.
   static void init(TrydosWalletConfig config) {
+    final previousConfig = _config;
+    final languageChanged =
+        previousConfig != null &&
+        (previousConfig.languageCode != config.languageCode ||
+            previousConfig.isKurdish != config.isKurdish);
+
+    _applyConfig(config, emitLanguageChanged: languageChanged);
+  }
+
+  static void _applyConfig(
+    TrydosWalletConfig config, {
+    bool emitLanguageChanged = false,
+  }) {
     _config = config;
-    _apiClient = config.createApiClient();
-    _kycApiClient = config.createKycApiClient();
+
+    if (_apiClient == null) {
+      _apiClient = config.createApiClient();
+    } else {
+      _apiClient!
+        ..updateBaseUrl(config.baseUrl)
+        ..updateHeaders(config.headersConfig)
+        ..updateAllowBadCertificate(config.allowBadCertificate);
+    }
+
+    if (_kycApiClient == null) {
+      _kycApiClient = config.createKycApiClient();
+    } else {
+      _kycApiClient!
+        ..updateBaseUrl(config.kycBaseUrl ?? config.baseUrl)
+        ..updateHeaders(config.headersConfig)
+        ..updateAllowBadCertificate(config.allowBadCertificate);
+    }
+
+    if (emitLanguageChanged) {
+      emitLanguageChangeEvent(
+        LanguageChangeEvent(
+          config.languageCode,
+          languageName:
+              const {
+                'en': 'English',
+                'ar': 'Arabic',
+                'ku': 'Kurdish',
+                'tr': 'Turkish',
+              }[config.languageCode] ??
+              config.languageCode,
+        ),
+      );
+    }
+
+    _configChangesController.add(config);
   }
 
   /// Trigger logout event for the host app.
@@ -127,74 +180,62 @@ class TrydosWallet {
   /// Update the token later (e.g. after login).
   static void updateToken(String? token) {
     if (_config == null) return;
-    _config = TrydosWalletConfig(
-      baseUrl: _config!.baseUrl,
-      kycBaseUrl: _config!.kycBaseUrl,
-      token: token,
-      languageCode: _config!.languageCode,
-      isKurdish: _config!.isKurdish,
-      applicationVersion: _config!.applicationVersion,
-      debug: _config!.debug,
-      firstName: _config!.firstName,
-      lastName: _config!.lastName,
-      email: _config!.email,
-      phoneNumber: _config!.phoneNumber,
-      profileImageUrl: _config!.profileImageUrl,
-      userSubtitle: _config!.userSubtitle,
-      isPhoneVerified: _config!.isPhoneVerified,
-      isAccountActive: _config!.isAccountActive,
-      isTwoFactorEnabled: _config!.isTwoFactorEnabled,
-      memberSince: _config!.memberSince,
-      allowBadCertificate: _config!.allowBadCertificate,
-      skipSplash: _config!.skipSplash,
-      disableWalletOverscrollIndicator:
-          _config!.disableWalletOverscrollIndicator,
+    _applyConfig(
+      TrydosWalletConfig(
+        baseUrl: _config!.baseUrl,
+        kycBaseUrl: _config!.kycBaseUrl,
+        token: token,
+        languageCode: _config!.languageCode,
+        isKurdish: _config!.isKurdish,
+        applicationVersion: _config!.applicationVersion,
+        debug: _config!.debug,
+        firstName: _config!.firstName,
+        lastName: _config!.lastName,
+        email: _config!.email,
+        phoneNumber: _config!.phoneNumber,
+        profileImageUrl: _config!.profileImageUrl,
+        userSubtitle: _config!.userSubtitle,
+        isPhoneVerified: _config!.isPhoneVerified,
+        isAccountActive: _config!.isAccountActive,
+        isTwoFactorEnabled: _config!.isTwoFactorEnabled,
+        memberSince: _config!.memberSince,
+        allowBadCertificate: _config!.allowBadCertificate,
+        skipSplash: _config!.skipSplash,
+        disableWalletOverscrollIndicator:
+            _config!.disableWalletOverscrollIndicator,
+      ),
     );
-    _apiClient?.updateHeaders(_config!.headersConfig);
-    _kycApiClient?.updateHeaders(_config!.headersConfig);
   }
 
   /// Update the language later.
   static void updateLanguage(String languageCode, {bool? isKurdish}) {
     if (_config == null) return;
     final kurdish = isKurdish ?? (languageCode == 'ku');
-    _config = TrydosWalletConfig(
-      baseUrl: _config!.baseUrl,
-      kycBaseUrl: _config!.kycBaseUrl,
-      token: _config!.token,
-      languageCode: languageCode,
-      isKurdish: kurdish,
-      applicationVersion: _config!.applicationVersion,
-      debug: _config!.debug,
-      firstName: _config!.firstName,
-      lastName: _config!.lastName,
-      email: _config!.email,
-      phoneNumber: _config!.phoneNumber,
-      profileImageUrl: _config!.profileImageUrl,
-      userSubtitle: _config!.userSubtitle,
-      isPhoneVerified: _config!.isPhoneVerified,
-      isAccountActive: _config!.isAccountActive,
-      isTwoFactorEnabled: _config!.isTwoFactorEnabled,
-      memberSince: _config!.memberSince,
-      allowBadCertificate: _config!.allowBadCertificate,
-      skipSplash: _config!.skipSplash,
-      disableWalletOverscrollIndicator:
-          _config!.disableWalletOverscrollIndicator,
-    );
-    _apiClient?.updateHeaders(_config!.headersConfig);
-    _kycApiClient?.updateHeaders(_config!.headersConfig);
-    emitLanguageChangeEvent(
-      LanguageChangeEvent(
-        languageCode,
-        languageName:
-            const {
-              'en': 'English',
-              'ar': 'Arabic',
-              'ku': 'Kurdish',
-              'tr': 'Turkish',
-            }[languageCode] ??
-            languageCode,
+    _applyConfig(
+      TrydosWalletConfig(
+        baseUrl: _config!.baseUrl,
+        kycBaseUrl: _config!.kycBaseUrl,
+        token: _config!.token,
+        languageCode: languageCode,
+        isKurdish: kurdish,
+        applicationVersion: _config!.applicationVersion,
+        debug: _config!.debug,
+        firstName: _config!.firstName,
+        lastName: _config!.lastName,
+        email: _config!.email,
+        phoneNumber: _config!.phoneNumber,
+        profileImageUrl: _config!.profileImageUrl,
+        userSubtitle: _config!.userSubtitle,
+        isPhoneVerified: _config!.isPhoneVerified,
+        isAccountActive: _config!.isAccountActive,
+        isTwoFactorEnabled: _config!.isTwoFactorEnabled,
+        memberSince: _config!.memberSince,
+        allowBadCertificate: _config!.allowBadCertificate,
+        skipSplash: _config!.skipSplash,
+        disableWalletOverscrollIndicator:
+            _config!.disableWalletOverscrollIndicator,
       ),
+      emitLanguageChanged: true,
     );
   }
 
@@ -212,28 +253,30 @@ class TrydosWallet {
     DateTime? memberSince,
   }) {
     if (_config == null) return;
-    _config = TrydosWalletConfig(
-      baseUrl: _config!.baseUrl,
-      kycBaseUrl: _config!.kycBaseUrl,
-      token: _config!.token,
-      languageCode: _config!.languageCode,
-      isKurdish: _config!.isKurdish,
-      applicationVersion: _config!.applicationVersion,
-      debug: _config!.debug,
-      firstName: firstName ?? _config!.firstName,
-      lastName: lastName ?? _config!.lastName,
-      email: email ?? _config!.email,
-      phoneNumber: phoneNumber ?? _config!.phoneNumber,
-      profileImageUrl: profileImageUrl ?? _config!.profileImageUrl,
-      userSubtitle: userSubtitle ?? _config!.userSubtitle,
-      isPhoneVerified: isPhoneVerified ?? _config!.isPhoneVerified,
-      isAccountActive: isAccountActive ?? _config!.isAccountActive,
-      isTwoFactorEnabled: isTwoFactorEnabled ?? _config!.isTwoFactorEnabled,
-      memberSince: memberSince ?? _config!.memberSince,
-      allowBadCertificate: _config!.allowBadCertificate,
-      skipSplash: _config!.skipSplash,
-      disableWalletOverscrollIndicator:
-          _config!.disableWalletOverscrollIndicator,
+    _applyConfig(
+      TrydosWalletConfig(
+        baseUrl: _config!.baseUrl,
+        kycBaseUrl: _config!.kycBaseUrl,
+        token: _config!.token,
+        languageCode: _config!.languageCode,
+        isKurdish: _config!.isKurdish,
+        applicationVersion: _config!.applicationVersion,
+        debug: _config!.debug,
+        firstName: firstName ?? _config!.firstName,
+        lastName: lastName ?? _config!.lastName,
+        email: email ?? _config!.email,
+        phoneNumber: phoneNumber ?? _config!.phoneNumber,
+        profileImageUrl: profileImageUrl ?? _config!.profileImageUrl,
+        userSubtitle: userSubtitle ?? _config!.userSubtitle,
+        isPhoneVerified: isPhoneVerified ?? _config!.isPhoneVerified,
+        isAccountActive: isAccountActive ?? _config!.isAccountActive,
+        isTwoFactorEnabled: isTwoFactorEnabled ?? _config!.isTwoFactorEnabled,
+        memberSince: memberSince ?? _config!.memberSince,
+        allowBadCertificate: _config!.allowBadCertificate,
+        skipSplash: _config!.skipSplash,
+        disableWalletOverscrollIndicator:
+            _config!.disableWalletOverscrollIndicator,
+      ),
     );
   }
 }

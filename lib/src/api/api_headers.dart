@@ -41,6 +41,8 @@ class ApiHeaders {
     headers['User-Agent'] = config.userAgent;
     if (config.token != null && config.token!.isNotEmpty) {
       headers[HttpHeaders.authorizationHeader] = 'Bearer ${config.token}';
+    } else {
+      headers.remove(HttpHeaders.authorizationHeader);
     }
   }
 }

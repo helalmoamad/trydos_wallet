@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import '../config/trydos_wallet_config.dart';
+
 class WalletDepositParams {
   const WalletDepositParams({
     required this.bankId,
@@ -52,6 +54,12 @@ class WalletRefreshAllRequested extends WalletEvent {
 
 class WalletReconnectWebSocketRequested extends WalletEvent {
   const WalletReconnectWebSocketRequested();
+}
+
+class WalletConfigUpdated extends WalletEvent {
+  const WalletConfigUpdated(this.config);
+
+  final TrydosWalletConfig config;
 }
 
 /// Balances
