@@ -68,7 +68,7 @@ abstract class ApiPaths {
   /// Body: kycSessionId, timestamp, nonce, fullName, nationalityCountryId,
   /// documentType, nationalIdNumber, documentFrontImageUrl,
   /// documentBackImageUrl, selfieImageUrl, selfieVsIdScore, documentExpiryDate
-  static const String kycSubmit = '/api/kyc/submit';
+  static const String kycSubmit = '/kyc/submit';
 
   /// AWS liveness session lifecycle (POST create session, GET result by sessionId).
   static const String kycAwsLiveness = '/api/kyc/liveness-aws';

@@ -192,6 +192,29 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
                         ),
                         VideoCallRequest(
                           onTapNextPage: _goToNextPage,
+                          onSkip: () {
+                            final navigator = Navigator.of(
+                              context,
+                              rootNavigator: true,
+                            );
+                            try {
+                              if (navigator.canPop()) {
+                                navigator.popUntil((route) => route.isFirst);
+                              } else {
+                                navigator.push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const TrydosWalletHomePage(),
+                                  ),
+                                );
+                              }
+                            } catch (_) {
+                              Navigator.of(
+                                context,
+                                rootNavigator: true,
+                              ).popUntil((route) => route.isFirst);
+                            }
+                          },
                           selfiePath: _selfiePath,
                           backIdPath: _backImagePath,
                         ),

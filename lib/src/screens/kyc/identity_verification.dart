@@ -546,6 +546,55 @@ class _IdentityVerificationState extends State<IdentityVerification> {
     );
   }
 
+  /// Called when the server rejects the image (bad quality, unknown ID, etc.).
+  /// Deletes the failed image file, resets BLoC state for that side,
+  /// and restarts the camera so the user can rescan.
+  Future<void> _rescanSide(_ScanStep side) async {
+    if (!mounted) return;
+
+    // Delete the failed image file
+    final imagePath = side == _ScanStep.front
+        ? _frontImagePath
+        : _backImagePath;
+    if (imagePath != null) {
+      try {
+        await File(imagePath).delete();
+      } catch (_) {}
+    }
+
+    // Reset BLoC status for the failed side only
+    context.read<WalletBloc>().add(const WalletKycAnalyzeIdResetRequested());
+
+    // Reset local state and restart scanning
+    setState(() {
+      if (side == _ScanStep.front) {
+        _frontImagePath = null;
+        _step = _ScanStep.front;
+      } else {
+        _backImagePath = null;
+        _step = _ScanStep.back;
+      }
+      _detectProgress = 0.0;
+      _consecutiveDocFrames = 0;
+      _isCapturing = false;
+    });
+
+    // Restart camera stream if already initialised
+    if (_cameraController != null &&
+        _cameraController!.value.isInitialized &&
+        !_isStreamActive) {
+      if (!widget.isActive) return;
+      try {
+        await _cameraController!.startImageStream(_onCameraImage);
+        _isStreamActive = true;
+        _resetCameraInactivityTimer();
+      } catch (_) {}
+    } else if (_cameraController == null ||
+        !(_cameraController?.value.isInitialized ?? false)) {
+      await _initCamera();
+    }
+  }
+
   Future<void> _handleFrontAnalyzeSuccess(String imagePath) async {
     if (!mounted) return;
     setState(() {
@@ -595,6 +644,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
     required _ScanStep side,
     required String? errorText,
     required String lang,
+    required bool isNetworkError,
   }) {
     if (uploadStatus == WalletStatus.loading) {
       return Shimmer.fromColors(
@@ -632,7 +682,8 @@ class _IdentityVerificationState extends State<IdentityVerification> {
                 SizedBox(height: 6.h),
               ],
               InkWell(
-                onTap: () => _retryUpload(side),
+                onTap: () =>
+                    isNetworkError ? _retryUpload(side) : _rescanSide(side),
                 child: Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: 10.w,
@@ -643,7 +694,9 @@ class _IdentityVerificationState extends State<IdentityVerification> {
                     borderRadius: BorderRadius.circular(8.r),
                   ),
                   child: Text(
-                    AppStrings.get(lang, 'retry'),
+                    isNetworkError
+                        ? AppStrings.get(lang, 'retry')
+                        : AppStrings.get(lang, 'kyc_rescan'),
                     style: TextStyle(color: Colors.white, fontSize: 11.sp),
                   ),
                 ),
@@ -1064,6 +1117,8 @@ class _IdentityVerificationState extends State<IdentityVerification> {
                               side: _ScanStep.front,
                               errorText: state.kycFrontAnalyzeErrorMessage,
                               lang: lang,
+                              isNetworkError:
+                                  state.kycFrontAnalyzeIsNetworkError,
                             ),
                           ),
                         ),
@@ -1122,6 +1177,8 @@ class _IdentityVerificationState extends State<IdentityVerification> {
                               side: _ScanStep.back,
                               errorText: state.kycBackAnalyzeErrorMessage,
                               lang: lang,
+                              isNetworkError:
+                                  state.kycBackAnalyzeIsNetworkError,
                             ),
                           ),
                         ),

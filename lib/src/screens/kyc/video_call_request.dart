@@ -14,11 +14,13 @@ import 'package:trydos_wallet/src/localization/app_strings.dart';
 /// Digital wallet home page.
 class VideoCallRequest extends StatelessWidget {
   final Function()? onTapNextPage;
+  final Function()? onSkip;
   final String? selfiePath;
   final String? backIdPath;
   const VideoCallRequest({
     super.key,
     this.onTapNextPage,
+    this.onSkip,
     this.selfiePath,
     this.backIdPath,
   });
@@ -211,7 +213,9 @@ class VideoCallRequest extends StatelessWidget {
               child: InkWell(
                 highlightColor: Colors.transparent,
                 splashColor: Colors.transparent,
-                onTap: () async {},
+                onTap: () {
+                  onSkip?.call();
+                },
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 10.h),
                   child: Text(

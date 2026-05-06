@@ -51,23 +51,25 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
     super.initState();
     _startBlinking();
     // Send compare-face request on first frame using BLoC state data
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final state = context.read<WalletBloc>().state;
-      final selfie = state.selfieImageData ?? '';
-      final idFace = state.kycIdFaceImageData ?? '';
-      if (selfie.isNotEmpty && idFace.isNotEmpty && !_requestSent) {
-        _requestSent = true;
-        Future.delayed(const Duration(seconds: 1), () {
-          if (!mounted) return;
-          context.read<WalletBloc>().add(
-            WalletKycCompareFaceRequested(
-              selfieImageData: selfie,
-              idFaceImageData: idFace,
-            ),
-          );
-        });
-      }
-    });
+
+    final state = context.read<WalletBloc>().state;
+    final selfie = state.selfieImageData ?? '';
+    final idFace = state.kycIdFaceImageData ?? '';
+    print(
+      'Selfie path: ${selfie.isNotEmpty}, Front ID path: ${idFace.isNotEmpty}     ${!_requestSent}',
+    );
+    if (selfie.isNotEmpty && idFace.isNotEmpty && !_requestSent) {
+      _requestSent = true;
+      Future.delayed(const Duration(seconds: 2), () {
+        // ignore: use_build_context_synchronously
+        context.read<WalletBloc>().add(
+          WalletKycCompareFaceRequested(
+            selfieImageData: selfie,
+            idFaceImageData: idFace,
+          ),
+        );
+      });
+    }
   }
 
   void _startBlinking() {

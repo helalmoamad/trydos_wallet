@@ -51,6 +51,8 @@ class WalletState {
     this.kycIdFaceImageData,
     this.kycFrontAnalyzeErrorMessage,
     this.kycBackAnalyzeErrorMessage,
+    this.kycFrontAnalyzeIsNetworkError = false,
+    this.kycBackAnalyzeIsNetworkError = false,
     // KYC Image Upload URLs
     this.kycFrontImageUrl,
     this.kycBackImageUrl,
@@ -162,6 +164,8 @@ class WalletState {
   final String? kycIdFaceImageData;
   final String? kycFrontAnalyzeErrorMessage;
   final String? kycBackAnalyzeErrorMessage;
+  final bool kycFrontAnalyzeIsNetworkError;
+  final bool kycBackAnalyzeIsNetworkError;
 
   // KYC Image Upload URLs
   final String? kycFrontImageUrl;
@@ -250,6 +254,8 @@ class WalletState {
     Object? kycIdFaceImageData = _unset,
     Object? kycFrontAnalyzeErrorMessage = _unset,
     Object? kycBackAnalyzeErrorMessage = _unset,
+    bool? kycFrontAnalyzeIsNetworkError,
+    bool? kycBackAnalyzeIsNetworkError,
     Object? kycFrontImageUrl = _unset,
     Object? kycBackImageUrl = _unset,
     WalletStatus? kycSelfieUploadStatus,
@@ -349,6 +355,10 @@ class WalletState {
       kycBackAnalyzeErrorMessage: kycBackAnalyzeErrorMessage == _unset
           ? this.kycBackAnalyzeErrorMessage
           : kycBackAnalyzeErrorMessage as String?,
+      kycFrontAnalyzeIsNetworkError:
+          kycFrontAnalyzeIsNetworkError ?? this.kycFrontAnalyzeIsNetworkError,
+      kycBackAnalyzeIsNetworkError:
+          kycBackAnalyzeIsNetworkError ?? this.kycBackAnalyzeIsNetworkError,
       kycFrontImageUrl: kycFrontImageUrl == _unset
           ? this.kycFrontImageUrl
           : kycFrontImageUrl as String?,

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trydos_wallet/src/models/models.dart';
 import 'package:trydos_wallet/src/services/balances_api_service.dart';
@@ -997,6 +998,19 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     );
   }
 
+  /// Returns true when a DioException indicates a connectivity/timeout problem
+  /// (i.e. the server was never reached), as opposed to a structured error
+  /// response from the server itself.
+  bool _isNetworkDioError(Object? error) {
+    if (error is DioException) {
+      return error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.sendTimeout;
+    }
+    return false;
+  }
+
   Future<void> _onKycAnalyzeIdRequested(
     WalletKycAnalyzeIdRequested event,
     Emitter<WalletState> emit,
@@ -1033,6 +1047,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       );
 
       if (result.isFailure || result.data == null) {
+        final isNetworkErr = _isNetworkDioError(result.error);
         emit(
           state.copyWith(
             kycFrontAnalyzeStatus: isFront
@@ -1047,6 +1062,12 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
             kycBackAnalyzeErrorMessage: isFront
                 ? state.kycBackAnalyzeErrorMessage
                 : (result.errorMessage ?? 'Upload failed'),
+            kycFrontAnalyzeIsNetworkError: isFront
+                ? isNetworkErr
+                : state.kycFrontAnalyzeIsNetworkError,
+            kycBackAnalyzeIsNetworkError: isFront
+                ? state.kycBackAnalyzeIsNetworkError
+                : isNetworkErr,
             kycExtractedData: isFront ? null : state.kycExtractedData,
           ),
         );
@@ -1070,6 +1091,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
 
         if (uploadResult.isFailure || uploadResult.data == null) {
           final uploadError = uploadResult.errorMessage ?? 'Upload failed';
+          final isNetworkErr = _isNetworkDioError(uploadResult.error);
           emit(
             state.copyWith(
               kycFrontAnalyzeStatus: isFront
@@ -1084,6 +1106,12 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
               kycBackAnalyzeErrorMessage: isFront
                   ? state.kycBackAnalyzeErrorMessage
                   : uploadError,
+              kycFrontAnalyzeIsNetworkError: isFront
+                  ? isNetworkErr
+                  : state.kycFrontAnalyzeIsNetworkError,
+              kycBackAnalyzeIsNetworkError: isFront
+                  ? state.kycBackAnalyzeIsNetworkError
+                  : isNetworkErr,
               kycExtractedData: isFront ? null : state.kycExtractedData,
             ),
           );
@@ -1109,7 +1137,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
                 : state.kycExtractedData,
             kycNextStep: data.nextStep,
             kycIdFaceImageData: isFront
-                ? (data.idFaceImageData ?? state.kycIdFaceImageData)
+                ? (data.idFaceImageData ?? data.croppedImageData)
                 : state.kycIdFaceImageData,
             kycFrontAnalyzeErrorMessage: isFront
                 ? null
@@ -1132,6 +1160,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           ? (data.message ?? data.code ?? 'Upload failed')
           : 'Document not found. Try again.';
 
+      // data.isError / isNotFound = structured server response → always server error
       emit(
         state.copyWith(
           kycFrontAnalyzeStatus: isFront
@@ -1146,6 +1175,12 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           kycBackAnalyzeErrorMessage: isFront
               ? state.kycBackAnalyzeErrorMessage
               : errorMessage,
+          kycFrontAnalyzeIsNetworkError: isFront
+              ? false
+              : state.kycFrontAnalyzeIsNetworkError,
+          kycBackAnalyzeIsNetworkError: isFront
+              ? state.kycBackAnalyzeIsNetworkError
+              : false,
           kycExtractedData: isFront ? null : state.kycExtractedData,
         ),
       );
@@ -1164,6 +1199,12 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           kycBackAnalyzeErrorMessage: isFront
               ? state.kycBackAnalyzeErrorMessage
               : e.toString(),
+          kycFrontAnalyzeIsNetworkError: isFront
+              ? _isNetworkDioError(e)
+              : state.kycFrontAnalyzeIsNetworkError,
+          kycBackAnalyzeIsNetworkError: isFront
+              ? state.kycBackAnalyzeIsNetworkError
+              : _isNetworkDioError(e),
           kycExtractedData: isFront ? null : state.kycExtractedData,
         ),
       );
@@ -1185,6 +1226,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         kycIdFaceImageData: null,
         kycFrontAnalyzeErrorMessage: null,
         kycBackAnalyzeErrorMessage: null,
+        kycFrontAnalyzeIsNetworkError: false,
+        kycBackAnalyzeIsNetworkError: false,
         kycFrontImageUrl: null,
         kycBackImageUrl: null,
       ),
@@ -1371,7 +1414,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           'documentExpiryDate': extracted?.expiryDate ?? '',
         };
 
-        final submitResult = await _kycApi.submitKyc(payload: submitPayload);
+        /* final submitResult = await _kycApi.submitKyc(payload: submitPayload);
         if (submitResult.isFailure) {
           emit(
             state.copyWith(
@@ -1382,7 +1425,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
             ),
           );
           return;
-        }
+        }*/
 
         emit(
           state.copyWith(
