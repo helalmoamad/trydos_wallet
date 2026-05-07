@@ -23,6 +23,7 @@ class TrydosWalletConfig {
     this.lastName = 'A*****',
     this.email,
     this.phoneNumber,
+    this.accountNumber,
     this.profileImageUrl,
     this.userSubtitle,
     this.isPhoneVerified = false,
@@ -45,6 +46,7 @@ class TrydosWalletConfig {
   final String lastName;
   final String? email;
   final String? phoneNumber;
+  final String? accountNumber;
   final String? profileImageUrl;
   final String? userSubtitle;
   final bool isPhoneVerified;

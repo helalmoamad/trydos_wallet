@@ -14,7 +14,8 @@ import 'package:trydos_wallet/trydos_wallet.dart';
 
 /// رأس الصفحة (شعار + أيقونة QR).
 class WalletHeader extends StatelessWidget {
-  const WalletHeader({super.key});
+  final bool fromSettings;
+  const WalletHeader({super.key, this.fromSettings = false});
 
   @override
   Widget build(BuildContext context) {
@@ -32,50 +33,156 @@ class WalletHeader extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              SvgPicture.asset(
-                TrydosWalletAssets.rdb,
-                package: TrydosWalletStyles.packageName,
-                height: 30.h,
-              ),
-              const Spacer(),
-              state.balanceCardIsSelected
-                  ? InkWell(
-                      onTap: () {
-                        final walletBloc = context.read<WalletBloc>();
-                        showWalletModal(
-                          context: context,
-                          builder: (context, sc) => BlocProvider.value(
-                            value: walletBloc,
-                            child: ReceiveModal(scrollController: sc),
-                          ),
-                        );
-                      },
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          SvgPicture.asset(
-                            TrydosWalletAssets.receive,
-                            height: 20.h,
-                            package: TrydosWalletStyles.packageName,
-                          ),
-                          SizedBox(height: 5.h),
-                          Text(
-                            AppStrings.get(state.languageCode, 'receive_label'),
-                            style: context.textTheme.bodyMedium?.rq.copyWith(
-                              color: const Color(0xff404040),
-                              fontSize: 11.sp,
-                              height: 1.3,
+            children: fromSettings
+                ? [
+                    SvgPicture.asset(
+                      TrydosWalletAssets.rdb,
+                      package: TrydosWalletStyles.packageName,
+                      height: 30.h,
+                    ),
+                    const Spacer(),
+                    SvgPicture.asset(
+                      TrydosWalletAssets.setting,
+                      package: TrydosWalletStyles.packageName,
+                      height: 30.h,
+                    ),
+                  ]
+                : [
+                    SvgPicture.asset(
+                      TrydosWalletAssets.rdb,
+                      package: TrydosWalletStyles.packageName,
+                      height: 30.h,
+                    ),
+                    const Spacer(),
+                    state.balanceCardIsSelected
+                        ? InkWell(
+                            onTap: () {
+                              final walletBloc = context.read<WalletBloc>();
+                              showWalletModal(
+                                context: context,
+                                builder: (context, sc) => BlocProvider.value(
+                                  value: walletBloc,
+                                  child: ReceiveModal(scrollController: sc),
+                                ),
+                              );
+                            },
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                SvgPicture.asset(
+                                  TrydosWalletAssets.receive,
+                                  height: 20.h,
+                                  package: TrydosWalletStyles.packageName,
+                                ),
+                                SizedBox(height: 5.h),
+                                Text(
+                                  AppStrings.get(
+                                    state.languageCode,
+                                    'receive_label',
+                                  ),
+                                  style: context.textTheme.bodyMedium?.rq
+                                      .copyWith(
+                                        color: const Color(0xff404040),
+                                        fontSize: 11.sp,
+                                        height: 1.3,
+                                      ),
+                                ),
+                              ],
                             ),
+                          )
+                        : SizedBox(height: 30.h),
+                    SizedBox(width: 30.w),
+                    state.balanceCardIsSelected
+                        ? InkWell(
+                            onTap: () async {
+                              final walletBloc = context.read<WalletBloc>();
+                              final headerContext = context;
+
+                              Future<void> openQRThenSend() async {
+                                if (!headerContext.mounted) return;
+                                final result = await showWalletModal<String>(
+                                  context: headerContext,
+                                  builder: (ctx, sc) => BlocProvider.value(
+                                    value: walletBloc,
+                                    child: QRScannerPage(fromQR: false),
+                                  ),
+                                );
+                                if (!headerContext.mounted || result == null)
+                                  return;
+
+                                final payload = QrTransferPayloadCodec.tryParse(
+                                  result,
+                                );
+                                // Close the QR scanner modal.
+                                showWalletModal(
+                                  context: context,
+                                  builder: (ctx, sc) => BlocProvider.value(
+                                    value: walletBloc,
+                                    child: SendModal(
+                                      initialPayload: payload,
+                                      initialScanRaw: result,
+                                      onBack: openQRThenSend,
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              await openQRThenSend();
+                            },
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                SvgPicture.asset(
+                                  TrydosWalletAssets.send,
+                                  height: 20.h,
+                                  package: TrydosWalletStyles.packageName,
+                                ),
+                                SizedBox(height: 5.h),
+                                Text(
+                                  AppStrings.get(
+                                    state.languageCode,
+                                    'send_label',
+                                  ),
+                                  style: context.textTheme.bodyMedium?.rq
+                                      .copyWith(
+                                        color: const Color(0xff404040),
+                                        fontSize: 11.sp,
+                                        height: 1.3,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              SizedBox(height: 25.h),
+                              Text(
+                                "",
+                                style: context.textTheme.bodyMedium?.rq
+                                    .copyWith(
+                                      color: const Color(0xff404040),
+                                      fontSize: 11.sp,
+                                      height: 1.3,
+                                    ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    )
-                  : SizedBox(height: 30.h),
-              SizedBox(width: 30.w),
-              state.balanceCardIsSelected
-                  ? InkWell(
+                    SizedBox(width: 30.w),
+                    InkWell(
                       onTap: () async {
+                        /*   if (!state.balanceCardIsSelected) {
+                    showMessage(
+                      AppStrings.get(
+                        state.languageCode,
+                        'select_currency_to_send_msg',
+                      ),
+                      context: context,
+                      type: MessageType.error,
+                    );
+                    return;
+                  }
+*/
                         final walletBloc = context.read<WalletBloc>();
                         final headerContext = context;
 
@@ -85,7 +192,7 @@ class WalletHeader extends StatelessWidget {
                             context: headerContext,
                             builder: (ctx, sc) => BlocProvider.value(
                               value: walletBloc,
-                              child: QRScannerPage(fromQR: false),
+                              child: QRScannerPage(fromQR: true),
                             ),
                           );
                           if (!headerContext.mounted || result == null) return;
@@ -93,9 +200,9 @@ class WalletHeader extends StatelessWidget {
                           final payload = QrTransferPayloadCodec.tryParse(
                             result,
                           );
-                          // Close the QR scanner modal.
+
                           showWalletModal(
-                            context: context,
+                            context: headerContext,
                             builder: (ctx, sc) => BlocProvider.value(
                               value: walletBloc,
                               child: SendModal(
@@ -109,93 +216,13 @@ class WalletHeader extends StatelessWidget {
 
                         await openQRThenSend();
                       },
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          SvgPicture.asset(
-                            TrydosWalletAssets.send,
-                            height: 20.h,
-                            package: TrydosWalletStyles.packageName,
-                          ),
-                          SizedBox(height: 5.h),
-                          Text(
-                            AppStrings.get(state.languageCode, 'send_label'),
-                            style: context.textTheme.bodyMedium?.rq.copyWith(
-                              color: const Color(0xff404040),
-                              fontSize: 11.sp,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
+                      child: SvgPicture.asset(
+                        TrydosWalletAssets.qr,
+                        package: TrydosWalletStyles.packageName,
+                        height: 25.h,
                       ),
-                    )
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        SizedBox(height: 25.h),
-                        Text(
-                          "",
-                          style: context.textTheme.bodyMedium?.rq.copyWith(
-                            color: const Color(0xff404040),
-                            fontSize: 11.sp,
-                            height: 1.3,
-                          ),
-                        ),
-                      ],
                     ),
-              SizedBox(width: 30.w),
-              InkWell(
-                onTap: () async {
-                  /*   if (!state.balanceCardIsSelected) {
-                    showMessage(
-                      AppStrings.get(
-                        state.languageCode,
-                        'select_currency_to_send_msg',
-                      ),
-                      context: context,
-                      type: MessageType.error,
-                    );
-                    return;
-                  }
-*/
-                  final walletBloc = context.read<WalletBloc>();
-                  final headerContext = context;
-
-                  Future<void> openQRThenSend() async {
-                    if (!headerContext.mounted) return;
-                    final result = await showWalletModal<String>(
-                      context: headerContext,
-                      builder: (ctx, sc) => BlocProvider.value(
-                        value: walletBloc,
-                        child: QRScannerPage(fromQR: true),
-                      ),
-                    );
-                    if (!headerContext.mounted || result == null) return;
-
-                    final payload = QrTransferPayloadCodec.tryParse(result);
-
-                    showWalletModal(
-                      context: headerContext,
-                      builder: (ctx, sc) => BlocProvider.value(
-                        value: walletBloc,
-                        child: SendModal(
-                          initialPayload: payload,
-                          initialScanRaw: result,
-                          onBack: openQRThenSend,
-                        ),
-                      ),
-                    );
-                  }
-
-                  await openQRThenSend();
-                },
-                child: SvgPicture.asset(
-                  TrydosWalletAssets.qr,
-                  package: TrydosWalletStyles.packageName,
-                  height: 25.h,
-                ),
-              ),
-            ],
+                  ],
           ),
         );
       },
