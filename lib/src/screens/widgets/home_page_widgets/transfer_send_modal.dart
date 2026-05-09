@@ -1524,7 +1524,6 @@ class _TransferSendModalState extends State<TransferSendModal>
                                 color: Colors.white,
                                 fontSize: 13.sp,
                               ),
-                              textDirection: TextDirection.ltr,
                             ),
                             SizedBox(height: 12.h),
 
@@ -2337,11 +2336,12 @@ class _TransferSendModalState extends State<TransferSendModal>
     final accountId = (identity?.accountNumber ?? '').trim().isNotEmpty
         ? identity!.accountNumber
         : '----';
+
     final subtypeRaw = identity?.accountSubtype ?? 'MAIN';
     final subtype = subtypeRaw.toUpperCase() == 'MAIN'
         ? AppStrings.get(state.languageCode, 'main_sub_account')
         : subtypeRaw;
-    return '$subtype | $accountId | ${state.maskedName}';
+    return '$subtype | \u202D$accountId\u202C | ${state.maskedName}';
   }
 
   Widget _buildAmountRow(WalletState state) {

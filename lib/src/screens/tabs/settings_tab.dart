@@ -507,6 +507,7 @@ Widget _personInfoWidget(BuildContext context, WalletState state) {
                       fontSize: 14.sp,
                       height: 1.3,
                     ),
+                    textDirection: TextDirection.ltr,
                   ),
                   SizedBox(width: 5.w),
                   Text(

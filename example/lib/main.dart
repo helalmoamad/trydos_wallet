@@ -11,6 +11,7 @@ import 'package:trydos_wallet/src/constent/constant_design.dart';
 
 // ignore: implementation_imports
 import 'package:trydos_wallet/src/constent/theme/app_theme.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   // Library init - required before any API call
@@ -49,13 +50,18 @@ class TrydosWalletExampleApp extends StatefulWidget {
   State<TrydosWalletExampleApp> createState() => _TrydosWalletExampleAppState();
 }
 
-class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp> {
+class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp>
+    with WidgetsBindingObserver {
   StreamSubscription? _logoutSubscription;
   StreamSubscription? _languageSubscription;
+  bool _isAppInBackground = false;
 
   @override
   void initState() {
     super.initState();
+
+    // Register as lifecycle observer to monitor app background state
+    WidgetsBinding.instance.addObserver(this);
 
     // Listen to logout events emitted by the library.
     _logoutSubscription = logoutEvents.listen((event) {
@@ -69,7 +75,67 @@ class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    debugPrint('[App] Lifecycle state: $state');
+
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        // When app goes to background, hide sensitive content at platform level
+        _hideWindowContent();
+        setState(() {
+          _isAppInBackground = true;
+        });
+        break;
+      case AppLifecycleState.resumed:
+        // When app returns to foreground, show content again
+        _showWindowContent();
+        setState(() {
+          _isAppInBackground = false;
+        });
+        break;
+      case AppLifecycleState.inactive:
+        // App is becoming inactive (temporary state)
+        setState(() {
+          _isAppInBackground = true;
+        });
+        break;
+      case AppLifecycleState.hidden:
+        // App is hidden (new state in newer Flutter)
+        setState(() {
+          _isAppInBackground = true;
+        });
+        break;
+    }
+  }
+
+  Future<void> _hideWindowContent() async {
+    try {
+      const platform = MethodChannel(
+        'com.example.trydos_wallet_example/security',
+      );
+      await platform.invokeMethod('hideContent');
+      debugPrint('[App] Platform method: hideContent called');
+    } catch (e) {
+      debugPrint('[App] Error calling hideContent: $e');
+    }
+  }
+
+  Future<void> _showWindowContent() async {
+    try {
+      const platform = MethodChannel(
+        'com.example.trydos_wallet_example/security',
+      );
+      await platform.invokeMethod('showContent');
+      debugPrint('[App] Platform method: showContent called');
+    } catch (e) {
+      debugPrint('[App] Error calling showContent: $e');
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _logoutSubscription?.cancel();
     _languageSubscription?.cancel();
     super.dispose();
@@ -77,6 +143,14 @@ class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Show black screen when app is in background for security
+    if (_isAppInBackground) {
+      return MaterialApp(
+        home: Scaffold(body: Container(color: Colors.black)),
+        debugShowCheckedModeBanner: false,
+      );
+    }
+
     return BlocProvider<WalletBloc>(
       create: (context) =>
           WalletBloc()
