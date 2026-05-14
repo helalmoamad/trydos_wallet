@@ -2,6 +2,7 @@
 class TrydosWalletAssets {
   /// مسار مجلد الـ SVG الأساسي
   static const String _svgPath = 'assets/svg';
+  static const String back = '$_svgPath/back.svg';
 
   /// أيقونة رامز (الشعار)
   static const String rammaz = '$_svgPath/rammaz.svg';
@@ -77,6 +78,22 @@ class TrydosWalletAssets {
   static const String bottomRight = '$_svgPath/bottom_right.svg';
   static const String topLeft = '$_svgPath/top_left.svg';
   static const String topRight = '$_svgPath/top_right.svg';
+  static const String aboutUs = '$_svgPath/about_us.svg';
+  static const String addPhone = '$_svgPath/add_phone.svg';
+  static const String addPhoto = '$_svgPath/add_photo.svg';
+  static const String delete = '$_svgPath/delete.svg';
+  static const String files = '$_svgPath/files.svg';
+  static const String gallary = '$_svgPath/gallary.svg';
+  static const String history = '$_svgPath/history.svg';
+  static const String language = '$_svgPath/language.svg';
+  static const String legal = '$_svgPath/legal.svg';
+  static const String lock = '$_svgPath/lock.svg';
+  static const String logout = '$_svgPath/logout.svg';
+  static const String personHide = '$_svgPath/person_hide.svg';
+  static const String shareApp = '$_svgPath/share_app.svg';
+  static const String takePhoto = '$_svgPath/take_photo.svg';
+  static const String terms = '$_svgPath/terms.svg';
+  static const String worrning = '$_svgPath/worrning.svg';
 
   // يمكنك إضافة المزيد من الـ SVG هنا مستقبلاً:
   // static const String walletIcon = '$_svgPath/wallet.svg';

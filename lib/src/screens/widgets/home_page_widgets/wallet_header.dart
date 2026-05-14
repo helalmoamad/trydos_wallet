@@ -41,10 +41,25 @@ class WalletHeader extends StatelessWidget {
                       height: 30.h,
                     ),
                     const Spacer(),
-                    SvgPicture.asset(
-                      TrydosWalletAssets.setting,
-                      package: TrydosWalletStyles.packageName,
-                      height: 30.h,
+                    SizedBox(
+                      child: Column(
+                        children: [
+                          SvgPicture.asset(
+                            TrydosWalletAssets.lock,
+                            package: TrydosWalletStyles.packageName,
+                            height: 23.h,
+                          ),
+                          SizedBox(height: 3.h),
+                          Text(
+                            AppStrings.get(state.languageCode, 'Lock'),
+                            style: context.textTheme.bodyMedium?.rq.copyWith(
+                              color: const Color(0xff1D1D1D),
+                              fontSize: 10.sp,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ]
                 : [
