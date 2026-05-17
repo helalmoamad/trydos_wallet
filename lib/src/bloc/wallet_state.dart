@@ -93,6 +93,7 @@ class WalletState {
     this.phoneNumber,
     this.profileImageUrl,
     this.userSubtitle,
+    this.isVerified = false,
     this.isPhoneVerified = false,
     this.isAccountActive = true,
     this.isTwoFactorEnabled = false,
@@ -121,6 +122,7 @@ class WalletState {
   final String? phoneNumber;
   final String? profileImageUrl;
   final String? userSubtitle;
+  final bool isVerified;
   final bool isPhoneVerified;
   final bool isAccountActive;
   final bool isTwoFactorEnabled;
@@ -284,6 +286,7 @@ class WalletState {
     String? phoneNumber,
     String? profileImageUrl,
     String? userSubtitle,
+    bool? isVerified,
     bool? isPhoneVerified,
     bool? isAccountActive,
     bool? isTwoFactorEnabled,
@@ -407,6 +410,7 @@ class WalletState {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       userSubtitle: userSubtitle ?? this.userSubtitle,
+      isVerified: isVerified ?? this.isVerified,
       isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
       isAccountActive: isAccountActive ?? this.isAccountActive,
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,

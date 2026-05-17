@@ -26,6 +26,7 @@ class TrydosWalletConfig {
     this.accountNumber,
     this.profileImageUrl,
     this.userSubtitle,
+    this.isVerified = false,
     this.isPhoneVerified = false,
     this.isAccountActive = true,
     this.isTwoFactorEnabled = false,
@@ -49,6 +50,7 @@ class TrydosWalletConfig {
   final String? accountNumber;
   final String? profileImageUrl;
   final String? userSubtitle;
+  final bool isVerified;
   final bool isPhoneVerified;
   final bool isAccountActive;
   final bool isTwoFactorEnabled;
@@ -82,6 +84,8 @@ class TrydosWalletConfig {
 
 /// Global config store - set once at app startup.
 class TrydosWallet {
+  static const String _profileImageUrlPrefKey =
+      'trydos_wallet_profile_image_url';
   static TrydosWalletConfig? _config;
   static ApiClient? _apiClient;
   static ApiClient? _kycApiClient;
@@ -127,6 +131,7 @@ class TrydosWallet {
             previousConfig.isKurdish != config.isKurdish);
 
     _applyConfig(config, emitLanguageChanged: languageChanged);
+    unawaited(_restorePersistedProfileImageUrl());
   }
 
   static void _applyConfig(
@@ -197,6 +202,7 @@ class TrydosWallet {
         phoneNumber: _config!.phoneNumber,
         profileImageUrl: _config!.profileImageUrl,
         userSubtitle: _config!.userSubtitle,
+        isVerified: _config!.isVerified,
         isPhoneVerified: _config!.isPhoneVerified,
         isAccountActive: _config!.isAccountActive,
         isTwoFactorEnabled: _config!.isTwoFactorEnabled,
@@ -228,6 +234,7 @@ class TrydosWallet {
         phoneNumber: _config!.phoneNumber,
         profileImageUrl: _config!.profileImageUrl,
         userSubtitle: _config!.userSubtitle,
+        isVerified: _config!.isVerified,
         isPhoneVerified: _config!.isPhoneVerified,
         isAccountActive: _config!.isAccountActive,
         isTwoFactorEnabled: _config!.isTwoFactorEnabled,
@@ -249,12 +256,14 @@ class TrydosWallet {
     String? phoneNumber,
     String? profileImageUrl,
     String? userSubtitle,
+    bool? isVerified,
     bool? isPhoneVerified,
     bool? isAccountActive,
     bool? isTwoFactorEnabled,
     DateTime? memberSince,
   }) {
     if (_config == null) return;
+    final resolvedProfileImageUrl = profileImageUrl ?? _config!.profileImageUrl;
     _applyConfig(
       TrydosWalletConfig(
         baseUrl: _config!.baseUrl,
@@ -268,12 +277,68 @@ class TrydosWallet {
         lastName: lastName ?? _config!.lastName,
         email: email ?? _config!.email,
         phoneNumber: phoneNumber ?? _config!.phoneNumber,
-        profileImageUrl: profileImageUrl ?? _config!.profileImageUrl,
+        profileImageUrl: resolvedProfileImageUrl,
         userSubtitle: userSubtitle ?? _config!.userSubtitle,
+        isVerified: isVerified ?? _config!.isVerified,
         isPhoneVerified: isPhoneVerified ?? _config!.isPhoneVerified,
         isAccountActive: isAccountActive ?? _config!.isAccountActive,
         isTwoFactorEnabled: isTwoFactorEnabled ?? _config!.isTwoFactorEnabled,
         memberSince: memberSince ?? _config!.memberSince,
+        allowBadCertificate: _config!.allowBadCertificate,
+        skipSplash: _config!.skipSplash,
+        disableWalletOverscrollIndicator:
+            _config!.disableWalletOverscrollIndicator,
+      ),
+    );
+
+    unawaited(_persistProfileImageUrl(resolvedProfileImageUrl));
+  }
+
+  static Future<void> _persistProfileImageUrl(String? profileImageUrl) async {
+    final prefs = await SharedPreferences.getInstance();
+    final normalizedValue = profileImageUrl?.trim();
+    if (normalizedValue == null || normalizedValue.isEmpty) {
+      await prefs.remove(_profileImageUrlPrefKey);
+      return;
+    }
+
+    await prefs.setString(_profileImageUrlPrefKey, normalizedValue);
+  }
+
+  static Future<void> _restorePersistedProfileImageUrl() async {
+    if (_config == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    if (!prefs.containsKey(_profileImageUrlPrefKey)) return;
+
+    final persistedValue = prefs.getString(_profileImageUrlPrefKey);
+    final normalizedValue =
+        (persistedValue == null || persistedValue.trim().isEmpty)
+        ? null
+        : persistedValue.trim();
+
+    if (_config!.profileImageUrl == normalizedValue) return;
+
+    _applyConfig(
+      TrydosWalletConfig(
+        baseUrl: _config!.baseUrl,
+        kycBaseUrl: _config!.kycBaseUrl,
+        token: _config!.token,
+        languageCode: _config!.languageCode,
+        isKurdish: _config!.isKurdish,
+        applicationVersion: _config!.applicationVersion,
+        debug: _config!.debug,
+        firstName: _config!.firstName,
+        lastName: _config!.lastName,
+        email: _config!.email,
+        phoneNumber: _config!.phoneNumber,
+        profileImageUrl: normalizedValue,
+        userSubtitle: _config!.userSubtitle,
+        isVerified: _config!.isVerified,
+        isPhoneVerified: _config!.isPhoneVerified,
+        isAccountActive: _config!.isAccountActive,
+        isTwoFactorEnabled: _config!.isTwoFactorEnabled,
+        memberSince: _config!.memberSince,
         allowBadCertificate: _config!.allowBadCertificate,
         skipSplash: _config!.skipSplash,
         disableWalletOverscrollIndicator:

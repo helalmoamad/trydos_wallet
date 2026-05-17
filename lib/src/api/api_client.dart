@@ -207,6 +207,41 @@ class ApiClient {
     }
   }
 
+  /// PATCH
+  Future<ApiResult<T>> patch<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    T Function(dynamic)? fromJson,
+  }) async {
+    try {
+      final res = await _dio.patch<dynamic>(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+      );
+      if (res.statusCode == 400) {
+        _handle400(res.data);
+        return ApiResult<T>.manualFailure(
+          errorMessage: _extractErrorMessageFromData(res.data),
+        );
+      }
+      final result = fromJson != null && res.data != null
+          ? fromJson(res.data)
+          : res.data as T?;
+      return ApiResult.success(result);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400) {
+        _handle400(e.response?.data);
+      }
+      return ApiResult<T>.failure(e, errorMessage: _extractErrorMessage(e));
+    }
+  }
+
   /// DELETE
   Future<ApiResult<T>> delete<T>(
     String path, {

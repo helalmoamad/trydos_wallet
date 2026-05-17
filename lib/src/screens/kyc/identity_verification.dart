@@ -563,6 +563,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
     }
 
     // Reset BLoC status for the failed side only
+    // ignore: use_build_context_synchronously
     context.read<WalletBloc>().add(const WalletKycAnalyzeIdResetRequested());
 
     // Reset local state and restart scanning

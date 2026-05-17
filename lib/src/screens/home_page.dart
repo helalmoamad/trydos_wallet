@@ -190,7 +190,14 @@ class _TrydosWalletHomePageContentState
 
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _selectedIndex = index),
+        onTap: () {
+          if (index == 3) {
+            context.read<WalletBloc>().add(
+              const WalletUserProfileRefreshRequested(),
+            );
+          }
+          setState(() => _selectedIndex = index);
+        },
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [

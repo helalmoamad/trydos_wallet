@@ -62,6 +62,12 @@ class WalletConfigUpdated extends WalletEvent {
   final TrydosWalletConfig config;
 }
 
+class WalletUserProfileRefreshRequested extends WalletEvent {
+  const WalletUserProfileRefreshRequested({this.silent = true});
+
+  final bool silent;
+}
+
 /// Balances
 class WalletBalanceLoadRequested extends WalletEvent {
   const WalletBalanceLoadRequested(this.assetId);

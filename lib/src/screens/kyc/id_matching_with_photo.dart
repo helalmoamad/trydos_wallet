@@ -55,9 +55,7 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
     final state = context.read<WalletBloc>().state;
     final selfie = state.selfieImageData ?? '';
     final idFace = state.kycIdFaceImageData ?? '';
-    print(
-      'Selfie path: ${selfie.isNotEmpty}, Front ID path: ${idFace.isNotEmpty}     ${!_requestSent}',
-    );
+
     if (selfie.isNotEmpty && idFace.isNotEmpty && !_requestSent) {
       _requestSent = true;
       Future.delayed(const Duration(seconds: 2), () {

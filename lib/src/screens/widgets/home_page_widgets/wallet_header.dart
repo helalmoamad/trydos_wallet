@@ -122,8 +122,9 @@ class WalletHeader extends StatelessWidget {
                                     child: QRScannerPage(fromQR: false),
                                   ),
                                 );
-                                if (!headerContext.mounted || result == null)
+                                if (!headerContext.mounted || result == null) {
                                   return;
+                                }
 
                                 final payload = QrTransferPayloadCodec.tryParse(
                                   result,

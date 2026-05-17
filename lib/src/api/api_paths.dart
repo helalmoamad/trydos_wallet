@@ -51,6 +51,11 @@ abstract class ApiPaths {
   /// Body: file (required), type (required), metadata (optional)
   static const String mediaUploadDirect = '/media/upload/direct';
 
+  // ─── User ───
+  /// Update current user profile (PATCH).
+  /// Body: profilePictureURL, firstName, lastName
+  static const String myProfile = '/users/me';
+
   // ─── KYC ───
   /// Analyze front/back ID image (POST).
   /// Body: imageData (data URL), side (front|back), sessionHint?

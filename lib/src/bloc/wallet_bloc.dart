@@ -16,6 +16,7 @@ import 'package:trydos_wallet/src/services/kyc_compare_face_api_service.dart';
 import 'package:trydos_wallet/src/services/payment_requests_api_service.dart';
 import 'package:trydos_wallet/src/services/transfer_purposes_api_service.dart';
 import 'package:trydos_wallet/src/services/transactions_api_service.dart';
+import 'package:trydos_wallet/src/services/users_api_service.dart';
 import 'package:trydos_wallet/src/services/wallet_websocket_service.dart';
 //////////////////////////////////////////////////////////////////////////
 import '../config/trydos_wallet_config.dart';
@@ -35,6 +36,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     KycCompareFaceApiService? kycCompareFaceApi,
     TransferPurposesApiService? transferPurposesApi,
     PaymentRequestsApiService? paymentRequestsApi,
+    UsersApiService? usersApi,
     WalletWebSocketService? walletWebSocketService,
     String? initialLanguage,
     String? firstName,
@@ -43,6 +45,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     String? phoneNumber,
     String? profileImageUrl,
     String? userSubtitle,
+    bool? isVerified,
     bool? isPhoneVerified,
     bool? isAccountActive,
     bool? isTwoFactorEnabled,
@@ -59,6 +62,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
        _transferPurposesApi =
            transferPurposesApi ?? TransferPurposesApiService(),
        _paymentRequestsApi = paymentRequestsApi ?? PaymentRequestsApiService(),
+       _usersApi = usersApi ?? UsersApiService(),
        _walletWebSocketService = walletWebSocketService,
        super(
          WalletState(
@@ -70,6 +74,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
            profileImageUrl:
                profileImageUrl ?? TrydosWallet.config.profileImageUrl,
            userSubtitle: userSubtitle ?? TrydosWallet.config.userSubtitle,
+           isVerified: isVerified ?? TrydosWallet.config.isVerified,
            isPhoneVerified:
                isPhoneVerified ?? TrydosWallet.config.isPhoneVerified,
            isAccountActive:
@@ -112,6 +117,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletRealtimeBalanceUpdated>(_onRealtimeBalanceUpdated);
     on<WalletRealtimeTransactionReceived>(_onRealtimeTransactionReceived);
     on<WalletConfigUpdated>(_onConfigUpdated);
+    on<WalletUserProfileRefreshRequested>(_onUserProfileRefreshRequested);
 
     _configSubscription = TrydosWallet.configChanges.listen((config) {
       if (!isClosed) {
@@ -122,6 +128,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     _walletWebSocketService ??= _createDefaultWalletWebSocketService();
 
     _walletWebSocketService?.connect();
+    add(const WalletUserProfileRefreshRequested());
   }
 
   final CurrenciesApiService _currenciesApi;
@@ -135,6 +142,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   final KycCompareFaceApiService _kycCompareFaceApi;
   final TransferPurposesApiService _transferPurposesApi;
   final PaymentRequestsApiService _paymentRequestsApi;
+  final UsersApiService _usersApi;
   WalletWebSocketService? _walletWebSocketService;
   StreamSubscription<TrydosWalletConfig>? _configSubscription;
 
@@ -222,6 +230,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         phoneNumber: config.phoneNumber,
         profileImageUrl: config.profileImageUrl,
         userSubtitle: config.userSubtitle,
+        isVerified: config.isVerified,
         isPhoneVerified: config.isPhoneVerified,
         isAccountActive: config.isAccountActive,
         isTwoFactorEnabled: config.isTwoFactorEnabled,
@@ -237,6 +246,61 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       add(const WalletRefreshAllRequested());
       add(const WalletTransferPurposesLoadRequested());
     }
+  }
+
+  Future<void> _onUserProfileRefreshRequested(
+    WalletUserProfileRefreshRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    final result = await _usersApi.getMyProfile();
+    if (result.isFailure || result.data == null) {
+      return;
+    }
+
+    final data = result.data!;
+    final firstName = (data['firstName'] ?? '').toString().trim();
+    final lastName = (data['lastName'] ?? '').toString().trim();
+    final email = (data['email'] ?? '').toString().trim();
+    final phoneNumber = (data['phoneNumber'] ?? '').toString().trim();
+    final profilePictureUrl = (data['profilePictureURL'] ?? '')
+        .toString()
+        .trim();
+    final userType = (data['userType'] ?? '').toString().trim();
+    final kycVerification = data['kycVerification'];
+    final kycVerificationData = kycVerification is Map
+        ? Map<String, dynamic>.from(kycVerification)
+        : const <String, dynamic>{};
+    final verificationStatus = (kycVerificationData['status'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    final verificationStatusLabel = (kycVerificationData['statusLabel'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    final isVerified =
+        data['isVerified'] == true ||
+        verificationStatus == 'verified' ||
+        verificationStatusLabel == 'verified';
+    final isPhoneVerified = data['isPhoneVerified'] == true;
+    final isTwoFactorEnabled = data['isTwoFactorEnabled'] == true;
+    final isBlocked = data['isBlocked'] == true;
+    final createdAt = (data['createdAt'] ?? '').toString().trim();
+    final memberSince = createdAt.isEmpty ? null : DateTime.tryParse(createdAt);
+
+    TrydosWallet.updateUserInfo(
+      firstName: firstName.isEmpty ? state.firstName : firstName,
+      lastName: lastName.isEmpty ? state.lastName : lastName,
+      email: email.isEmpty ? null : email,
+      phoneNumber: phoneNumber.isEmpty ? null : phoneNumber,
+      profileImageUrl: profilePictureUrl,
+      userSubtitle: userType.isEmpty ? null : userType,
+      isVerified: isVerified,
+      isPhoneVerified: isPhoneVerified,
+      isAccountActive: !isBlocked,
+      isTwoFactorEnabled: isTwoFactorEnabled,
+      memberSince: memberSince,
+    );
   }
 
   /// Currencies
@@ -1392,7 +1456,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       final data = result.data!;
 
       if (data.isSuccess) {
-        final extracted = state.kycExtractedData;
+        /* final extracted = state.kycExtractedData;
         final fullName = (extracted?.name?.trim().isNotEmpty ?? false)
             ? extracted!.name!.trim()
             : '${TrydosWallet.config.firstName} ${TrydosWallet.config.lastName}'
@@ -1412,8 +1476,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           'selfieImageUrl': state.kycSelfieImageUrl ?? '',
           'selfieVsIdScore': data.matchScore ?? 0,
           'documentExpiryDate': extracted?.expiryDate ?? '',
-        };
-
+        };*/
         /* final submitResult = await _kycApi.submitKyc(payload: submitPayload);
         if (submitResult.isFailure) {
           emit(

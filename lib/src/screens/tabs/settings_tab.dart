@@ -1,13 +1,13 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
+import 'package:trydos_wallet/src/screens/widgets/profile/profile_info_page.dart';
 import 'package:trydos_wallet/src/screens/widgets/profile/profile_photo_page.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
@@ -21,284 +21,308 @@ class SettingsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
+        final isVerified = state.isVerified;
         return Scaffold(
+          backgroundColor: const Color(0xffFFFFFF),
           body: SafeArea(
-            child: Column(
-              children: [
-                WalletHeader(fromSettings: true),
-                Padding(
-                  padding: EdgeInsetsDirectional.only(start: 24.w, end: 24.w),
-                  child: Divider(color: Color(0xffD3D3D3)),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w),
-                  child: _personInfoWidget(context, state),
-                ),
-                SizedBox(height: 5.h, width: 1.sw),
-                Container(
-                  padding: EdgeInsets.all(12.w),
-                  margin: EdgeInsets.symmetric(horizontal: 12.w),
+            child: SizedBox(
+              height: 1.sh,
+              width: 1.sw,
+              child: Column(
+                children: [
+                  WalletHeader(fromSettings: true),
+                  Padding(
+                    padding: EdgeInsetsDirectional.only(start: 24.w, end: 24.w),
+                    child: Divider(color: Color(0xffD3D3D3)),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w),
+                    child: _personInfoWidget(context, state, isVerified),
+                  ),
+                  isVerified ? SizedBox.shrink() : SizedBox(height: 5.h),
+                  isVerified
+                      ? SizedBox.shrink()
+                      : Container(
+                          padding: EdgeInsets.all(10.w),
+                          margin: EdgeInsets.symmetric(horizontal: 12.w),
 
-                  width: 1.sw,
-                  decoration: BoxDecoration(
-                    color: const Color(0xffFFF9F0),
-                    borderRadius: BorderRadius.circular(15.r),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          SvgPicture.asset(
-                            TrydosWalletAssets.worrning,
-                            package: TrydosWalletStyles.packageName,
-                            height: 14.h,
+                          width: 1.sw,
+                          decoration: BoxDecoration(
+                            color: const Color(0xffFFF9F0),
+                            borderRadius: BorderRadius.circular(15.r),
                           ),
-                          SizedBox(width: 5.w),
-                          Text(
-                            AppStrings.get(
-                              state.languageCode,
-                              'unprotected_account_limited_access',
-                            ),
-                            style: context.textTheme.bodyMedium?.mq.copyWith(
-                              color: const Color(0xFF1D1D1D),
-                              fontSize: 11.sp,
-                              height: 1.1,
-                            ),
-                          ),
-                          Spacer(),
-                          SvgPicture.asset(
-                            TrydosWalletAssets.question,
-                            package: TrydosWalletStyles.packageName,
-                            height: 14.h,
-                            color: const Color(0xFFC3C3C3),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 5.h),
-                      Row(
-                        children: [
-                          SizedBox(width: 19.w),
-                          Text(
-                            AppStrings.get(
-                              state.languageCode,
-                              'weekly_transfer_volume',
-                            ),
-                            style: context.textTheme.bodyMedium?.rq.copyWith(
-                              color: const Color(0xFF1D1D1D),
-                              fontSize: 11.sp,
-                              height: 1.1,
-                            ),
-                          ),
-                          Text(
-                            " 60/15 ",
-                            style: context.textTheme.bodyMedium?.bq.copyWith(
-                              color: const Color(0xFF1D1D1D),
-                              fontSize: 11.sp,
-                              height: 1.1,
-                            ),
-                          ),
-                          Text(
-                            AppStrings.get(state.languageCode, 'usd_renew'),
-                            style: context.textTheme.bodyMedium?.rq.copyWith(
-                              color: const Color(0xFF1D1D1D),
-                              fontSize: 11.sp,
-                              height: 1.1,
-                            ),
-                          ),
-                          Text(
-                            ' fri_1010',
-                            style: context.textTheme.bodyMedium?.rq.copyWith(
-                              color: const Color(0xFF1D1D1D),
-                              fontSize: 11.sp,
-                              height: 1.1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 5.h, width: 1.sw),
-                Container(
-                  padding: EdgeInsets.all(12.w),
-                  margin: EdgeInsets.symmetric(horizontal: 12.w),
-
-                  width: 1.sw,
-                  decoration: BoxDecoration(
-                    color: const Color(0xffF0F6FD),
-                    borderRadius: BorderRadius.circular(15.r),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          SvgPicture.asset(
-                            TrydosWalletAssets.successVerification,
-                            package: TrydosWalletStyles.packageName,
-                            height: 15.h,
-                          ),
-                          SizedBox(width: 10.w),
-                          Text(
-                            AppStrings.get(
-                              state.languageCode,
-                              'protect_account_full_access',
-                            ),
-                            style: context.textTheme.bodyMedium?.mq.copyWith(
-                              color: const Color(0xFF1D1D1D),
-                              fontSize: 11.sp,
-                              height: 1.1,
-                            ),
-                          ),
-                          Spacer(),
-                          SvgPicture.asset(
-                            TrydosWalletAssets.question,
-                            package: TrydosWalletStyles.packageName,
-                            height: 14.h,
-                            color: const Color(0xFFC3C3C3),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 5.h),
-                      Row(
-                        children: [
-                          Text(
-                            AppStrings.get(
-                              state.languageCode,
-                              'secure_account_safe_transactions',
-                            ),
-                            style: context.textTheme.bodyMedium?.mq.copyWith(
-                              color: const Color(0xFF1D1D1D),
-                              fontSize: 11.sp,
-                              height: 1.1,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        alignment: Alignment.center,
-                        margin: EdgeInsets.only(top: 12.h),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 12.w,
-                          vertical: 10.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xffE0EDFF),
-                          borderRadius: BorderRadius.circular(15.r),
-                        ),
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const FirstPageKyc(),
-                              ),
-                            );
-                          },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SvgPicture.asset(
-                                TrydosWalletAssets.successVerification,
-                                package: TrydosWalletStyles.packageName,
-                                height: 15.h,
-                              ),
-                              SizedBox(width: 10.w),
-                              Text(
-                                AppStrings.get(
-                                  state.languageCode,
-                                  'protect_verify_now',
-                                ),
-                                style: context.textTheme.bodyMedium?.mq
-                                    .copyWith(
-                                      color: const Color(0xFF1D1D1D),
-                                      fontSize: 11.sp,
-                                      height: 1.1,
+                              Row(
+                                children: [
+                                  SvgPicture.asset(
+                                    TrydosWalletAssets.worrning,
+                                    package: TrydosWalletStyles.packageName,
+                                    height: 14.h,
+                                  ),
+                                  SizedBox(width: 5.w),
+                                  Text(
+                                    AppStrings.get(
+                                      state.languageCode,
+                                      'unprotected_account_limited_access',
                                     ),
+                                    style: context.textTheme.bodyMedium?.mq
+                                        .copyWith(
+                                          color: const Color(0xFF1D1D1D),
+                                          fontSize: 11.sp,
+                                          height: 1.1,
+                                        ),
+                                  ),
+                                  Spacer(),
+                                  SvgPicture.asset(
+                                    TrydosWalletAssets.question,
+                                    package: TrydosWalletStyles.packageName,
+                                    height: 14.h,
+                                    // ignore: deprecated_member_use
+                                    color: const Color(0xFFC3C3C3),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 5.h),
+                              Row(
+                                children: [
+                                  SizedBox(width: 19.w),
+                                  Text(
+                                    AppStrings.get(
+                                      state.languageCode,
+                                      'weekly_transfer_volume',
+                                    ),
+                                    style: context.textTheme.bodyMedium?.rq
+                                        .copyWith(
+                                          color: const Color(0xFF1D1D1D),
+                                          fontSize: 11.sp,
+                                          height: 1.1,
+                                        ),
+                                  ),
+                                  Text(
+                                    " 60/15 ",
+                                    style: context.textTheme.bodyMedium?.bq
+                                        .copyWith(
+                                          color: const Color(0xFF1D1D1D),
+                                          fontSize: 11.sp,
+                                          height: 1.1,
+                                        ),
+                                  ),
+                                  Text(
+                                    AppStrings.get(
+                                      state.languageCode,
+                                      'usd_renew',
+                                    ),
+                                    style: context.textTheme.bodyMedium?.rq
+                                        .copyWith(
+                                          color: const Color(0xFF1D1D1D),
+                                          fontSize: 11.sp,
+                                          height: 1.1,
+                                        ),
+                                  ),
+                                  Text(
+                                    ' fri_1010',
+                                    style: context.textTheme.bodyMedium?.rq
+                                        .copyWith(
+                                          color: const Color(0xFF1D1D1D),
+                                          fontSize: 11.sp,
+                                          height: 1.1,
+                                        ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    ],
+                  isVerified
+                      ? SizedBox.shrink()
+                      : SizedBox(height: 5.h, width: 1.sw),
+                  isVerified
+                      ? SizedBox.shrink()
+                      : Container(
+                          padding: EdgeInsets.all(10.w),
+                          margin: EdgeInsets.symmetric(horizontal: 12.w),
+
+                          width: 1.sw,
+                          decoration: BoxDecoration(
+                            color: const Color(0xffF0F6FD),
+                            borderRadius: BorderRadius.circular(15.r),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  SvgPicture.asset(
+                                    TrydosWalletAssets.successVerification,
+                                    package: TrydosWalletStyles.packageName,
+                                    height: 15.h,
+                                  ),
+                                  SizedBox(width: 5.w),
+                                  Text(
+                                    AppStrings.get(
+                                      state.languageCode,
+                                      'protect_account_full_access',
+                                    ),
+                                    style: context.textTheme.bodyMedium?.mq
+                                        .copyWith(
+                                          color: const Color(0xFF1D1D1D),
+                                          fontSize: 11.sp,
+                                          height: 1.1,
+                                        ),
+                                  ),
+                                  Spacer(),
+                                  SvgPicture.asset(
+                                    TrydosWalletAssets.question,
+                                    package: TrydosWalletStyles.packageName,
+                                    height: 14.h,
+                                    // ignore: deprecated_member_use
+                                    color: const Color(0xFFC3C3C3),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 5.h),
+                              Row(
+                                children: [
+                                  SizedBox(width: 19.w),
+                                  Text(
+                                    AppStrings.get(
+                                      state.languageCode,
+                                      'secure_account_safe_transactions',
+                                    ),
+                                    style: context.textTheme.bodyMedium?.mq
+                                        .copyWith(
+                                          color: const Color(0xFF1D1D1D),
+                                          fontSize: 11.sp,
+                                          height: 1.1,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                alignment: Alignment.center,
+                                margin: EdgeInsets.only(top: 12.h),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 12.w,
+                                  vertical: 10.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xffE0EDFF),
+                                  borderRadius: BorderRadius.circular(15.r),
+                                ),
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => const FirstPageKyc(),
+                                      ),
+                                    );
+                                  },
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      SvgPicture.asset(
+                                        TrydosWalletAssets.successVerification,
+                                        package: TrydosWalletStyles.packageName,
+                                        height: 15.h,
+                                      ),
+                                      SizedBox(width: 10.w),
+                                      Text(
+                                        AppStrings.get(
+                                          state.languageCode,
+                                          'protect_verify_now',
+                                        ),
+                                        style: context.textTheme.bodyMedium?.mq
+                                            .copyWith(
+                                              color: const Color(0xFF1D1D1D),
+                                              fontSize: 11.sp,
+                                              height: 1.1,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                  SizedBox(height: 20.h, width: 1.sw),
+                  Padding(
+                    padding: EdgeInsetsDirectional.only(start: 24.w, end: 24.w),
+                    child: Divider(color: Color(0xffD3D3D3), height: 0.5),
                   ),
-                ),
-                SizedBox(height: 20.h, width: 1.sw),
-                Padding(
-                  padding: EdgeInsetsDirectional.only(start: 24.w, end: 24.w),
-                  child: Divider(color: Color(0xffD3D3D3), height: 0.5),
-                ),
-                SizedBox(height: 20.h, width: 1.sw),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w),
-                  child: SizedBox(
-                    height: 1.sh - 560.h,
-                    child: ListView(
-                      scrollDirection: Axis.vertical,
+                  SizedBox(height: 20.h, width: 1.sw),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12.w),
+                      child: ListView(
+                        scrollDirection: Axis.vertical,
 
-                      children: [
-                        _actionWidget(
-                          TrydosWalletAssets.setting,
-                          AppStrings.get(state.languageCode, 'settings'),
-                          context,
-                        ),
-
-                        SizedBox(height: 5.h, width: 1.sw),
-                        _actionWidget(
-                          TrydosWalletAssets.terms,
-                          AppStrings.get(
-                            state.languageCode,
-                            'terms_conditions',
-                          ),
-                          context,
-                        ),
-                        SizedBox(height: 5.h, width: 1.sw),
-                        _actionWidget(
-                          TrydosWalletAssets.legal,
-                          AppStrings.get(
-                            state.languageCode,
-                            'legal_information',
-                          ),
-                          context,
-                        ),
-                        SizedBox(height: 5.h, width: 1.sw),
-                        _actionWidget(
-                          TrydosWalletAssets.aboutUs,
-                          AppStrings.get(state.languageCode, 'about_us'),
-                          context,
-                        ),
-                        SizedBox(height: 5.h, width: 1.sw),
-                        _actionWidget(
-                          TrydosWalletAssets.shareApp,
-                          AppStrings.get(state.languageCode, 'share_app'),
-                          context,
-                        ),
-                        SizedBox(height: 5.h, width: 1.sw),
-                        _languageActionWidget(context: context, state: state),
-                        SizedBox(height: 5.h, width: 1.sw),
-                        InkWell(
-                          child: _actionWidget(
-                            TrydosWalletAssets.history,
-                            AppStrings.get(state.languageCode, 'history'),
-                            context,
-                            true,
-                          ),
-                        ),
-                        SizedBox(height: 5.h, width: 1.sw),
-                        InkWell(
-                          onTap: TrydosWallet.logout,
-                          child: _actionWidget(
-                            TrydosWalletAssets.logout,
-                            AppStrings.get(state.languageCode, 'logout'),
+                        children: [
+                          _actionWidget(
+                            TrydosWalletAssets.setting,
+                            AppStrings.get(state.languageCode, 'settings'),
                             context,
                           ),
-                        ),
-                        SizedBox(height: 20.h, width: 1.sw),
-                      ],
+
+                          SizedBox(height: 5.h, width: 1.sw),
+                          _actionWidget(
+                            TrydosWalletAssets.terms,
+                            AppStrings.get(
+                              state.languageCode,
+                              'terms_conditions',
+                            ),
+                            context,
+                          ),
+                          SizedBox(height: 5.h, width: 1.sw),
+                          _actionWidget(
+                            TrydosWalletAssets.legal,
+                            AppStrings.get(
+                              state.languageCode,
+                              'legal_information',
+                            ),
+                            context,
+                          ),
+                          SizedBox(height: 5.h, width: 1.sw),
+                          _actionWidget(
+                            TrydosWalletAssets.aboutUs,
+                            AppStrings.get(state.languageCode, 'about_us'),
+                            context,
+                          ),
+                          SizedBox(height: 5.h, width: 1.sw),
+                          _actionWidget(
+                            TrydosWalletAssets.shareApp,
+                            AppStrings.get(state.languageCode, 'share_app'),
+                            context,
+                          ),
+                          SizedBox(height: 5.h, width: 1.sw),
+                          _languageActionWidget(context: context, state: state),
+                          SizedBox(height: 5.h, width: 1.sw),
+                          InkWell(
+                            child: _actionWidget(
+                              TrydosWalletAssets.history,
+                              AppStrings.get(state.languageCode, 'history'),
+                              context,
+                              true,
+                            ),
+                          ),
+                          SizedBox(height: 5.h, width: 1.sw),
+                          InkWell(
+                            onTap: TrydosWallet.logout,
+                            child: _actionWidget(
+                              TrydosWalletAssets.logout,
+                              AppStrings.get(state.languageCode, 'logout'),
+                              context,
+                            ),
+                          ),
+                          SizedBox(height: 20.h, width: 1.sw),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -463,7 +487,7 @@ class SettingsTab extends StatelessWidget {
               ),
             ),
           ],
-        );*/
+        ); */
       },
     );
   }
@@ -531,6 +555,11 @@ Widget _languageActionWidget({
   required BuildContext context,
   required WalletState state,
 }) {
+  final selectedOption = _languageOptions.firstWhere(
+    (option) => option.code == state.languageCode,
+    orElse: () => _languageOptions.first,
+  );
+
   return PopupMenuButton<String>(
     tooltip: AppStrings.get(state.languageCode, 'select_language'),
     onSelected: (languageCode) {
@@ -557,6 +586,7 @@ Widget _languageActionWidget({
                     style: context.textTheme.bodyMedium?.mq.copyWith(
                       color: const Color(0xFF1D1D1D),
                       fontWeight: FontWeight.w600,
+                      height: 1.1,
                     ),
                   ),
                   Text(
@@ -564,6 +594,7 @@ Widget _languageActionWidget({
                     style: context.textTheme.bodySmall?.mq.copyWith(
                       color: const Color(0xFF8D8D8D),
                       fontSize: 10,
+                      height: 1.1,
                     ),
                   ),
                 ],
@@ -586,7 +617,7 @@ Widget _languageActionWidget({
           Expanded(
             child: _actionWidget(
               TrydosWalletAssets.language,
-              AppStrings.get(state.languageCode, 'language'),
+              AppStrings.get(state.languageCode, selectedOption.labelKey),
               context,
             ),
           ),
@@ -596,7 +627,11 @@ Widget _languageActionWidget({
   );
 }
 
-Widget _personInfoWidget(BuildContext context, WalletState state) {
+Widget _personInfoWidget(
+  BuildContext context,
+  WalletState state,
+  bool isVerified,
+) {
   Balance? resolveReceiveBalance(WalletState state) {
     if (state.selectedAssetId != null) {
       final selected = state.balances[state.selectedAssetId!];
@@ -627,6 +662,11 @@ Widget _personInfoWidget(BuildContext context, WalletState state) {
   final profileImagePath = state.profileImageUrl?.trim();
   final hasProfileImage =
       profileImagePath != null && profileImagePath.isNotEmpty;
+  final normalizedPhone = state.phoneNumber?.trim().isNotEmpty == true
+      ? (state.phoneNumber!.startsWith('+')
+            ? state.phoneNumber!
+            : '+${state.phoneNumber!}')
+      : AppStrings.get(state.languageCode, 'not_provided');
 
   void openProfilePhotoPage() {
     Navigator.of(context).push(
@@ -639,176 +679,215 @@ Widget _personInfoWidget(BuildContext context, WalletState state) {
     );
   }
 
-  return Container(
-    padding: EdgeInsets.all(12.w),
-    decoration: BoxDecoration(
-      color: const Color(0xffFCFCFC),
-      borderRadius: BorderRadius.circular(15.r),
-    ),
-    width: 1.sw,
-    height: 140.h,
-    child: Row(
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            SvgPicture.asset(
-              TrydosWalletAssets.realQr,
-              package: TrydosWalletStyles.packageName,
-              height: 50.h,
-            ),
-
-            Row(
-              children: [
-                Text(
-                  accountNumberFromState(state),
-                  style: context.textTheme.bodyMedium?.bq.copyWith(
-                    color: const Color(0xff1D1D1D),
-                    letterSpacing: 0.18,
-                    fontSize: 13.sp,
-                    height: 1.3,
-                  ),
-                  textDirection: TextDirection.ltr,
-                ),
-                SizedBox(width: 5.w),
-                Text(
-                  "ID",
-                  style: context.textTheme.bodyMedium?.rq.copyWith(
-                    color: const Color(0xff1D1D1D),
-                    letterSpacing: 0.18,
-                    fontSize: 13.sp,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-
-            Row(
-              children: [
-                Text(
-                  '${state.firstName} ${state.lastName}',
-                  style: context.textTheme.bodyMedium?.rq.copyWith(
-                    color: const Color(0xff1D1D1D),
-                    letterSpacing: 0.18,
-                    fontSize: 13.sp,
-                    height: 1.3,
-                  ),
-                ),
-                /*    SizedBox(width: 5.w),
-                SvgPicture.asset(
-                  TrydosWalletAssets.nVerify,
-                  package: TrydosWalletStyles.packageName,
-                  height: 15.h,
-                ),*/
-              ],
-            ),
-
-            Row(
-              children: [
-                Text(
-                  state.phoneNumber ?? '---',
-                  style: context.textTheme.bodyMedium?.rq.copyWith(
-                    color: const Color(0xff1D1D1D),
-                    letterSpacing: 0.18,
-                    fontSize: 11.sp,
-                    height: 1.3,
-                  ),
-                ),
-                SizedBox(width: 10.w),
-                SvgPicture.asset(
-                  TrydosWalletAssets.phone,
-                  package: TrydosWalletStyles.packageName,
-                  height: 10.h,
-                  color: const Color(0xff8D8D8D),
-                ),
-              ],
-            ),
-            SizedBox(height: 5.h),
-          ],
+  void openProfileInfoPage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ProfileInfoPage(
+          languageCode: state.languageCode,
+          accountNumber: accountNumberFromState(state),
+          firstName: state.firstName,
+          lastName: state.lastName,
+          isVerified: isVerified,
+          phoneNumber: state.phoneNumber,
+          isAccountActive: state.isAccountActive,
+          isPhoneVerified: state.isPhoneVerified,
+          memberSince: state.memberSince,
+          profileImagePath: profileImagePath,
         ),
-        Spacer(),
-        Container(
-          height: 116.h,
-          width: 116.w,
-          decoration: BoxDecoration(
-            color: const Color(0xffFCFCFC),
-            borderRadius: BorderRadius.circular(15.r),
-            border: Border.all(color: const Color(0xffC3C3C3)),
-          ),
-          child: Stack(
+      ),
+    );
+  }
+
+  return InkWell(
+    onTap: openProfileInfoPage,
+    borderRadius: BorderRadius.circular(15.r),
+    child: Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: const Color(0xffFCFCFC),
+        borderRadius: BorderRadius.circular(15.r),
+      ),
+      width: 1.sw,
+      height: 140.h,
+      child: Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Positioned.fill(
-                child: InkWell(
-                  onTap: openProfilePhotoPage,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(15.r),
-                    child: hasProfileImage
-                        ? Image.file(
-                            File(profileImagePath),
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                _ProfileImagePlaceholder(),
-                          )
-                        : _ProfileImagePlaceholder(),
+              SvgPicture.asset(
+                TrydosWalletAssets.realQr,
+                package: TrydosWalletStyles.packageName,
+                height: 50.h,
+              ),
+              SizedBox(height: 3.h),
+
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    accountNumberFromState(state),
+                    style: context.textTheme.bodyMedium?.bq.copyWith(
+                      color: const Color(0xff1D1D1D),
+                      letterSpacing: 0.18,
+                      fontSize: 13.sp,
+                      height: 1.3,
+                    ),
+                    textDirection: TextDirection.ltr,
+                  ),
+                  SizedBox(width: 5.w),
+                  Text(
+                    AppStrings.get(state.languageCode, 'id_label'),
+                    style: context.textTheme.bodyMedium?.rq.copyWith(
+                      color: const Color(0xff1D1D1D),
+                      letterSpacing: 0.18,
+                      fontSize: 13.sp,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+
+              Row(
+                children: [
+                  Text(
+                    '${state.firstName} ${state.lastName}',
+                    style: context.textTheme.bodyMedium?.rq.copyWith(
+                      color: const Color(0xff1D1D1D),
+                      letterSpacing: 0.18,
+                      fontSize: 13.sp,
+                      height: 1.3,
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  !isVerified
+                      ? SizedBox.shrink()
+                      : SvgPicture.asset(
+                          TrydosWalletAssets.nVerify,
+                          package: TrydosWalletStyles.packageName,
+                          height: 16.h,
+                          // ignore: deprecated_member_use
+                          color: const Color(0xff388CFF),
+                        ),
+                ],
+              ),
+
+              Row(
+                children: [
+                  Text(
+                    normalizedPhone,
+                    style: context.textTheme.bodyMedium?.rq.copyWith(
+                      color: const Color(0xff1D1D1D),
+                      letterSpacing: 0.18,
+                      fontSize: 11.sp,
+                      height: 1.3,
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  SvgPicture.asset(
+                    TrydosWalletAssets.phone,
+                    package: TrydosWalletStyles.packageName,
+                    height: 10.h,
+                    // ignore: deprecated_member_use
+                    color: const Color(0xff8D8D8D),
+                  ),
+                ],
+              ),
+              SizedBox(height: 5.h),
+            ],
+          ),
+          Spacer(),
+          Container(
+            height: 116.h,
+            width: 116.w,
+            decoration: BoxDecoration(
+              color: const Color(0xffFCFCFC),
+              borderRadius: BorderRadius.circular(15.r),
+              border: Border.all(color: const Color(0xffC3C3C3)),
+            ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: InkWell(
+                    onTap: openProfilePhotoPage,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(15.r),
+                      child: hasProfileImage
+                          ? Image.network(
+                              profileImagePath,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return const _ProfileImageLoadingPlaceholder();
+                              },
+                              errorBuilder: (_, __, ___) =>
+                                  _ProfileImagePlaceholder(),
+                            )
+                          : _ProfileImagePlaceholder(),
+                    ),
                   ),
                 ),
-              ),
-              hasProfileImage
-                  ? SizedBox.shrink()
-                  : Positioned(
-                      bottom: 0,
-                      child: InkWell(
-                        onTap: openProfilePhotoPage,
-                        borderRadius: BorderRadius.only(
-                          bottomLeft: Radius.circular(15.r),
-                          bottomRight: Radius.circular(15.r),
-                        ),
-                        child: Container(
-                          width: 116.w,
-                          height: 22.h,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xff404040)),
-                            color: const Color(0xff404040),
-                            borderRadius: BorderRadius.only(
-                              bottomLeft: Radius.circular(15.r),
-                              bottomRight: Radius.circular(15.r),
-                            ),
+                hasProfileImage
+                    ? SizedBox.shrink()
+                    : Positioned(
+                        bottom: 0,
+                        child: InkWell(
+                          onTap: openProfilePhotoPage,
+                          borderRadius: BorderRadius.only(
+                            bottomLeft: Radius.circular(15.r),
+                            bottomRight: Radius.circular(15.r),
                           ),
-                          child: Center(
-                            child: SizedBox(
-                              height: 14.h,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  SvgPicture.asset(
-                                    TrydosWalletAssets.addPhoto,
-                                    package: TrydosWalletStyles.packageName,
-                                    height: 13.h,
-                                  ),
-                                  SizedBox(width: 5.w),
-                                  Text(
-                                    "Add Photo",
-                                    style: context.textTheme.bodySmall?.rq
-                                        .copyWith(
-                                          color: const Color(0xffFCFCFC),
-                                          letterSpacing: 0.18,
-                                          fontSize: 10.sp,
-                                          height: 1.1,
-                                        ),
-                                  ),
-                                ],
+                          child: Container(
+                            width: 116.w,
+                            height: 22.h,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: const Color(0xff404040),
+                              ),
+                              color: const Color(0xff404040),
+                              borderRadius: BorderRadius.only(
+                                bottomLeft: Radius.circular(15.r),
+                                bottomRight: Radius.circular(15.r),
+                              ),
+                            ),
+                            child: Center(
+                              child: SizedBox(
+                                height: 14.h,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    SvgPicture.asset(
+                                      TrydosWalletAssets.addPhoto,
+                                      package: TrydosWalletStyles.packageName,
+                                      height: 13.h,
+                                    ),
+                                    SizedBox(width: 5.w),
+                                    Text(
+                                      AppStrings.get(
+                                        state.languageCode,
+                                        'add_photo',
+                                      ),
+                                      style: context.textTheme.bodySmall?.rq
+                                          .copyWith(
+                                            color: const Color(0xffFCFCFC),
+                                            letterSpacing: 0.18,
+                                            fontSize: 10.sp,
+                                            height: 1.1,
+                                          ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }
@@ -823,6 +902,23 @@ class _ProfileImagePlaceholder extends StatelessWidget {
         TrydosWalletAssets.personHide,
         package: TrydosWalletStyles.packageName,
         height: 80.h,
+      ),
+    );
+  }
+}
+
+class _ProfileImageLoadingPlaceholder extends StatelessWidget {
+  const _ProfileImageLoadingPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFFE4E4E4),
+      highlightColor: const Color(0xFFF3F3F3),
+      child: Container(
+        color: const Color(0xFFE4E4E4),
+        width: double.infinity,
+        height: double.infinity,
       ),
     );
   }
@@ -1117,31 +1213,15 @@ const List<_LanguageOptionData> _languageOptions = [
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () {
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const FirstPageKyc()));
-        },
-        style: ElevatedButton.styleFrom(
-          elevation: 0,
-          backgroundColor: const Color(0xFF2E6AE8),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        icon: const Icon(Icons.verified_user_outlined, size: 20),
-        label: Text(
-          AppStrings.get(languageCode, 'kyc_verify_identity_btn'),
-          style: context.textTheme.bodyMedium?.mq.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 14.sp,
-          ),
+    return ElevatedButton(
+      onPressed: () {
+        // Add your onPressed logic here
+      },
+      child: Text(
+        AppStrings.get(languageCode, 'kyc_button_label'),
+        style: context.textTheme.bodyMedium?.mq.copyWith(
+          color: Colors.white,
+          fontSize: 14.sp,
         ),
       ),
     );
@@ -1209,13 +1289,13 @@ String _displayName(String firstName, String lastName, String fallback) {
 }
 
 String _displaySubtitle(WalletState state) {
-  const localizedKeys = {
+  const localizedKeys = [
     'registered',
     'active',
     'disabled',
     'enabled',
     'verified',
-  };
+  ];
 
   if (_isBlank(state.userSubtitle)) {
     return AppStrings.get(state.languageCode, 'registered');
@@ -1244,4 +1324,5 @@ String _formatMemberSince(DateTime? memberSince, String fallback) {
 bool _hasImage(String? profileImageUrl) => !_isBlank(profileImageUrl);
 
 bool _isBlank(String? value) => value == null || value.trim().isEmpty;
+}
 */
