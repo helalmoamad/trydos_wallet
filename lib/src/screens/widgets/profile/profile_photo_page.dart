@@ -11,6 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/build_context.dart';
+import 'package:trydos_wallet/src/constent/rdb_loading.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/services/users_api_service.dart';
@@ -343,11 +344,11 @@ class _ProfilePhotoPageState extends State<ProfilePhotoPage> {
                                 borderRadius: BorderRadius.circular(8.r),
                                 child: _isSaving
                                     ? SizedBox(
-                                        width: 16.w,
-                                        height: 16.h,
-                                        child: const CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Color(0xFF388CFF),
+                                        width: 40.w,
+                                        height: 30.h,
+                                        child: RDBLoader(
+                                          size: 22.h,
+                                          color: const Color(0xff1D1D1D),
                                         ),
                                       )
                                     : Text(

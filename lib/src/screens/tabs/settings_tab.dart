@@ -528,7 +528,7 @@ Widget _actionWidget(
                   color: const Color(0xff1D1D1D),
                   letterSpacing: 0.18,
                   fontSize: 14.sp,
-                  height: 1.3,
+                  height: 1.1,
                 ),
               ),
               SizedBox(width: 40.w),
@@ -539,7 +539,7 @@ Widget _actionWidget(
                         color: const Color(0xff1D1D1D),
                         letterSpacing: 0.18,
                         fontSize: 11.sp,
-                        height: 1.3,
+                        height: 1.1,
                       ),
                     )
                   : SizedBox.shrink(),
