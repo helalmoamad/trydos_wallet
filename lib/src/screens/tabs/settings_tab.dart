@@ -267,6 +267,27 @@ class SettingsTab extends StatelessWidget {
                           ),
 
                           SizedBox(height: 5.h, width: 1.sw),
+                          InkWell(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => LinkedDevicesPage(
+                                    languageCode: state.languageCode,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: _actionWidget(
+                              TrydosWalletAssets.qr,
+                              AppStrings.get(
+                                state.languageCode,
+                                'linked_devices',
+                              ),
+                              context,
+                            ),
+                          ),
+
+                          SizedBox(height: 5.h, width: 1.sw),
                           _actionWidget(
                             TrydosWalletAssets.terms,
                             AppStrings.get(

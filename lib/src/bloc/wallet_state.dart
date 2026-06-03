@@ -98,6 +98,19 @@ class WalletState {
     this.isAccountActive = true,
     this.isTwoFactorEnabled = false,
     this.memberSince,
+    // QR login
+    this.qrScanStatus = WalletStatus.initial,
+    this.qrActionStatus = WalletStatus.initial,
+    this.qrLoginRequest,
+    this.qrScanErrorMessage,
+    this.qrActionErrorMessage,
+    this.qrActionSuccessMessage,
+    this.activeSessions = const [],
+    this.activeSessionsStatus = WalletStatus.initial,
+    this.activeSessionsErrorMessage,
+    this.sessionActionStatus = WalletStatus.initial,
+    this.sessionActionErrorMessage,
+    this.sessionActionSuccessMessage,
   });
 
   final String languageCode;
@@ -206,6 +219,22 @@ class WalletState {
   final WalletStatus paymentRequestStatus;
   final String? paymentRequestErrorMessage;
 
+  // QR login
+  final WalletStatus qrScanStatus;
+  final WalletStatus qrActionStatus;
+  final WalletQrLoginRequest? qrLoginRequest;
+  final String? qrScanErrorMessage;
+  final String? qrActionErrorMessage;
+  final String? qrActionSuccessMessage;
+
+  // Active sessions
+  final List<WalletSession> activeSessions;
+  final WalletStatus activeSessionsStatus;
+  final String? activeSessionsErrorMessage;
+  final WalletStatus sessionActionStatus;
+  final String? sessionActionErrorMessage;
+  final String? sessionActionSuccessMessage;
+
   /// RTL helper
   bool get isRtl => languageCode == 'ar' || languageCode == 'ku';
 
@@ -296,6 +325,18 @@ class WalletState {
     PaymentRequestResponse? paymentRequestResponse,
     WalletStatus? paymentRequestStatus,
     String? paymentRequestErrorMessage,
+    WalletStatus? qrScanStatus,
+    WalletStatus? qrActionStatus,
+    Object? qrLoginRequest = _unset,
+    Object? qrScanErrorMessage = _unset,
+    Object? qrActionErrorMessage = _unset,
+    Object? qrActionSuccessMessage = _unset,
+    List<WalletSession>? activeSessions,
+    WalletStatus? activeSessionsStatus,
+    Object? activeSessionsErrorMessage = _unset,
+    WalletStatus? sessionActionStatus,
+    Object? sessionActionErrorMessage = _unset,
+    Object? sessionActionSuccessMessage = _unset,
   }) {
     return WalletState(
       languageCode: languageCode ?? this.languageCode,
@@ -422,6 +463,32 @@ class WalletState {
       paymentRequestStatus: paymentRequestStatus ?? this.paymentRequestStatus,
       paymentRequestErrorMessage:
           paymentRequestErrorMessage ?? this.paymentRequestErrorMessage,
+      qrScanStatus: qrScanStatus ?? this.qrScanStatus,
+      qrActionStatus: qrActionStatus ?? this.qrActionStatus,
+      qrLoginRequest: qrLoginRequest == _unset
+          ? this.qrLoginRequest
+          : qrLoginRequest as WalletQrLoginRequest?,
+      qrScanErrorMessage: qrScanErrorMessage == _unset
+          ? this.qrScanErrorMessage
+          : qrScanErrorMessage as String?,
+      qrActionErrorMessage: qrActionErrorMessage == _unset
+          ? this.qrActionErrorMessage
+          : qrActionErrorMessage as String?,
+      qrActionSuccessMessage: qrActionSuccessMessage == _unset
+          ? this.qrActionSuccessMessage
+          : qrActionSuccessMessage as String?,
+      activeSessions: activeSessions ?? this.activeSessions,
+      activeSessionsStatus: activeSessionsStatus ?? this.activeSessionsStatus,
+      activeSessionsErrorMessage: activeSessionsErrorMessage == _unset
+          ? this.activeSessionsErrorMessage
+          : activeSessionsErrorMessage as String?,
+      sessionActionStatus: sessionActionStatus ?? this.sessionActionStatus,
+      sessionActionErrorMessage: sessionActionErrorMessage == _unset
+          ? this.sessionActionErrorMessage
+          : sessionActionErrorMessage as String?,
+      sessionActionSuccessMessage: sessionActionSuccessMessage == _unset
+          ? this.sessionActionSuccessMessage
+          : sessionActionSuccessMessage as String?,
     );
   }
 }

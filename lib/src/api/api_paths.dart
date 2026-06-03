@@ -35,6 +35,30 @@ abstract class ApiPaths {
   /// Query: page (0-indexed), limit (default: 10, max: 100)
   static const String banks = '/banks';
 
+  // ─── Authentication ───
+  /// Scan QR token for web login approval (POST).
+  /// Body: qrToken
+  static const String qrScan = '/auth/qr/scan';
+
+  /// Approve a QR login request (POST).
+  /// Body: linkId
+  static const String qrApprove = '/auth/qr/approve';
+
+  /// Reject a QR login request (POST).
+  /// Body: linkId
+  static const String qrReject = '/auth/qr/reject';
+
+  // ─── Sessions ───
+  /// Get all active user sessions.
+  static const String sessionsActive = '/sessions/active';
+
+  /// Delete a single session by ID.
+  static String sessionById(String sessionId) =>
+      '/sessions/${Uri.encodeComponent(sessionId)}';
+
+  /// Delete all sessions except current (requires current session header).
+  static const String sessionsDeleteOthers = '/sessions/all/except-current';
+
   // ─── Bank Deposits ───
   /// Calculate deposit fees (POST).
   /// Body: bankId, currencyId, amount

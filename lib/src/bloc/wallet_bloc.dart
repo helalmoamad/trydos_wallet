@@ -9,6 +9,8 @@ import 'package:trydos_wallet/src/services/balances_api_service.dart';
 import 'package:trydos_wallet/src/services/bank_deposits_api_service.dart';
 import 'package:trydos_wallet/src/services/banks_api_service.dart';
 import 'package:trydos_wallet/src/services/currencies_api_service.dart';
+import 'package:trydos_wallet/src/services/qr_login_api_service.dart';
+import 'package:trydos_wallet/src/services/sessions_api_service.dart';
 import 'package:trydos_wallet/src/services/media_api_service.dart';
 import 'package:trydos_wallet/src/services/kyc_api_service.dart';
 import 'package:trydos_wallet/src/services/kyc_liveness_api_service.dart';
@@ -37,6 +39,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     TransferPurposesApiService? transferPurposesApi,
     PaymentRequestsApiService? paymentRequestsApi,
     UsersApiService? usersApi,
+    QrLoginApiService? qrLoginApiService,
+    SessionsApiService? sessionsApi,
     WalletWebSocketService? walletWebSocketService,
     String? initialLanguage,
     String? firstName,
@@ -63,6 +67,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
            transferPurposesApi ?? TransferPurposesApiService(),
        _paymentRequestsApi = paymentRequestsApi ?? PaymentRequestsApiService(),
        _usersApi = usersApi ?? UsersApiService(),
+       _qrLoginApi = qrLoginApiService ?? QrLoginApiService(),
+       _sessionsApi = sessionsApi ?? SessionsApiService(),
        _walletWebSocketService = walletWebSocketService,
        super(
          WalletState(
@@ -101,6 +107,12 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletDepositSubmitted>(_onDepositSubmitted);
     on<WalletImageUploadRequested>(_onImageUploadRequested);
     on<WalletImageResetRequested>(_onImageResetRequested);
+    on<WalletQrScanRequested>(_onQrScanRequested);
+    on<WalletQrApproveRequested>(_onQrApproveRequested);
+    on<WalletQrRejectRequested>(_onQrRejectRequested);
+    on<WalletQrLoginResetRequested>(_onQrLoginResetRequested);
+    on<WalletActiveSessionsRequested>(_onActiveSessionsRequested);
+    on<WalletSessionDeleteRequested>(_onSessionDeleteRequested);
     on<WalletKycAnalyzeIdRequested>(_onKycAnalyzeIdRequested);
     on<WalletKycAnalyzeIdResetRequested>(_onKycAnalyzeIdResetRequested);
     on<WalletKycLivenessRequested>(_onKycLivenessRequested);
@@ -143,6 +155,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   final TransferPurposesApiService _transferPurposesApi;
   final PaymentRequestsApiService _paymentRequestsApi;
   final UsersApiService _usersApi;
+  final QrLoginApiService _qrLoginApi;
+  final SessionsApiService _sessionsApi;
   WalletWebSocketService? _walletWebSocketService;
   StreamSubscription<TrydosWalletConfig>? _configSubscription;
 
@@ -1019,6 +1033,203 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         ),
       );
     }
+  }
+
+  Future<void> _onQrScanRequested(
+    WalletQrScanRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        qrScanStatus: WalletStatus.loading,
+        qrScanErrorMessage: null,
+        qrActionErrorMessage: null,
+        qrActionSuccessMessage: null,
+        qrLoginRequest: null,
+        qrActionStatus: WalletStatus.initial,
+      ),
+    );
+
+    final result = await _qrLoginApi.scanQrToken(event.qrToken);
+    if (result.isFailure || result.data == null) {
+      emit(
+        state.copyWith(
+          qrScanStatus: WalletStatus.failure,
+          qrScanErrorMessage:
+              result.errorMessage ?? 'Failed to read QR. Please try again.',
+        ),
+      );
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        qrScanStatus: WalletStatus.success,
+        qrLoginRequest: result.data,
+        qrScanErrorMessage: null,
+      ),
+    );
+  }
+
+  Future<void> _onQrApproveRequested(
+    WalletQrApproveRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        qrActionStatus: WalletStatus.loading,
+        qrActionErrorMessage: null,
+        qrActionSuccessMessage: null,
+      ),
+    );
+
+    final result = await _qrLoginApi.approveQrLogin(event.linkId);
+    if (result.isFailure) {
+      emit(
+        state.copyWith(
+          qrActionStatus: WalletStatus.failure,
+          qrActionErrorMessage:
+              result.errorMessage ?? 'Approve failed. Please try again.',
+        ),
+      );
+      return;
+    }
+    Future.delayed(const Duration(seconds: 1), () {
+      add(const WalletActiveSessionsRequested());
+    });
+    emit(
+      state.copyWith(
+        qrScanStatus: WalletStatus.initial,
+        qrActionStatus: WalletStatus.success,
+        qrLoginRequest: null,
+        qrScanErrorMessage: null,
+        qrActionErrorMessage: null,
+        qrActionSuccessMessage: 'Web signed in successfully',
+      ),
+    );
+  }
+
+  Future<void> _onQrRejectRequested(
+    WalletQrRejectRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        qrActionStatus: WalletStatus.loading,
+        qrActionErrorMessage: null,
+        qrActionSuccessMessage: null,
+      ),
+    );
+
+    final result = await _qrLoginApi.rejectQrLogin(event.linkId);
+    if (result.isFailure) {
+      emit(
+        state.copyWith(
+          qrActionStatus: WalletStatus.failure,
+          qrActionErrorMessage:
+              result.errorMessage ?? 'Reject failed. Please try again.',
+        ),
+      );
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        qrScanStatus: WalletStatus.initial,
+        qrActionStatus: WalletStatus.success,
+        qrLoginRequest: null,
+        qrScanErrorMessage: null,
+        qrActionErrorMessage: null,
+        qrActionSuccessMessage: 'Login declined',
+      ),
+    );
+  }
+
+  void _onQrLoginResetRequested(
+    WalletQrLoginResetRequested event,
+    Emitter<WalletState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        qrScanStatus: WalletStatus.initial,
+        qrActionStatus: WalletStatus.initial,
+        qrLoginRequest: null,
+        qrScanErrorMessage: null,
+        qrActionErrorMessage: null,
+        qrActionSuccessMessage: null,
+      ),
+    );
+  }
+
+  Future<void> _onActiveSessionsRequested(
+    WalletActiveSessionsRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        activeSessionsStatus: WalletStatus.loading,
+        activeSessionsErrorMessage: null,
+        sessionActionErrorMessage: null,
+        sessionActionSuccessMessage: null,
+      ),
+    );
+
+    final result = await _sessionsApi.getActiveSessions();
+    if (result.isFailure) {
+      emit(
+        state.copyWith(
+          activeSessionsStatus: WalletStatus.failure,
+          activeSessionsErrorMessage:
+              result.errorMessage ?? 'Failed to load linked devices.',
+        ),
+      );
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        activeSessionsStatus: WalletStatus.success,
+        activeSessions: result.data ?? const [],
+        activeSessionsErrorMessage: null,
+      ),
+    );
+  }
+
+  Future<void> _onSessionDeleteRequested(
+    WalletSessionDeleteRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        sessionActionStatus: WalletStatus.loading,
+        sessionActionErrorMessage: null,
+        sessionActionSuccessMessage: null,
+      ),
+    );
+
+    final result = await _sessionsApi.deleteSession(event.sessionId);
+    if (result.isFailure) {
+      emit(
+        state.copyWith(
+          sessionActionStatus: WalletStatus.failure,
+          sessionActionErrorMessage:
+              result.errorMessage ?? 'Failed to remove the linked device.',
+        ),
+      );
+      return;
+    }
+
+    final updatedSessions = state.activeSessions
+        .where((session) => session.id != event.sessionId)
+        .toList();
+
+    emit(
+      state.copyWith(
+        sessionActionStatus: WalletStatus.success,
+        sessionActionSuccessMessage: 'Linked device removed successfully.',
+        activeSessions: updatedSessions,
+      ),
+    );
   }
 
   /// Fees

@@ -16,6 +16,8 @@ export 'transfer_purpose/transfer_purpose.dart';
 export 'transfer_send_result/transfer_send_result.dart';
 export 'transfer_verify_result/transfer_verify_result.dart';
 export 'payment_request/payment_request_models.dart';
+export 'qr_login_request/qr_login_request.dart';
+export 'session/session.dart';
 export 'enums/payment_request_status.dart';
 export 'kyc/kyc_analyze_id_response.dart';
 export 'kyc/kyc_liveness_response.dart';

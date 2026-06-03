@@ -35,10 +35,15 @@ class WalletHeader extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.start,
             children: fromSettings
                 ? [
-                    SvgPicture.asset(
-                      TrydosWalletAssets.rdb,
-                      package: TrydosWalletStyles.packageName,
-                      height: 30.h,
+                    InkWell(
+                      onTap: () {
+                        emitLoclEvent(LoclEvent.loclEvent());
+                      },
+                      child: SvgPicture.asset(
+                        TrydosWalletAssets.rdb,
+                        package: TrydosWalletStyles.packageName,
+                        height: 30.h,
+                      ),
                     ),
                     const Spacer(),
                     SizedBox(

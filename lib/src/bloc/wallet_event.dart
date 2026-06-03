@@ -68,6 +68,40 @@ class WalletUserProfileRefreshRequested extends WalletEvent {
   final bool silent;
 }
 
+/// QR login from web wallet
+class WalletQrScanRequested extends WalletEvent {
+  const WalletQrScanRequested(this.qrToken);
+
+  final String qrToken;
+}
+
+class WalletQrApproveRequested extends WalletEvent {
+  const WalletQrApproveRequested(this.linkId);
+
+  final String linkId;
+}
+
+class WalletQrRejectRequested extends WalletEvent {
+  const WalletQrRejectRequested(this.linkId);
+
+  final String linkId;
+}
+
+class WalletQrLoginResetRequested extends WalletEvent {
+  const WalletQrLoginResetRequested();
+}
+
+/// Active sessions / linked devices
+class WalletActiveSessionsRequested extends WalletEvent {
+  const WalletActiveSessionsRequested();
+}
+
+class WalletSessionDeleteRequested extends WalletEvent {
+  const WalletSessionDeleteRequested(this.sessionId);
+
+  final String sessionId;
+}
+
 /// Balances
 class WalletBalanceLoadRequested extends WalletEvent {
   const WalletBalanceLoadRequested(this.assetId);
