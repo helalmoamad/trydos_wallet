@@ -232,188 +232,209 @@ class _LinkedDevicesPageState extends State<LinkedDevicesPage> {
                                       ),
                                 ),
                                 SizedBox(height: 20.h),
-                                Container(
-                                  width: double.infinity,
-                                  padding: EdgeInsets.all(16.w),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFFFFF),
-                                    borderRadius: BorderRadius.circular(16.r),
-                                    border: Border.all(
-                                      color: const Color(0xFFE1E5EE),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            AppStrings.get(
-                                              widget.languageCode,
-                                              'linked_devices',
-                                            ),
-                                            style: context
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.rq
-                                                .copyWith(
-                                                  fontSize: 14.sp,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: const Color(
-                                                    0xFF1D1D1D,
-                                                  ),
-                                                ),
-                                          ),
-                                          SizedBox(width: 6.w),
-                                          Text(
-                                            '(${activeSessions.length})',
-                                            style: context
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.rq
-                                                .copyWith(
-                                                  fontSize: 14.sp,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: const Color(
-                                                    0xFF1D1D1D,
-                                                  ),
-                                                ),
-                                          ),
-                                        ],
+                              ],
+                            ),
+                          ),
+                          Container(
+                            width: double.infinity,
+                            margin: EdgeInsets.only(top: 20.h, bottom: 20.h),
+                            padding: EdgeInsets.only(
+                              left: 16.w,
+                              right: 16.w,
+                              top: 16.h,
+                              bottom: 0.h,
+                            ),
+                            height: 320.h,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFFFF),
+                              borderRadius: BorderRadius.circular(16.r),
+                              border: Border.all(
+                                color: const Color(0xFFE1E5EE),
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      AppStrings.get(
+                                        widget.languageCode,
+                                        'linked_devices',
                                       ),
-                                      SizedBox(height: 10.h),
-                                      if (activeSessionsLoading)
-                                        Center(
-                                          child: SizedBox(
-                                            width: 20.w,
-                                            height: 20.w,
-                                            child:
-                                                const CircularProgressIndicator(
-                                                  strokeWidth: 2,
+                                      style: context.textTheme.bodyMedium?.rq
+                                          .copyWith(
+                                            fontSize: 14.sp,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF1D1D1D),
+                                          ),
+                                    ),
+                                    SizedBox(width: 6.w),
+                                    Text(
+                                      '(${activeSessions.length})',
+                                      style: context.textTheme.bodyMedium?.rq
+                                          .copyWith(
+                                            fontSize: 14.sp,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF1D1D1D),
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 10.h),
+                                if (activeSessionsLoading)
+                                  Center(
+                                    child: SizedBox(
+                                      width: 20.w,
+                                      height: 20.w,
+                                      child: const CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  )
+                                else if (activeSessions.isEmpty)
+                                  Text(
+                                    AppStrings.get(
+                                      widget.languageCode,
+                                      'linked_devices_no_active_sessions',
+                                    ),
+                                    style: context.textTheme.bodyMedium?.rq
+                                        .copyWith(
+                                          fontSize: 13.sp,
+                                          color: const Color(0xFF6B6B6B),
+                                          height: 1.4,
+                                        ),
+                                  )
+                                else
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      child: Column(
+                                        children: activeSessions
+                                            .map(
+                                              (session) => Padding(
+                                                padding: EdgeInsets.only(
+                                                  bottom: 12.h,
                                                 ),
-                                          ),
-                                        )
-                                      else if (activeSessions.isEmpty)
-                                        Text(
-                                          AppStrings.get(
-                                            widget.languageCode,
-                                            'linked_devices_no_active_sessions',
-                                          ),
-                                          style: context
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.rq
-                                              .copyWith(
-                                                fontSize: 13.sp,
-                                                color: const Color(0xFF6B6B6B),
-                                                height: 1.4,
-                                              ),
-                                        )
-                                      else
-                                        Column(
-                                          children: activeSessions
-                                              .map(
-                                                (session) => Padding(
-                                                  padding: EdgeInsets.only(
-                                                    bottom: 12.h,
-                                                  ),
-                                                  child: Container(
-                                                    width: double.infinity,
-                                                    padding: EdgeInsets.all(
-                                                      14.w,
+                                                child: Container(
+                                                  width: double.infinity,
+                                                  padding: EdgeInsets.all(14.w),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xFFFFFFFF,
                                                     ),
-                                                    decoration: BoxDecoration(
-                                                      color: const Color(
-                                                        0xFFFFFFFF,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            16.r,
-                                                          ),
-                                                      border: Border.all(
-                                                        color: const Color(
-                                                          0xFFE1E5EE,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          16.r,
                                                         ),
-                                                        width: 1,
+                                                    border: Border.all(
+                                                      color: const Color(
+                                                        0xFFE1E5EE,
                                                       ),
+                                                      width: 1,
                                                     ),
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Row(
-                                                          mainAxisAlignment:
-                                                              MainAxisAlignment
-                                                                  .spaceBetween,
-                                                          children: [
-                                                            Expanded(
+                                                  ),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Row(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .spaceBetween,
+                                                        children: [
+                                                          Expanded(
+                                                            child: Text(
+                                                              session
+                                                                  .deviceName,
+                                                              style: context
+                                                                  .textTheme
+                                                                  .bodyMedium
+                                                                  ?.rq
+                                                                  .copyWith(
+                                                                    fontSize:
+                                                                        13.sp,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w700,
+                                                                    color: const Color(
+                                                                      0xFF1D1D1D,
+                                                                    ),
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                          if (session.isCurrent)
+                                                            Container(
+                                                              padding:
+                                                                  EdgeInsets.symmetric(
+                                                                    horizontal:
+                                                                        10.w,
+                                                                    vertical:
+                                                                        4.h,
+                                                                  ),
+                                                              decoration: BoxDecoration(
+                                                                color:
+                                                                    const Color(
+                                                                      0xFFE7F1FF,
+                                                                    ),
+                                                                borderRadius:
+                                                                    BorderRadius.circular(
+                                                                      12.r,
+                                                                    ),
+                                                              ),
                                                               child: Text(
-                                                                session
-                                                                    .deviceName,
+                                                                AppStrings.get(
+                                                                  widget
+                                                                      .languageCode,
+                                                                  'active_session',
+                                                                ),
                                                                 style: context
                                                                     .textTheme
                                                                     .bodyMedium
                                                                     ?.rq
                                                                     .copyWith(
                                                                       fontSize:
-                                                                          13.sp,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w700,
+                                                                          11.sp,
                                                                       color: const Color(
-                                                                        0xFF1D1D1D,
+                                                                        0xFF2E6AE8,
                                                                       ),
                                                                     ),
                                                               ),
                                                             ),
-                                                            if (session
-                                                                .isCurrent)
-                                                              Container(
-                                                                padding:
-                                                                    EdgeInsets.symmetric(
-                                                                      horizontal:
-                                                                          10.w,
-                                                                      vertical:
-                                                                          4.h,
-                                                                    ),
-                                                                decoration: BoxDecoration(
-                                                                  color: const Color(
-                                                                    0xFFE7F1FF,
+                                                        ],
+                                                      ),
+                                                      SizedBox(height: 8.h),
+                                                      Text(
+                                                        '${session.platform.toUpperCase()} · ${session.ipAddress}',
+                                                        style: context
+                                                            .textTheme
+                                                            .bodyMedium
+                                                            ?.rq
+                                                            .copyWith(
+                                                              fontSize: 12.sp,
+                                                              color:
+                                                                  const Color(
+                                                                    0xFF6B6B6B,
                                                                   ),
-                                                                  borderRadius:
-                                                                      BorderRadius.circular(
-                                                                        12.r,
-                                                                      ),
-                                                                ),
-                                                                child: Text(
-                                                                  AppStrings.get(
-                                                                    widget
-                                                                        .languageCode,
-                                                                    'active_session',
-                                                                  ),
-                                                                  style: context
-                                                                      .textTheme
-                                                                      .bodyMedium
-                                                                      ?.rq
-                                                                      .copyWith(
-                                                                        fontSize:
-                                                                            11.sp,
-                                                                        color: const Color(
-                                                                          0xFF2E6AE8,
-                                                                        ),
-                                                                      ),
-                                                                ),
-                                                              ),
-                                                          ],
-                                                        ),
-                                                        SizedBox(height: 8.h),
+                                                              height: 1.4,
+                                                            ),
+                                                      ),
+                                                      if (session
+                                                              .lastActiveAt !=
+                                                          null)
                                                         Text(
-                                                          '${session.platform.toUpperCase()} · ${session.ipAddress}',
+                                                          AppStrings.get(
+                                                            widget.languageCode,
+                                                            'linked_devices_last_active',
+                                                          ).replaceFirst(
+                                                            '{time}',
+                                                            session
+                                                                .lastActiveAt!
+                                                                .toLocal()
+                                                                .toString(),
+                                                          ),
                                                           style: context
                                                               .textTheme
                                                               .bodyMedium
@@ -427,108 +448,83 @@ class _LinkedDevicesPageState extends State<LinkedDevicesPage> {
                                                                 height: 1.4,
                                                               ),
                                                         ),
-                                                        if (session
-                                                                .lastActiveAt !=
-                                                            null)
-                                                          Text(
-                                                            AppStrings.get(
-                                                              widget
-                                                                  .languageCode,
-                                                              'linked_devices_last_active',
-                                                            ).replaceFirst(
-                                                              '{time}',
-                                                              session
-                                                                  .lastActiveAt!
-                                                                  .toLocal()
-                                                                  .toString(),
-                                                            ),
-                                                            style: context
-                                                                .textTheme
-                                                                .bodyMedium
-                                                                ?.rq
-                                                                .copyWith(
-                                                                  fontSize:
-                                                                      12.sp,
-                                                                  color: const Color(
-                                                                    0xFF6B6B6B,
-                                                                  ),
-                                                                  height: 1.4,
-                                                                ),
-                                                          ),
-                                                        SizedBox(height: 10.h),
-                                                        Row(
-                                                          children: [
-                                                            Expanded(
-                                                              child: OutlinedButton(
-                                                                onPressed:
-                                                                    session.isCurrent ||
-                                                                        isSessionActionLoading
-                                                                    ? null
-                                                                    : () => _deleteSession(
-                                                                        session
-                                                                            .id,
-                                                                      ),
-                                                                style: OutlinedButton.styleFrom(
-                                                                  side: const BorderSide(
-                                                                    color: Color(
-                                                                      0xFF2E6AE8,
+                                                      SizedBox(height: 10.h),
+                                                      Row(
+                                                        children: [
+                                                          Expanded(
+                                                            child: OutlinedButton(
+                                                              onPressed:
+                                                                  session.isCurrent ||
+                                                                      isSessionActionLoading
+                                                                  ? null
+                                                                  : () => _deleteSession(
+                                                                      session
+                                                                          .id,
                                                                     ),
+                                                              style: OutlinedButton.styleFrom(
+                                                                side: const BorderSide(
+                                                                  color: Color(
+                                                                    0xFF2E6AE8,
                                                                   ),
-                                                                  shape: RoundedRectangleBorder(
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                          16.r,
-                                                                        ),
-                                                                  ),
-                                                                  padding:
-                                                                      EdgeInsets.symmetric(
-                                                                        vertical:
-                                                                            14.h,
+                                                                ),
+                                                                shape: RoundedRectangleBorder(
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        16.r,
                                                                       ),
                                                                 ),
-                                                                child: Text(
-                                                                  session.isCurrent
-                                                                      ? AppStrings.get(
-                                                                          widget
-                                                                              .languageCode,
-                                                                          'linked_devices_current_device',
-                                                                        )
-                                                                      : AppStrings.get(
-                                                                          widget
-                                                                              .languageCode,
-                                                                          'linked_devices_remove_button',
-                                                                        ),
-                                                                  style: context.textTheme.bodyMedium?.rq.copyWith(
-                                                                    color:
-                                                                        session
-                                                                            .isCurrent
-                                                                        ? const Color(
-                                                                            0xFF6B6B6B,
-                                                                          )
-                                                                        : const Color(
-                                                                            0xFF2E6AE8,
-                                                                          ),
-                                                                    fontSize:
-                                                                        14.sp,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w700,
-                                                                  ),
-                                                                ),
+                                                                padding:
+                                                                    EdgeInsets.symmetric(
+                                                                      vertical:
+                                                                          14.h,
+                                                                    ),
+                                                              ),
+                                                              child: Text(
+                                                                session.isCurrent
+                                                                    ? AppStrings.get(
+                                                                        widget
+                                                                            .languageCode,
+                                                                        'linked_devices_current_device',
+                                                                      )
+                                                                    : AppStrings.get(
+                                                                        widget
+                                                                            .languageCode,
+                                                                        'linked_devices_remove_button',
+                                                                      ),
+                                                                style: context
+                                                                    .textTheme
+                                                                    .bodyMedium
+                                                                    ?.rq
+                                                                    .copyWith(
+                                                                      color:
+                                                                          session
+                                                                              .isCurrent
+                                                                          ? const Color(
+                                                                              0xFF6B6B6B,
+                                                                            )
+                                                                          : const Color(
+                                                                              0xFF2E6AE8,
+                                                                            ),
+                                                                      fontSize:
+                                                                          14.sp,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w700,
+                                                                    ),
                                                               ),
                                                             ),
-                                                          ],
-                                                        ),
-                                                      ],
-                                                    ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
-                                              )
-                                              .toList(),
-                                        ),
-                                    ],
+                                              ),
+                                            )
+                                            .toList(),
+                                      ),
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ),

@@ -35,35 +35,37 @@ class WalletHeader extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.start,
             children: fromSettings
                 ? [
-                    InkWell(
-                      onTap: () {
-                        emitLoclEvent(LoclEvent.loclEvent());
-                      },
-                      child: SvgPicture.asset(
-                        TrydosWalletAssets.rdb,
-                        package: TrydosWalletStyles.packageName,
-                        height: 30.h,
-                      ),
+                    SvgPicture.asset(
+                      TrydosWalletAssets.rdb,
+                      package: TrydosWalletStyles.packageName,
+                      height: 30.h,
                     ),
+
                     const Spacer(),
                     SizedBox(
-                      child: Column(
-                        children: [
-                          SvgPicture.asset(
-                            TrydosWalletAssets.lock,
-                            package: TrydosWalletStyles.packageName,
-                            height: 23.h,
-                          ),
-                          SizedBox(height: 3.h),
-                          Text(
-                            AppStrings.get(state.languageCode, 'Lock'),
-                            style: context.textTheme.bodyMedium?.rq.copyWith(
-                              color: const Color(0xff1D1D1D),
-                              fontSize: 10.sp,
-                              height: 1.3,
+                      child: InkWell(
+                        onTap: () {
+                          emitLockEvent(LockEvent.lockEvent());
+                        },
+
+                        child: Column(
+                          children: [
+                            SvgPicture.asset(
+                              TrydosWalletAssets.lock,
+                              package: TrydosWalletStyles.packageName,
+                              height: 23.h,
                             ),
-                          ),
-                        ],
+                            SizedBox(height: 3.h),
+                            Text(
+                              AppStrings.get(state.languageCode, 'Lock'),
+                              style: context.textTheme.bodyMedium?.rq.copyWith(
+                                color: const Color(0xff1D1D1D),
+                                fontSize: 10.sp,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ]

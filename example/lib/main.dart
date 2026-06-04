@@ -52,6 +52,7 @@ class TrydosWalletExampleApp extends StatefulWidget {
 class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp> {
   StreamSubscription? _logoutSubscription;
   StreamSubscription? _languageSubscription;
+  StreamSubscription? _lockSubscription;
 
   @override
   void initState() {
@@ -66,12 +67,16 @@ class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp> {
     _languageSubscription = languageChangeEvents.listen((event) {
       debugPrint('[App] Language change event: ${event.languageCode}');
     });
+    _lockSubscription = lockEvents.listen((event) {
+      debugPrint('[App] Lock event received: ${event.toString()}');
+    });
   }
 
   @override
   void dispose() {
     _logoutSubscription?.cancel();
     _languageSubscription?.cancel();
+    _lockSubscription?.cancel();
     super.dispose();
   }
 

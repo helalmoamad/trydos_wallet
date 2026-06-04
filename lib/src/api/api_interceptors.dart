@@ -15,15 +15,15 @@ class AuthEvent {
   String toString() => 'AuthEvent.$name';
 }
 
-class LoclEvent {
+class LockEvent {
   final String name;
 
-  const LoclEvent._(this.name);
+  const LockEvent._(this.name);
 
-  factory LoclEvent.loclEvent() => const LoclEvent._('loclEvent');
+  factory LockEvent.lockEvent() => const LockEvent._('lockEvent');
 
   @override
-  String toString() => 'loclEvent.$name';
+  String toString() => 'lockEvent.$name';
 }
 
 /// حدث لتمثيل أخطاء API العامة (مثل 400) التي تحتاج لعرض رسالة للمستخدم.
@@ -53,8 +53,8 @@ class LanguageChangeEvent {
 // Broadcast streams تسمح لأي عدد من المستمعين بالتسجيل.
 final StreamController<AuthEvent> _authEventController =
     StreamController<AuthEvent>.broadcast();
-final StreamController<LoclEvent> _loclEventController =
-    StreamController<LoclEvent>.broadcast();
+final StreamController<LockEvent> _lockEventController =
+    StreamController<LockEvent>.broadcast();
 final StreamController<ApiErrorEvent> _errorEventController =
     StreamController<ApiErrorEvent>.broadcast();
 final StreamController<LogoutEvent> _logoutEventController =
@@ -71,7 +71,7 @@ Stream<LogoutEvent> get logoutEvents => _logoutEventController.stream;
 Stream<LanguageChangeEvent> get languageChangeEvents =>
     _languageChangeEventController.stream;
 Stream<AuthEvent> get authEvents => _authEventController.stream;
-Stream<LoclEvent> get loclEvents => _loclEventController.stream;
+Stream<LockEvent> get lockEvents => _lockEventController.stream;
 
 /// ستستعملها التطبيقات للاستماع لأخطاء API لعرض SnackBars.
 Stream<ApiErrorEvent> get errorEvents => _errorEventController.stream;
@@ -91,9 +91,9 @@ void emitAuthEvent(AuthEvent evt) {
   }
 }
 
-void emitLoclEvent(LoclEvent evt) {
+void emitLockEvent(LockEvent evt) {
   try {
-    _loclEventController.add(evt);
+    _lockEventController.add(evt);
   } catch (_) {
     // ignore stream errors
   }
