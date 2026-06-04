@@ -653,7 +653,7 @@ Widget _personInfoWidget(
   WalletState state,
   bool isVerified,
 ) {
-  Balance? resolveReceiveBalance(WalletState state) {
+  /* Balance? resolveReceiveBalance(WalletState state) {
     if (state.selectedAssetId != null) {
       final selected = state.balances[state.selectedAssetId!];
       if (selected != null) return selected;
@@ -669,9 +669,9 @@ Widget _personInfoWidget(
       return state.balances.values.first;
     }
     return null;
-  }
+  }*/
 
-  String accountNumberFromState(WalletState state) {
+  /* String accountNumberFromState(WalletState state) {
     final balanceNumber = (resolveReceiveBalance(state)?.accountNumber ?? '')
         .trim();
     final accountNumber = balanceNumber.isNotEmpty
@@ -679,7 +679,7 @@ Widget _personInfoWidget(
         : (Balance.lastMyAccountsPrimaryWallet?.accountNumber ?? '');
     return accountNumber;
   }
-
+*/
   final profileImagePath = state.profileImageUrl?.trim();
   final hasProfileImage =
       profileImagePath != null && profileImagePath.isNotEmpty;
@@ -705,7 +705,7 @@ Widget _personInfoWidget(
       MaterialPageRoute(
         builder: (_) => ProfileInfoPage(
           languageCode: state.languageCode,
-          accountNumber: accountNumberFromState(state),
+          accountNumber: state.displayId ?? "",
           firstName: state.firstName,
           lastName: state.lastName,
           isVerified: isVerified,
@@ -747,7 +747,7 @@ Widget _personInfoWidget(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    accountNumberFromState(state),
+                    state.displayId ?? "",
                     style: context.textTheme.bodyMedium?.bq.copyWith(
                       color: const Color(0xff1D1D1D),
                       letterSpacing: 0.18,

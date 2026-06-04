@@ -241,6 +241,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         firstName: config.firstName,
         lastName: config.lastName,
         email: config.email,
+        displayId: config.displayId,
         phoneNumber: config.phoneNumber,
         profileImageUrl: config.profileImageUrl,
         userSubtitle: config.userSubtitle,
@@ -279,6 +280,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     final profilePictureUrl = (data['profilePictureURL'] ?? '')
         .toString()
         .trim();
+    final displayId = (data['displayId'] ?? '').toString().trim();
     final userType = (data['userType'] ?? '').toString().trim();
     final kycVerification = data['kycVerification'];
     final kycVerificationData = kycVerification is Map
@@ -305,6 +307,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     TrydosWallet.updateUserInfo(
       firstName: firstName.isEmpty ? state.firstName : firstName,
       lastName: lastName.isEmpty ? state.lastName : lastName,
+      displayId: displayId.isEmpty ? state.displayId : displayId,
       email: email.isEmpty ? null : email,
       phoneNumber: phoneNumber.isEmpty ? null : phoneNumber,
       profileImageUrl: profilePictureUrl,

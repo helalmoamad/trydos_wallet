@@ -26,6 +26,7 @@ class TrydosWalletConfig {
     this.accountNumber,
     this.profileImageUrl,
     this.userSubtitle,
+    this.displayId,
     this.isVerified = false,
     this.isPhoneVerified = false,
     this.isAccountActive = true,
@@ -43,6 +44,7 @@ class TrydosWalletConfig {
   final bool isKurdish;
   final String applicationVersion;
   final bool debug;
+  final String? displayId;
   final String firstName;
   final String lastName;
   final String? email;
@@ -252,6 +254,7 @@ class TrydosWallet {
   static void updateUserInfo({
     String? firstName,
     String? lastName,
+    String? displayId,
     String? email,
     String? phoneNumber,
     String? profileImageUrl,
@@ -274,6 +277,7 @@ class TrydosWallet {
         applicationVersion: _config!.applicationVersion,
         debug: _config!.debug,
         firstName: firstName ?? _config!.firstName,
+        displayId: displayId ?? _config!.displayId,
         lastName: lastName ?? _config!.lastName,
         email: email ?? _config!.email,
         phoneNumber: phoneNumber ?? _config!.phoneNumber,

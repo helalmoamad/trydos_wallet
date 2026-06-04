@@ -63,7 +63,8 @@ class _LinkedDevicesPageState extends State<LinkedDevicesPage> {
                 current.qrActionSuccessMessage != null ||
             previous.sessionActionSuccessMessage !=
                     current.sessionActionSuccessMessage &&
-                current.sessionActionSuccessMessage != null,
+                current.sessionActionSuccessMessage != null ||
+            previous.sessionActionStatus != current.sessionActionStatus,
         listener: (context, state) {
           final successMessage =
               state.qrActionSuccessMessage ?? state.sessionActionSuccessMessage;
@@ -76,7 +77,7 @@ class _LinkedDevicesPageState extends State<LinkedDevicesPage> {
                     color: Colors.white,
                   ),
                 ),
-                backgroundColor: const Color(0xFF2E6AE8),
+                backgroundColor: const Color(0xFF1D1D1D),
               ),
             );
           }
@@ -95,7 +96,14 @@ class _LinkedDevicesPageState extends State<LinkedDevicesPage> {
           final activeSessions = state.activeSessions;
           final activeSessionsLoading =
               state.activeSessionsStatus == WalletStatus.loading;
-
+          if (errorMessage != null) {
+            Future.delayed(const Duration(seconds: 3), () {
+              // ignore: use_build_context_synchronously
+              context.read<WalletBloc>().add(
+                const WalletQrLoginResetRequested(),
+              );
+            });
+          }
           return Scaffold(
             backgroundColor: const Color(0xffFFFFFF),
             body: SafeArea(
@@ -244,7 +252,7 @@ class _LinkedDevicesPageState extends State<LinkedDevicesPage> {
                               top: 16.h,
                               bottom: 0.h,
                             ),
-                            height: 320.h,
+                            height: 220.h,
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFFFFF),
                               borderRadius: BorderRadius.circular(16.r),
@@ -449,73 +457,89 @@ class _LinkedDevicesPageState extends State<LinkedDevicesPage> {
                                                               ),
                                                         ),
                                                       SizedBox(height: 10.h),
-                                                      Row(
-                                                        children: [
-                                                          Expanded(
-                                                            child: OutlinedButton(
-                                                              onPressed:
-                                                                  session.isCurrent ||
-                                                                      isSessionActionLoading
-                                                                  ? null
-                                                                  : () => _deleteSession(
-                                                                      session
-                                                                          .id,
-                                                                    ),
-                                                              style: OutlinedButton.styleFrom(
-                                                                side: const BorderSide(
-                                                                  color: Color(
-                                                                    0xFF2E6AE8,
+                                                      (session.isCurrent ||
+                                                              isSessionActionLoading)
+                                                          ? Shimmer.fromColors(
+                                                              baseColor:
+                                                                  const Color(
+                                                                    0xFFE0E0E0,
                                                                   ),
-                                                                ),
-                                                                shape: RoundedRectangleBorder(
+                                                              highlightColor:
+                                                                  const Color(
+                                                                    0xFFF5F5F5,
+                                                                  ),
+                                                              child: Container(
+                                                                width: double
+                                                                    .infinity,
+                                                                height: 40.h,
+                                                                decoration: BoxDecoration(
+                                                                  color: const Color(
+                                                                    0xFFE0E0E0,
+                                                                  ),
                                                                   borderRadius:
                                                                       BorderRadius.circular(
                                                                         16.r,
                                                                       ),
                                                                 ),
-                                                                padding:
-                                                                    EdgeInsets.symmetric(
-                                                                      vertical:
-                                                                          14.h,
-                                                                    ),
                                                               ),
-                                                              child: Text(
-                                                                session.isCurrent
-                                                                    ? AppStrings.get(
-                                                                        widget
-                                                                            .languageCode,
-                                                                        'linked_devices_current_device',
-                                                                      )
-                                                                    : AppStrings.get(
-                                                                        widget
-                                                                            .languageCode,
-                                                                        'linked_devices_remove_button',
+                                                            )
+                                                          : Row(
+                                                              children: [
+                                                                Expanded(
+                                                                  child: OutlinedButton(
+                                                                    onPressed:
+                                                                        session.isCurrent ||
+                                                                            isSessionActionLoading
+                                                                        ? null
+                                                                        : () => _deleteSession(
+                                                                            session.id,
+                                                                          ),
+                                                                    style: OutlinedButton.styleFrom(
+                                                                      side: const BorderSide(
+                                                                        color: Color(
+                                                                          0xFF2E6AE8,
+                                                                        ),
                                                                       ),
-                                                                style: context
-                                                                    .textTheme
-                                                                    .bodyMedium
-                                                                    ?.rq
-                                                                    .copyWith(
-                                                                      color:
-                                                                          session
-                                                                              .isCurrent
-                                                                          ? const Color(
-                                                                              0xFF6B6B6B,
-                                                                            )
-                                                                          : const Color(
-                                                                              0xFF2E6AE8,
+                                                                      shape: RoundedRectangleBorder(
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(
+                                                                              16.r,
                                                                             ),
-                                                                      fontSize:
-                                                                          14.sp,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w700,
+                                                                      ),
+                                                                      padding: EdgeInsets.symmetric(
+                                                                        vertical:
+                                                                            14.h,
+                                                                      ),
                                                                     ),
-                                                              ),
+                                                                    child: Text(
+                                                                      session.isCurrent
+                                                                          ? AppStrings.get(
+                                                                              widget.languageCode,
+                                                                              'linked_devices_current_device',
+                                                                            )
+                                                                          : AppStrings.get(
+                                                                              widget.languageCode,
+                                                                              'linked_devices_remove_button',
+                                                                            ),
+                                                                      style: context.textTheme.bodyMedium?.rq.copyWith(
+                                                                        color:
+                                                                            session.isCurrent
+                                                                            ? const Color(
+                                                                                0xFF6B6B6B,
+                                                                              )
+                                                                            : const Color(
+                                                                                0xFF2E6AE8,
+                                                                              ),
+                                                                        fontSize:
+                                                                            14.sp,
+                                                                        fontWeight:
+                                                                            FontWeight.w700,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
                                                             ),
-                                                          ),
-                                                        ],
-                                                      ),
                                                     ],
                                                   ),
                                                 ),

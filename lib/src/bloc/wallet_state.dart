@@ -104,6 +104,7 @@ class WalletState {
     this.qrLoginRequest,
     this.qrScanErrorMessage,
     this.qrActionErrorMessage,
+    this.displayId,
     this.qrActionSuccessMessage,
     this.activeSessions = const [],
     this.activeSessionsStatus = WalletStatus.initial,
@@ -131,6 +132,7 @@ class WalletState {
   final String selectedAssetType;
   final String firstName;
   final String lastName;
+  final String? displayId;
   final String? email;
   final String? phoneNumber;
   final String? profileImageUrl;
@@ -260,6 +262,7 @@ class WalletState {
     List<Transaction>? transactions,
     WalletStatus? transactionsStatus,
     bool? transactionsHasNext,
+    String? displayId,
     Object? transactionsNextCursor = _unset,
     String? transactionsErrorMessage,
     Object? transactionsAssetSymbolFilter = _unset,
@@ -349,6 +352,7 @@ class WalletState {
       balancesStatus: balancesStatus ?? this.balancesStatus,
       loadingBalanceIds: loadingBalanceIds ?? this.loadingBalanceIds,
       transactions: transactions ?? this.transactions,
+      displayId: displayId ?? this.displayId,
       transactionsStatus: transactionsStatus ?? this.transactionsStatus,
       transactionsHasNext: transactionsHasNext ?? this.transactionsHasNext,
       transactionsNextCursor: transactionsNextCursor == _unset
