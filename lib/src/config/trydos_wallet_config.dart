@@ -26,6 +26,7 @@ class TrydosWalletConfig {
     this.accountNumber,
     this.profileImageUrl,
     this.userSubtitle,
+    this.clientIp,
     this.displayId,
     this.isVerified = false,
     this.isPhoneVerified = false,
@@ -48,6 +49,7 @@ class TrydosWalletConfig {
   final String firstName;
   final String lastName;
   final String? email;
+  final String? clientIp;
   final String? phoneNumber;
   final String? accountNumber;
   final String? profileImageUrl;
@@ -63,6 +65,7 @@ class TrydosWalletConfig {
 
   ApiHeadersConfig get headersConfig => ApiHeadersConfig(
     languageCode: languageCode,
+    clientIp: clientIp ?? '',
     isKurdish: isKurdish,
     applicationVersion: applicationVersion,
     token: token,
@@ -201,6 +204,7 @@ class TrydosWallet {
         firstName: _config!.firstName,
         lastName: _config!.lastName,
         email: _config!.email,
+        clientIp: _config!.clientIp,
         phoneNumber: _config!.phoneNumber,
         profileImageUrl: _config!.profileImageUrl,
         userSubtitle: _config!.userSubtitle,
@@ -236,6 +240,7 @@ class TrydosWallet {
         phoneNumber: _config!.phoneNumber,
         profileImageUrl: _config!.profileImageUrl,
         userSubtitle: _config!.userSubtitle,
+        clientIp: _config!.clientIp,
         isVerified: _config!.isVerified,
         isPhoneVerified: _config!.isPhoneVerified,
         isAccountActive: _config!.isAccountActive,
@@ -256,6 +261,7 @@ class TrydosWallet {
     String? lastName,
     String? displayId,
     String? email,
+    String? clientIp,
     String? phoneNumber,
     String? profileImageUrl,
     String? userSubtitle,
@@ -283,6 +289,7 @@ class TrydosWallet {
         phoneNumber: phoneNumber ?? _config!.phoneNumber,
         profileImageUrl: resolvedProfileImageUrl,
         userSubtitle: userSubtitle ?? _config!.userSubtitle,
+        clientIp: clientIp ?? _config!.clientIp,
         isVerified: isVerified ?? _config!.isVerified,
         isPhoneVerified: isPhoneVerified ?? _config!.isPhoneVerified,
         isAccountActive: isAccountActive ?? _config!.isAccountActive,
@@ -336,6 +343,7 @@ class TrydosWallet {
         lastName: _config!.lastName,
         email: _config!.email,
         phoneNumber: _config!.phoneNumber,
+        clientIp: _config!.clientIp,
         profileImageUrl: normalizedValue,
         userSubtitle: _config!.userSubtitle,
         isVerified: _config!.isVerified,

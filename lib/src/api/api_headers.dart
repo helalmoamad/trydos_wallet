@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 class ApiHeadersConfig {
   ApiHeadersConfig({
     this.languageCode = 'ar',
+    this.clientIp = '',
     this.isKurdish = false,
     this.applicationVersion = '1.0.0',
     this.token,
@@ -16,6 +17,7 @@ class ApiHeadersConfig {
   final bool isKurdish;
   final String applicationVersion;
   final String? token;
+  final String clientIp;
   final bool isAndroid;
 
   String get lang {
@@ -37,6 +39,7 @@ class ApiHeaders {
     final headers = client.options.headers;
     headers['lang'] = config.lang;
     headers['x-lang'] = config.lang;
+    headers['X-Client-IP'] = config.clientIp;
     headers['Accept-Language'] = config.lang;
     headers['User-Agent'] = config.userAgent;
     if (config.token != null && config.token!.isNotEmpty) {
