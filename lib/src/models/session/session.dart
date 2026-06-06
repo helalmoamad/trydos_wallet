@@ -6,6 +6,7 @@ class WalletSession {
     required this.browser,
     required this.os,
     required this.ipAddress,
+    required this.deviceId,
     required this.lastActiveAt,
     required this.expiresAt,
     required this.status,
@@ -24,6 +25,7 @@ class WalletSession {
           deviceInfo?['os']?.toString() ??
           'Unknown Device',
       browser: deviceInfo?['browser']?.toString() ?? '',
+      deviceId: json['deviceId']?.toString() ?? '',
       os: deviceInfo?['os']?.toString() ?? '',
       ipAddress: json['ipAddress']?.toString() ?? 'Unknown IP',
       lastActiveAt: json['lastActiveAt'] != null
@@ -40,6 +42,7 @@ class WalletSession {
   final String id;
   final String platform;
   final String deviceName;
+  final String deviceId;
   final String browser;
   final String os;
   final String ipAddress;

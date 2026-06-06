@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -21,10 +24,26 @@ class LinkedDevicesPage extends StatefulWidget {
 
 class _LinkedDevicesPageState extends State<LinkedDevicesPage> {
   bool get _isRtl => widget.languageCode == 'ar' || widget.languageCode == 'ku';
+  String deviceId = '';
+
+  static Future<String?> getDeviceId() async {
+    var deviceInfo = DeviceInfoPlugin();
+    if (Platform.isIOS) {
+      var iosDeviceInfo = await deviceInfo.iosInfo;
+      return iosDeviceInfo.identifierForVendor;
+    } else if (Platform.isAndroid) {
+      AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+      return '${androidInfo.id}_${androidInfo.model}';
+    }
+    return 'other_os';
+  }
 
   @override
   void initState() {
     super.initState();
+    getDeviceId().then((id) {
+      deviceId = id ?? '';
+    });
     context.read<WalletBloc>().add(const WalletActiveSessionsRequested());
   }
 
@@ -94,6 +113,12 @@ class _LinkedDevicesPageState extends State<LinkedDevicesPage> {
           final isSessionActionLoading =
               state.sessionActionStatus == WalletStatus.loading;
           final activeSessions = state.activeSessions;
+
+          activeSessions.removeWhere(
+            (session) =>
+                session.platform == 'application' &&
+                session.deviceId == deviceId,
+          );
           final activeSessionsLoading =
               state.activeSessionsStatus == WalletStatus.loading;
           if (errorMessage != null) {

@@ -6,6 +6,7 @@ class AppStrings {
       // Home Tab
       'home_title': 'Home',
       'total_balance': 'Your Total Balance',
+      'linked_devices_no_active_sessions': 'No active sessions',
       'add_currency': 'Add Currency',
       'all_transactions': 'All Transactions',
       'balance': 'Balance',
@@ -379,6 +380,7 @@ class AppStrings {
     'ar': {
       // Home Tab
       'home_title': 'الرئيسية',
+      'linked_devices_no_active_sessions': 'لا توجد جلسات نشطة',
       'total_balance': 'إجمالي رصيدك',
       'add_currency': 'إضافة عملة',
       'all_transactions': 'جميع المعاملات',
@@ -765,6 +767,7 @@ class AppStrings {
       'recent_transactions': 'وەرگێڕانە نوێیەکان',
       'view_all': 'هەمووی ببینە',
       'your_total_balance_of': 'کۆی باڵانسی {currency} تۆ',
+      'linked_devices_no_active_sessions': 'هیچ جەلسەی چالاک نیە',
       'add_account_of': 'زیادکردنی هەژماری {currency}',
 
       // Wallet Tab
@@ -1142,6 +1145,7 @@ class AppStrings {
       'recent_transactions': 'Son İşlemler',
       'view_all': 'Tümünü Görüntüle',
       'your_total_balance_of': 'Toplam {currency} Bakiyeniz',
+      'linked_devices_no_active_sessions': 'Bağlı cihazlar - Aktif oturum yok',
       'add_account_of': '{currency} Hesabı Ekle',
 
       // Wallet Tab

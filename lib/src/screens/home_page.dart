@@ -229,6 +229,9 @@ class _TrydosWalletHomePageContentState
 
   void _onConnectivityChanged() {
     final online = ConnectivityService.instance.isOnline.value;
+    if (online) {
+      emitLockEvent(LockEvent.lockEvent());
+    }
     if (!mounted) return;
     setState(() => _isOffline = !online);
     if (online) {

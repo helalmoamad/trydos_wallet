@@ -8,7 +8,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trydos_wallet/src/config/trydos_wallet_config.dart';
 // ignore: implementation_imports
 import 'package:trydos_wallet/src/constent/constant_design.dart';
-
 // ignore: implementation_imports
 import 'package:trydos_wallet/src/constent/theme/app_theme.dart';
 
@@ -21,7 +20,7 @@ void main() {
           "https://kyc-ai-ramaaz-digital-banking.yazan-adnof.workers.dev/",
       //   "https://kyc-verification-ramaaz-digital-banking.yazan-adnof.workers.dev/",
       token:
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZDEyMDNiOTQxMjM4NWRmMWU5ZmIwYiIsImVtYWlsIjoicGhvbmVfOTYzOTM0MzMwODg5QHRyeWRvcy1vdHAubG9jYWwiLCJ0eXBlIjoidXNlciIsImxhbmciOiJlbiIsImt5Y1N0YXR1cyI6Im5vdF9zdWJtaXR0ZWQiLCJ1c2VyVHlwZSI6InJlZ2lzdGVyZWQiLCJzZXNzaW9uSWQiOiI2YTIzZGViODM3N2NiMmMzYzkxYzEyNjQiLCJpYXQiOjE3ODA3MzU2NzQsImV4cCI6MTc4MzMyNzY3NH0.7Ca3lKJEof7Vp1S5Fv6dP-krfDQ_maAa6lGF78XQ3hc",
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZDEyMDNiOTQxMjM4NWRmMWU5ZmIwYiIsImVtYWlsIjoicGhvbmVfOTYzOTM0MzMwODg5QHRyeWRvcy1vdHAubG9jYWwiLCJ0eXBlIjoidXNlciIsImxhbmciOiJlbiIsImt5Y1N0YXR1cyI6Im5vdF9zdWJtaXR0ZWQiLCJ1c2VyVHlwZSI6InJlZ2lzdGVyZWQiLCJzZXNzaW9uSWQiOiI2YTIzZmM4ZDM3N2NiMmMzYzkxYzMzZjUiLCJpYXQiOjE3ODA3NDMzMTIsImV4cCI6MTc4MzMzNTMxMn0.UlwoG2f3cvoSuqHhyEk4JTVuLgHBw4UsVBM_zMYC-0o",
       languageCode: 'en',
       isKurdish: false,
       applicationVersion: '1.0.0',
