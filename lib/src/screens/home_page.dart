@@ -195,6 +195,9 @@ class _TrydosWalletHomePageContentState
             context.read<WalletBloc>().add(
               const WalletUserProfileRefreshRequested(),
             );
+            context.read<WalletBloc>().add(
+              const WalletActiveSessionsRequested(),
+            );
           }
           setState(() => _selectedIndex = index);
         },

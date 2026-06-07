@@ -20,7 +20,7 @@ void main() {
           "https://kyc-ai-ramaaz-digital-banking.yazan-adnof.workers.dev/",
       //   "https://kyc-verification-ramaaz-digital-banking.yazan-adnof.workers.dev/",
       token:
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZDEyMDNiOTQxMjM4NWRmMWU5ZmIwYiIsImVtYWlsIjoicGhvbmVfOTYzOTM0MzMwODg5QHRyeWRvcy1vdHAubG9jYWwiLCJ0eXBlIjoidXNlciIsImxhbmciOiJlbiIsImt5Y1N0YXR1cyI6Im5vdF9zdWJtaXR0ZWQiLCJ1c2VyVHlwZSI6InJlZ2lzdGVyZWQiLCJzZXNzaW9uSWQiOiI2YTIzZmM4ZDM3N2NiMmMzYzkxYzMzZjUiLCJpYXQiOjE3ODA3NDMzMTIsImV4cCI6MTc4MzMzNTMxMn0.UlwoG2f3cvoSuqHhyEk4JTVuLgHBw4UsVBM_zMYC-0o",
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZDEyMDNiOTQxMjM4NWRmMWU5ZmIwYiIsImVtYWlsIjoicGhvbmVfOTYzOTM0MzMwODg5QHRyeWRvcy1vdHAubG9jYWwiLCJ0eXBlIjoidXNlciIsImxhbmciOiJlbiIsImt5Y1N0YXR1cyI6Im5vdF9zdWJtaXR0ZWQiLCJ1c2VyVHlwZSI6InJlZ2lzdGVyZWQiLCJzZXNzaW9uSWQiOiI2YTI1NDM5MTM3N2NiMmMzYzkxZDJjMjEiLCJpYXQiOjE3ODA4MjcwMjcsImV4cCI6MTc4MzQxOTAyN30.nV5RIRuujYXNcp8FseIDPVEPgKv69mze_U5GBUs7usE",
       languageCode: 'en',
       isKurdish: false,
       applicationVersion: '1.0.0',

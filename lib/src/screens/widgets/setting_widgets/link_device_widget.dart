@@ -69,7 +69,9 @@ class _LinkedDevicesPageState extends State<LinkedDevicesPage> {
   }
 
   void _deleteSession(String sessionId) {
-    context.read<WalletBloc>().add(WalletSessionDeleteRequested(sessionId));
+    context.read<WalletBloc>().add(
+      WalletSessionDeleteRequested(sessionId, false),
+    );
   }
 
   @override

@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -19,6 +22,20 @@ class SettingsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String deviceId = '';
+
+    Future<String?> getDeviceId() async {
+      var deviceInfo = DeviceInfoPlugin();
+      if (Platform.isIOS) {
+        var iosDeviceInfo = await deviceInfo.iosInfo;
+        return iosDeviceInfo.identifierForVendor;
+      } else if (Platform.isAndroid) {
+        AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+        return '${androidInfo.id}_${androidInfo.model}';
+      }
+      return 'other_os';
+    }
+
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
         final isVerified = state.isVerified;
@@ -329,12 +346,97 @@ class SettingsTab extends StatelessWidget {
                             ),
                           ),
                           SizedBox(height: 5.h, width: 1.sw),
-                          InkWell(
-                            onTap: TrydosWallet.logout,
-                            child: _actionWidget(
-                              TrydosWalletAssets.logout,
-                              AppStrings.get(state.languageCode, 'logout'),
-                              context,
+                          BlocListener<WalletBloc, WalletState>(
+                            listenWhen: (previous, current) =>
+                                previous.deleteSessionStatus !=
+                                current.deleteSessionStatus,
+                            listener: (context, state) {
+                              if (state.deleteSessionStatus ==
+                                  WalletStatus.success) {
+                                TrydosWallet.logout();
+                              }
+                            },
+                            child: BlocBuilder<WalletBloc, WalletState>(
+                              buildWhen: (previous, current) =>
+                                  previous.deleteSessionStatus !=
+                                      current.deleteSessionStatus ||
+                                  previous.activeSessionsStatus !=
+                                      current.activeSessionsStatus,
+                              builder: (context, state) {
+                                getDeviceId().then((id) {
+                                  deviceId = id ?? '';
+                                });
+
+                                WalletSession activeSessions = state
+                                    .activeSessions
+                                    .firstWhere(
+                                      (session) =>
+                                          (session.platform == 'application' &&
+                                          session.deviceId == deviceId),
+                                      orElse: () => WalletSession(
+                                        id: '',
+                                        platform: '',
+                                        deviceName: '',
+                                        browser: '',
+                                        os: '',
+                                        ipAddress: '',
+                                        deviceId: '',
+                                        lastActiveAt: null,
+                                        expiresAt: null,
+                                        status: '',
+                                        isCurrent: true,
+                                      ),
+                                    );
+                                print(
+                                  "*******************************${activeSessions.id}",
+                                );
+                                return state.deleteSessionStatus ==
+                                        WalletStatus.loading
+                                    ? Shimmer.fromColors(
+                                        baseColor: const Color(0xFFE4E4E4),
+                                        highlightColor: const Color(0xFFF3F3F3),
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 12.w,
+                                            vertical: 20.h,
+                                          ),
+                                          height: 58.h,
+                                          width: 1.sw,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xffF8F8F8),
+                                            borderRadius: BorderRadius.circular(
+                                              15.r,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : InkWell(
+                                        onTap: () async {
+                                          await getDeviceId().then((id) {
+                                            deviceId = id ?? '';
+                                          });
+                                          print(
+                                            "FFFFFFFFFFFFFFFFFFFFFFFFF${activeSessions.id} --- ${deviceId}",
+                                          );
+
+                                          // ignore: use_build_context_synchronously
+                                          context.read<WalletBloc>().add(
+                                            WalletSessionDeleteRequested(
+                                              activeSessions.id,
+                                              true,
+                                            ),
+                                          );
+                                        },
+                                        child: _actionWidget(
+                                          TrydosWalletAssets.logout,
+                                          AppStrings.get(
+                                            state.languageCode,
+                                            'logout',
+                                          ),
+                                          context,
+                                        ),
+                                      );
+                              },
                             ),
                           ),
                           SizedBox(height: 20.h, width: 1.sw),

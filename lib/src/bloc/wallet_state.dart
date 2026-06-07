@@ -106,6 +106,7 @@ class WalletState {
     this.qrActionErrorMessage,
     this.displayId,
     this.qrActionSuccessMessage,
+    this.deleteSessionStatus = WalletStatus.initial,
     this.activeSessions = const [],
     this.activeSessionsStatus = WalletStatus.initial,
     this.activeSessionsErrorMessage,
@@ -168,6 +169,7 @@ class WalletState {
 
   // Media
   final WalletStatus uploadStatus;
+  final WalletStatus deleteSessionStatus;
   final String? uploadUrl;
   final String? uploadErrorMessage;
 
@@ -263,6 +265,7 @@ class WalletState {
     WalletStatus? transactionsStatus,
     bool? transactionsHasNext,
     String? displayId,
+    WalletStatus? deleteSessionStatus,
     Object? transactionsNextCursor = _unset,
     String? transactionsErrorMessage,
     Object? transactionsAssetSymbolFilter = _unset,
@@ -358,6 +361,7 @@ class WalletState {
       transactionsNextCursor: transactionsNextCursor == _unset
           ? this.transactionsNextCursor
           : transactionsNextCursor as String?,
+      deleteSessionStatus: deleteSessionStatus ?? this.deleteSessionStatus,
       transactionsErrorMessage:
           transactionsErrorMessage ?? this.transactionsErrorMessage,
       transactionsAssetSymbolFilter: transactionsAssetSymbolFilter == _unset

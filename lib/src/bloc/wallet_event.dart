@@ -97,9 +97,10 @@ class WalletActiveSessionsRequested extends WalletEvent {
 }
 
 class WalletSessionDeleteRequested extends WalletEvent {
-  const WalletSessionDeleteRequested(this.sessionId);
+  const WalletSessionDeleteRequested(this.sessionId, this.deleteCurrentSession);
 
   final String sessionId;
+  final bool? deleteCurrentSession;
 }
 
 /// Balances

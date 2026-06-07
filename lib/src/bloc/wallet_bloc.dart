@@ -1205,6 +1205,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     emit(
       state.copyWith(
         sessionActionStatus: WalletStatus.loading,
+        deleteSessionStatus: event.deleteCurrentSession == true
+            ? WalletStatus.loading
+            : WalletStatus.initial,
         sessionActionErrorMessage: null,
         sessionActionSuccessMessage: null,
       ),
@@ -1215,6 +1218,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       emit(
         state.copyWith(
           sessionActionStatus: WalletStatus.failure,
+          deleteSessionStatus: event.deleteCurrentSession == true
+              ? WalletStatus.failure
+              : WalletStatus.initial,
           sessionActionErrorMessage:
               result.errorMessage ?? 'Failed to remove the linked device.',
         ),
@@ -1231,6 +1237,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         sessionActionStatus: WalletStatus.success,
         sessionActionSuccessMessage: 'Linked device removed successfully.',
         activeSessions: updatedSessions,
+        deleteSessionStatus: event.deleteCurrentSession == true
+            ? WalletStatus.success
+            : WalletStatus.initial,
       ),
     );
   }

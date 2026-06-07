@@ -2,10 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../api/api_client.dart';
-import '../api/api_headers.dart';
-import '../api/api_interceptors.dart';
+import 'package:trydos_wallet/trydos_wallet.dart';
 
 /// Library config - passed when initializing from the consuming app.
 ///
