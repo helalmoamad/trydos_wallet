@@ -112,13 +112,14 @@ class _LinkedDevicesPageState extends State<LinkedDevicesPage> {
           final isActionLoading = state.qrActionStatus == WalletStatus.loading;
           final isSessionActionLoading =
               state.sessionActionStatus == WalletStatus.loading;
-          final activeSessions = state.activeSessions;
 
-          activeSessions.removeWhere(
-            (session) =>
-                session.platform == 'application' &&
-                session.deviceId == deviceId,
-          );
+          List<WalletSession> activeSessions = state.activeSessions
+              .where(
+                (session) =>
+                    !(session.platform == 'application' &&
+                        session.deviceId == deviceId),
+              )
+              .toList();
           final activeSessionsLoading =
               state.activeSessionsStatus == WalletStatus.loading;
           if (errorMessage != null) {
