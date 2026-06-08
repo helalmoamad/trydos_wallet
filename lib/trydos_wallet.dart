@@ -17,6 +17,7 @@ export 'src/api/api_interceptors.dart'
         ApiErrorEvent,
         AuthEvent,
         LockEvent,
+        SwitchEvent,
         navigatorKey,
         scaffoldMessengerKey;
 export 'src/bloc/bloc.dart';

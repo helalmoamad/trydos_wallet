@@ -5,6 +5,7 @@ class AppStrings {
     'en': {
       // Home Tab
       'home_title': 'Home',
+      'web': 'Web',
       'total_balance': 'Your Total Balance',
       'linked_devices_no_active_sessions': 'No active sessions',
       'add_currency': 'Add Currency',
@@ -404,6 +405,7 @@ class AppStrings {
       'manage_balances': 'إدارة أرصدتك والمعاملات',
       'actions_for': 'الإجراءات لـ',
       'add_funds': 'إضافة أموال (إيداع)',
+      'web': 'الويب',
       'deposit': 'إيداع',
       'balance_available': 'الرصيد المتاح',
       'no_currencies': 'لا توجد عملات متاحة',
@@ -751,6 +753,7 @@ class AppStrings {
     'ku': {
       // Home Tab
       'home_title': 'سەرەتا',
+      'web': 'وێب',
       'total_balance': 'کۆی بەروونی تۆ',
       'add_currency': 'موژدە سازی زیادکە',
       'all_transactions': 'هەموو وەرگێڕانەکان',
@@ -1130,6 +1133,7 @@ class AppStrings {
     'tr': {
       // Home Tab
       'home_title': 'Anasayfa',
+      'web': 'ağ',
       'total_balance': 'Toplam Bakiyeniz',
       'add_currency': 'Para Birimi Ekle',
       'all_transactions': 'Tüm İşlemler',

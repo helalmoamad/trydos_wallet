@@ -45,6 +45,34 @@ class WalletHeader extends StatelessWidget {
                     SizedBox(
                       child: InkWell(
                         onTap: () {
+                          emitSwitchEvent(SwitchEvent.switchEvent());
+                        },
+
+                        child: Column(
+                          children: [
+                            SvgPicture.asset(
+                              TrydosWalletAssets.switchIcon,
+                              package: TrydosWalletStyles.packageName,
+                              height: 23.h,
+                            ),
+                            SizedBox(height: 3.h),
+                            Text(
+                              AppStrings.get(state.languageCode, 'Web'),
+                              style: context.textTheme.bodyMedium?.rq.copyWith(
+                                color: const Color(0xff1D1D1D),
+                                fontSize: 10.sp,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 20.w),
+
+                    SizedBox(
+                      child: InkWell(
+                        onTap: () {
                           emitLockEvent(LockEvent.lockEvent());
                         },
 

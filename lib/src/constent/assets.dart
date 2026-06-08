@@ -94,6 +94,7 @@ class TrydosWalletAssets {
   static const String takePhoto = '$_svgPath/take_photo.svg';
   static const String terms = '$_svgPath/terms.svg';
   static const String worrning = '$_svgPath/worrning.svg';
+  static const String switchIcon = '$_svgPath/switch.svg';
 
   // يمكنك إضافة المزيد من الـ SVG هنا مستقبلاً:
   // static const String walletIcon = '$_svgPath/wallet.svg';

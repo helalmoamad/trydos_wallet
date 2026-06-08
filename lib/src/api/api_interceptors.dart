@@ -26,6 +26,17 @@ class LockEvent {
   String toString() => 'lockEvent.$name';
 }
 
+class SwitchEvent {
+  final String name;
+
+  const SwitchEvent._(this.name);
+
+  factory SwitchEvent.switchEvent() => const SwitchEvent._('switchEvent');
+
+  @override
+  String toString() => 'switchEvent.$name';
+}
+
 /// حدث لتمثيل أخطاء API العامة (مثل 400) التي تحتاج لعرض رسالة للمستخدم.
 class ApiErrorEvent {
   final String message;
@@ -55,6 +66,8 @@ final StreamController<AuthEvent> _authEventController =
     StreamController<AuthEvent>.broadcast();
 final StreamController<LockEvent> _lockEventController =
     StreamController<LockEvent>.broadcast();
+final StreamController<SwitchEvent> _switchEventController =
+    StreamController<SwitchEvent>.broadcast();
 final StreamController<ApiErrorEvent> _errorEventController =
     StreamController<ApiErrorEvent>.broadcast();
 final StreamController<LogoutEvent> _logoutEventController =
@@ -72,6 +85,7 @@ Stream<LanguageChangeEvent> get languageChangeEvents =>
     _languageChangeEventController.stream;
 Stream<AuthEvent> get authEvents => _authEventController.stream;
 Stream<LockEvent> get lockEvents => _lockEventController.stream;
+Stream<SwitchEvent> get switchEvents => _switchEventController.stream;
 
 /// ستستعملها التطبيقات للاستماع لأخطاء API لعرض SnackBars.
 Stream<ApiErrorEvent> get errorEvents => _errorEventController.stream;
@@ -86,6 +100,14 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void emitAuthEvent(AuthEvent evt) {
   try {
     _authEventController.add(evt);
+  } catch (_) {
+    // ignore stream errors
+  }
+}
+
+void emitSwitchEvent(SwitchEvent evt) {
+  try {
+    _switchEventController.add(evt);
   } catch (_) {
     // ignore stream errors
   }

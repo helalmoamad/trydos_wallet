@@ -53,6 +53,7 @@ class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp> {
   StreamSubscription? _logoutSubscription;
   StreamSubscription? _languageSubscription;
   StreamSubscription? _lockSubscription;
+  StreamSubscription? _switchSubscription;
 
   @override
   void initState() {
@@ -61,6 +62,10 @@ class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp> {
     // Listen to logout events emitted by the library.
     _logoutSubscription = logoutEvents.listen((event) {
       debugPrint('[App] Logout event received: ${event.reason}');
+    });
+
+    _switchSubscription = switchEvents.listen((event) {
+      debugPrint('[App] Switch event received: ${event.toString()}');
     });
 
     // Listen to language change events emitted by the library.
@@ -77,6 +82,7 @@ class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp> {
     _logoutSubscription?.cancel();
     _languageSubscription?.cancel();
     _lockSubscription?.cancel();
+    _switchSubscription?.cancel();
     super.dispose();
   }
 
