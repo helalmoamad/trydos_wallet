@@ -324,7 +324,10 @@ class _QRScannerSwitchPageState extends State<QRScannerSwitchPage>
                                             ),
                                             SizedBox(height: 10.h),
                                             Text(
-                                              "Read The Code On The Opposite Side To Login",
+                                              AppStrings.get(
+                                                state.languageCode,
+                                                'qr_switch_scanner_hint',
+                                              ),
                                               textAlign: TextAlign.center,
                                               style: context
                                                   .textTheme
@@ -348,7 +351,7 @@ class _QRScannerSwitchPageState extends State<QRScannerSwitchPage>
                       ),
                       SizedBox(height: 48.h),
                       Text(
-                        "Switch To Web",
+                        AppStrings.get(state.languageCode, 'qr_switch_title'),
                         textAlign: TextAlign.start,
                         style: context.textTheme.bodyMedium?.bq.copyWith(
                           color: const Color(0xff1D1D1D),
@@ -358,7 +361,10 @@ class _QRScannerSwitchPageState extends State<QRScannerSwitchPage>
                       ),
                       SizedBox(height: 20.h),
                       Text(
-                        '"You Can Use Your Account On The Web Securely And Easily."',
+                        AppStrings.get(
+                          state.languageCode,
+                          'qr_switch_subtitle',
+                        ),
                         textAlign: TextAlign.start,
                         style: context.textTheme.bodyMedium?.rq.copyWith(
                           color: const Color(0xff1D1D1D),
@@ -368,7 +374,10 @@ class _QRScannerSwitchPageState extends State<QRScannerSwitchPage>
                       ),
                       SizedBox(height: 10.h),
                       Text(
-                        '- Open The Website From The Browser Web',
+                        AppStrings.get(
+                          state.languageCode,
+                          'qr_switch_step_open_web',
+                        ),
                         textAlign: TextAlign.start,
                         style: context.textTheme.bodyMedium?.rq.copyWith(
                           color: const Color(0xff1D1D1D),
@@ -378,7 +387,10 @@ class _QRScannerSwitchPageState extends State<QRScannerSwitchPage>
                       ),
                       SizedBox(height: 10.h),
                       Text(
-                        '- Choose Login Via Code Scanning',
+                        AppStrings.get(
+                          state.languageCode,
+                          'qr_switch_step_choose_login',
+                        ),
                         textAlign: TextAlign.start,
                         style: context.textTheme.bodyMedium?.rq.copyWith(
                           color: const Color(0xff1D1D1D),
@@ -388,7 +400,10 @@ class _QRScannerSwitchPageState extends State<QRScannerSwitchPage>
                       ),
                       SizedBox(height: 10.h),
                       Text(
-                        '- Read The Code The Opposite Side From Here',
+                        AppStrings.get(
+                          state.languageCode,
+                          'qr_switch_step_read_code',
+                        ),
                         textAlign: TextAlign.start,
                         style: context.textTheme.bodyMedium?.rq.copyWith(
                           color: const Color(0xff1D1D1D),
@@ -413,7 +428,10 @@ class _QRScannerSwitchPageState extends State<QRScannerSwitchPage>
                       SizedBox(height: 15.h),
                       Center(
                         child: Text(
-                          'Your Privacy Is Completely Safe',
+                          AppStrings.get(
+                            state.languageCode,
+                            'qr_switch_privacy_safe',
+                          ),
                           textAlign: TextAlign.center,
                           style: context.textTheme.bodyMedium?.rq.copyWith(
                             color: const Color(0xff388CFF),
@@ -474,7 +492,9 @@ class _QrLoginConfirmDialogState extends State<_QrLoginConfirmDialog> {
               borderRadius: BorderRadius.circular(20.r),
             ),
             title: Text(
-              'Log in to web — ${request.browser} on ${request.os}',
+              AppStrings.get(languageCode, 'qr_login_dialog_title')
+                  .replaceAll('{browser}', request.browser)
+                  .replaceAll('{os}', request.os),
               style: context.textTheme.bodyMedium?.bq.copyWith(
                 fontSize: 16.sp,
                 color: const Color(0xFF1D1D1D),
@@ -483,8 +503,21 @@ class _QrLoginConfirmDialogState extends State<_QrLoginConfirmDialog> {
             ),
             content: Text(
               request.sameCity
-                  ? "This login request expires at ${request.expiresAt != null ? request.expiresAt!.toLocal().toString() : 'soon'}."
-                  : "⚠️ This computer appears to be in ${request.webCity ?? 'Unknown'}, but your phone is in ${request.appCity ?? 'Unknown'}. Approve only if this is you.",
+                  ? AppStrings.get(
+                      languageCode,
+                      'qr_login_dialog_expires',
+                    ).replaceAll(
+                      '{time}',
+                      request.expiresAt != null
+                          ? request.expiresAt!.toLocal().toString()
+                          : 'soon',
+                    )
+                  : AppStrings.get(
+                      languageCode,
+                      'qr_login_dialog_location_warning',
+                    )
+                        .replaceAll('{webCity}', request.webCity ?? 'Unknown')
+                        .replaceAll('{appCity}', request.appCity ?? 'Unknown'),
               style: context.textTheme.bodyMedium?.rq.copyWith(
                 fontSize: 13.sp,
                 color: request.sameCity

@@ -331,7 +331,10 @@ class SettingsTab extends StatelessWidget {
                             },
                             child: BlocBuilder<WalletBloc, WalletState>(
                               buildWhen: (previous, current) =>
-                                  previous.logoutStatus != current.logoutStatus,
+                                  previous.logoutStatus !=
+                                      current.logoutStatus ||
+                                  previous.languageCode != current.languageCode,
+
                               builder: (context, state) {
                                 return state.logoutStatus ==
                                         WalletStatus.loading

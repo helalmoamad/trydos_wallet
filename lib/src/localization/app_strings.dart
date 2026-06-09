@@ -81,6 +81,20 @@ class AppStrings {
       'linked_devices_scan_button': 'Scan QR Code',
       'linked_devices_scan_approve_button': 'Approve',
       'linked_devices_scan_reject_button': 'Reject',
+      // QR scanner switch page (Switch to Web)
+      'qr_switch_scanner_hint': 'Read the code on the opposite side to login',
+      'qr_switch_title': 'Switch to Web',
+      'qr_switch_subtitle':
+          'You can use your account on the web securely and easily.',
+      'qr_switch_step_open_web': '- Open the website from the web browser',
+      'qr_switch_step_choose_login': '- Choose login via code scanning',
+      'qr_switch_step_read_code':
+          '- Read the code on the opposite side from here',
+      'qr_switch_privacy_safe': 'Your privacy is completely safe',
+      'qr_login_dialog_title': 'Log in to web — {browser} on {os}',
+      'qr_login_dialog_expires': 'This login request expires at {time}.',
+      'qr_login_dialog_location_warning':
+          '⚠️ This computer appears to be in {webCity}, but your phone is in {appCity}. Approve only if this is you.',
       'select_language': 'Select Language',
       'about': 'About',
       'about_us': 'About Us',
@@ -459,6 +473,18 @@ class AppStrings {
       'linked_devices_scan_button': 'مسح رمز QR',
       'linked_devices_scan_approve_button': 'الموافقة',
       'linked_devices_scan_reject_button': 'رفض',
+      // QR scanner switch page (Switch to Web)
+      'qr_switch_scanner_hint': 'امسح الرمز الموجود على الجهة المقابلة لتسجيل الدخول',
+      'qr_switch_title': 'التبديل إلى الويب',
+      'qr_switch_subtitle': 'يمكنك استخدام حسابك على الويب بأمان وسهولة.',
+      'qr_switch_step_open_web': '- افتح الموقع من متصفح الويب',
+      'qr_switch_step_choose_login': '- اختر تسجيل الدخول عبر مسح الرمز',
+      'qr_switch_step_read_code': '- امسح الرمز الموجود على الجهة المقابلة من هنا',
+      'qr_switch_privacy_safe': 'خصوصيتك آمنة تمامًا',
+      'qr_login_dialog_title': 'تسجيل الدخول إلى الويب — {browser} على {os}',
+      'qr_login_dialog_expires': 'تنتهي صلاحية طلب تسجيل الدخول هذا في {time}.',
+      'qr_login_dialog_location_warning':
+          '⚠️ يبدو أن هذا الكمبيوتر في {webCity}، لكن هاتفك في {appCity}. وافق فقط إذا كان هذا أنت.',
       'select_language': 'اختر اللغة',
       'about': 'حول',
       'about_us': 'من نحن',
@@ -837,6 +863,21 @@ class AppStrings {
       'linked_devices_scan_hint':
           'کۆدی QR لە ناو فریمەکە داخڵ بکە بۆ گرتنی ئامێرەکەت.',
       'linked_devices_scan_button': 'کۆدی QR بسکانێنە',
+      'linked_devices_scan_approve_button': 'پەسەندکردن',
+      'linked_devices_scan_reject_button': 'ڕەتکردنەوە',
+      // QR scanner switch page (Switch to Web)
+      'qr_switch_scanner_hint': 'کۆدی لای بەرامبەر بخوێنەرەوە بۆ چوونەژوورەوە',
+      'qr_switch_title': 'گۆڕین بۆ وێب',
+      'qr_switch_subtitle':
+          'دەتوانیت بە ئاسانی و پارێزراوی هەژمارەکەت لەسەر وێب بەکاربهێنیت.',
+      'qr_switch_step_open_web': '- ماڵپەڕەکە لە وێبگەڕەوە بکەرەوە',
+      'qr_switch_step_choose_login': '- چوونەژوورەوە بە سکانکردنی کۆد هەڵبژێرە',
+      'qr_switch_step_read_code': '- کۆدی لای بەرامبەر لێرەوە بخوێنەرەوە',
+      'qr_switch_privacy_safe': 'تایبەتمەندیت بە تەواوی پارێزراوە',
+      'qr_login_dialog_title': 'چوونەژوورەوە بۆ وێب — {browser} لەسەر {os}',
+      'qr_login_dialog_expires': 'ئەم داواکاریی چوونەژوورەوەیە لە {time} بەسەردەچێت.',
+      'qr_login_dialog_location_warning':
+          '⚠️ وادیارە ئەم کۆمپیوتەرە لە {webCity}ـە، بەڵام مۆبایلەکەت لە {appCity}ـە. تەنها ئەگەر ئەمە تۆیت پەسەندی بکە.',
       'select_language': 'زمانی هەڵبژێرە',
       'about': 'دەربارەی',
       'about_us': 'دەربارەی ئێمە',
@@ -1222,6 +1263,21 @@ class AppStrings {
       'linked_devices_scan_hint':
           'Cihazınızı bağlamak için QR kodunu çerçeve içine yerleştirin.',
       'linked_devices_scan_button': 'QR Kodunu Tara',
+      'linked_devices_scan_approve_button': 'Onayla',
+      'linked_devices_scan_reject_button': 'Reddet',
+      // QR scanner switch page (Switch to Web)
+      'qr_switch_scanner_hint': 'Giriş yapmak için karşı taraftaki kodu okutun',
+      'qr_switch_title': 'Web\'e Geç',
+      'qr_switch_subtitle':
+          'Hesabınızı web üzerinde güvenli ve kolay bir şekilde kullanabilirsiniz.',
+      'qr_switch_step_open_web': '- Web sitesini tarayıcıdan açın',
+      'qr_switch_step_choose_login': '- Kod tarama ile girişi seçin',
+      'qr_switch_step_read_code': '- Karşı taraftaki kodu buradan okutun',
+      'qr_switch_privacy_safe': 'Gizliliğiniz tamamen güvende',
+      'qr_login_dialog_title': 'Web\'e giriş yap — {os} üzerinde {browser}',
+      'qr_login_dialog_expires': 'Bu giriş isteğinin süresi {time} tarihinde dolacak.',
+      'qr_login_dialog_location_warning':
+          '⚠️ Bu bilgisayar {webCity} konumunda görünüyor, ancak telefonunuz {appCity} konumunda. Yalnızca bu sizseniz onaylayın.',
       'select_language': 'Dili Seçin',
       'about': 'Hakkında',
       'about_us': 'Hakkımızda',
