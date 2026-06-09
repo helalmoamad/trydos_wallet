@@ -36,6 +36,9 @@ abstract class ApiPaths {
   static const String banks = '/banks';
 
   // ─── Authentication ───
+  /// Logout current session (POST). Success/failure only.
+  static const String authLogout = '/auth/logout';
+
   /// Scan QR token for web login approval (POST).
   /// Body: qrToken
   static const String qrScan = '/auth/qr/scan';
@@ -58,6 +61,11 @@ abstract class ApiPaths {
 
   /// Delete all sessions except current (requires current session header).
   static const String sessionsDeleteOthers = '/sessions/all/except-current';
+
+  /// Respond to a session/web login approval request (POST).
+  /// Body: { action: 'approve' | 'reject' }
+  static String sessionApprovalRespond(String requestId) =>
+      '/sessions/approval/${Uri.encodeComponent(requestId)}/respond';
 
   // ─── Bank Deposits ───
   /// Calculate deposit fees (POST).

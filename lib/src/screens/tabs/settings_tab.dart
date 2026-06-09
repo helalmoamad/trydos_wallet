@@ -1,6 +1,3 @@
-import 'dart:io';
-
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -22,20 +19,6 @@ class SettingsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String deviceId = '';
-
-    Future<String?> getDeviceId() async {
-      var deviceInfo = DeviceInfoPlugin();
-      if (Platform.isIOS) {
-        var iosDeviceInfo = await deviceInfo.iosInfo;
-        return iosDeviceInfo.identifierForVendor;
-      } else if (Platform.isAndroid) {
-        AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-        return '${androidInfo.id}_${androidInfo.model}';
-      }
-      return 'other_os';
-    }
-
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
         final isVerified = state.isVerified;
@@ -284,27 +267,6 @@ class SettingsTab extends StatelessWidget {
                           ),
 
                           SizedBox(height: 5.h, width: 1.sw),
-                          InkWell(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => LinkedDevicesPage(
-                                    languageCode: state.languageCode,
-                                  ),
-                                ),
-                              );
-                            },
-                            child: _actionWidget(
-                              TrydosWalletAssets.qr,
-                              AppStrings.get(
-                                state.languageCode,
-                                'linked_devices',
-                              ),
-                              context,
-                            ),
-                          ),
-
-                          SizedBox(height: 5.h, width: 1.sw),
                           _actionWidget(
                             TrydosWalletAssets.terms,
                             AppStrings.get(
@@ -348,49 +310,30 @@ class SettingsTab extends StatelessWidget {
                           SizedBox(height: 5.h, width: 1.sw),
                           BlocListener<WalletBloc, WalletState>(
                             listenWhen: (previous, current) =>
-                                previous.deleteSessionStatus !=
-                                current.deleteSessionStatus,
+                                previous.logoutStatus != current.logoutStatus,
                             listener: (context, state) {
-                              if (state.deleteSessionStatus ==
-                                  WalletStatus.success) {
+                              if (state.logoutStatus == WalletStatus.success) {
                                 TrydosWallet.logout();
+                              } else if (state.logoutStatus ==
+                                  WalletStatus.failure) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      state.logoutErrorMessage ??
+                                          AppStrings.get(
+                                            state.languageCode,
+                                            'logout',
+                                          ),
+                                    ),
+                                  ),
+                                );
                               }
                             },
                             child: BlocBuilder<WalletBloc, WalletState>(
                               buildWhen: (previous, current) =>
-                                  previous.deleteSessionStatus !=
-                                      current.deleteSessionStatus ||
-                                  previous.activeSessionsStatus !=
-                                      current.activeSessionsStatus,
+                                  previous.logoutStatus != current.logoutStatus,
                               builder: (context, state) {
-                                getDeviceId().then((id) {
-                                  deviceId = id ?? '';
-                                });
-
-                                WalletSession activeSessions = state
-                                    .activeSessions
-                                    .firstWhere(
-                                      (session) =>
-                                          (session.platform == 'application' &&
-                                          session.deviceId == deviceId),
-                                      orElse: () => WalletSession(
-                                        id: '',
-                                        platform: '',
-                                        deviceName: '',
-                                        browser: '',
-                                        os: '',
-                                        ipAddress: '',
-                                        deviceId: '',
-                                        lastActiveAt: null,
-                                        expiresAt: null,
-                                        status: '',
-                                        isCurrent: true,
-                                      ),
-                                    );
-                                print(
-                                  "*******************************${activeSessions.id}",
-                                );
-                                return state.deleteSessionStatus ==
+                                return state.logoutStatus ==
                                         WalletStatus.loading
                                     ? Shimmer.fromColors(
                                         baseColor: const Color(0xFFE4E4E4),
@@ -412,19 +355,8 @@ class SettingsTab extends StatelessWidget {
                                       )
                                     : InkWell(
                                         onTap: () async {
-                                          await getDeviceId().then((id) {
-                                            deviceId = id ?? '';
-                                          });
-                                          print(
-                                            "FFFFFFFFFFFFFFFFFFFFFFFFF${activeSessions.id} --- ${deviceId}",
-                                          );
-
-                                          // ignore: use_build_context_synchronously
                                           context.read<WalletBloc>().add(
-                                            WalletSessionDeleteRequested(
-                                              activeSessions.id,
-                                              true,
-                                            ),
+                                            const WalletLogoutRequested(),
                                           );
                                         },
                                         child: _actionWidget(

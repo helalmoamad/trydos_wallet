@@ -22,6 +22,7 @@ class WalletWebSocketService {
     'ledger:failed',
     'ledger:cancelled',
     'balance:updated',
+    'session:approval_request',
   };
 
   static const String _namespace = '/wallet';
@@ -34,12 +35,29 @@ class WalletWebSocketService {
   final bool allowBadCertificate;
 
   sio.Socket? _socket;
+  bool _disposed = false;
 
   bool get isConnected => _socket?.connected ?? false;
 
   void connect() {
+    /*  print('Connecting to wallet WebSocket with token:000000000000000 $token');
+    Future.delayed(const Duration(seconds: 10), () {
+      print('Connecting to wallet WebSocket with token:111111111 $token');
+      onTrackedEvent("session:approval_request", {
+        'id': 'example',
+        'title': 'Example Device',
+        'subtitle': 'Flutter SDK Demo',
+        'description':
+            'Approve this login to see realtime events in the demo app.',
+        'expiresAt': DateTime.now().add(const Duration(minutes: 5)),
+      });
+    });*/
     if (token.trim().isEmpty) return;
     if (_socket != null && _socket!.connected) return;
+
+    // Re-arm after a previous disconnect so reconnection on the same instance
+    // (e.g. WalletReconnectWebSocketRequested) delivers events again.
+    _disposed = false;
 
     if (allowBadCertificate) {
       _applyBadCertificateOverride();
@@ -48,8 +66,8 @@ class WalletWebSocketService {
     final base = _normalizeBase(baseUrl);
 
     final options = sio.OptionBuilder()
-        // Prefer websocket, but allow polling fallback when backend/proxy
-        // rejects direct websocket handshakes.
+        // WebSocket only: lowest latency for realtime updates, no polling
+        // overhead. (No transport fallback is configured.)
         .setTransports(["websocket"])
         .setPath(_socketPath)
         .enableForceNew()
@@ -58,7 +76,11 @@ class WalletWebSocketService {
         .setAuth({'token': token.trim()})
         .enableReconnection()
         .setReconnectionAttempts(10)
+        // Exponential-ish backoff with jitter to avoid a reconnect stampede
+        // when the server restarts and every client retries at once.
         .setReconnectionDelay(2000)
+        .setReconnectionDelayMax(30000)
+        .setRandomizationFactor(0.5)
         .setTimeout(10000)
         .build();
 
@@ -79,7 +101,8 @@ class WalletWebSocketService {
         onLog('Connect error: $err');
         if (err.toString().contains('was not upgraded to websocket')) {
           onLog(
-            'WebSocket rejected by server/proxy, polling fallback will be used if available.',
+            'WebSocket rejected by server/proxy. No transport fallback is '
+            'configured (websocket-only); the client will keep retrying.',
           );
         }
       })
@@ -101,8 +124,14 @@ class WalletWebSocketService {
 
     for (final event in trackedEvents) {
       _socket!.on(event, (data) {
-        onLog('Event received: $event');
-        debugPrint('[WalletWS] Payload: $data');
+        // Ignore any in-flight callbacks that fire after disconnect().
+        if (_disposed) return;
+        // Per-event logging is debug-only: it runs on every realtime event and
+        // would otherwise allocate strings and flood logs in release builds.
+        if (kDebugMode) {
+          onLog('Event received: $event');
+          debugPrint('[WalletWS] Payload: $data');
+        }
         onTrackedEvent(event, data);
       });
     }
@@ -111,6 +140,10 @@ class WalletWebSocketService {
   }
 
   void disconnect() {
+    // Stop callbacks immediately so nothing fires for a disposed consumer,
+    // even if a socket event is already queued on the event loop.
+    _disposed = true;
+    _socket?.clearListeners();
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;

@@ -18,6 +18,7 @@ export 'transfer_verify_result/transfer_verify_result.dart';
 export 'payment_request/payment_request_models.dart';
 export 'qr_login_request/qr_login_request.dart';
 export 'session/session.dart';
+export 'session_approval_request/session_approval_request.dart';
 export 'enums/payment_request_status.dart';
 export 'kyc/kyc_analyze_id_response.dart';
 export 'kyc/kyc_liveness_response.dart';

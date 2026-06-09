@@ -28,4 +28,15 @@ class SessionsApiService {
       fromJson: (_) {},
     );
   }
+
+  /// الرد على طلب موافقة تسجيل دخول جلسة. يهمنا فقط نجاح أو فشل الطلب.
+  Future<ApiResult<void>> respondToApproval({
+    required String requestId,
+    required bool approve,
+  }) {
+    return _client.post<void>(
+      ApiPaths.sessionApprovalRespond(requestId),
+      data: {'action': approve ? 'approve' : 'reject'},
+    );
+  }
 }

@@ -3,6 +3,11 @@
 class AppStrings {
   static const Map<String, Map<String, String>> _strings = {
     'en': {
+      // Session approval (push)
+      'session_approval_title': 'Approve login from {source}?',
+      'session_approval_hint': 'Approve only if this is you.',
+      'session_approval_expires_in': 'Expires in {time}',
+      'session_approval_expired': 'Request expired',
       // Home Tab
       'home_title': 'Home',
       'web': 'Web',
@@ -379,6 +384,11 @@ class AppStrings {
           'Please check your internet connection and make sure you are connected to Wi-Fi or mobile data.',
     },
     'ar': {
+      // Session approval (push)
+      'session_approval_title': 'الموافقة على تسجيل الدخول من {source}؟',
+      'session_approval_hint': 'وافق فقط إذا كان هذا أنت.',
+      'session_approval_expires_in': 'تنتهي خلال {time}',
+      'session_approval_expired': 'انتهت صلاحية الطلب',
       // Home Tab
       'home_title': 'الرئيسية',
       'linked_devices_no_active_sessions': 'لا توجد جلسات نشطة',
@@ -751,6 +761,11 @@ class AppStrings {
           'يرجى التحقق من اتصالك بالإنترنت والتأكد من اتصالك بشبكة Wi-Fi أو بيانات الجوال.',
     },
     'ku': {
+      // Session approval (push)
+      'session_approval_title': 'پەسەندکردنی چوونەژوورەوە لە {source}؟',
+      'session_approval_hint': 'تەنها پەسەندی بکە ئەگەر ئەمە تۆ بیت.',
+      'session_approval_expires_in': 'کۆتایی دێت لە {time}',
+      'session_approval_expired': 'داواکارییەکە بەسەرچوو',
       // Home Tab
       'home_title': 'سەرەتا',
       'web': 'وێب',
@@ -1131,6 +1146,11 @@ class AppStrings {
           'تکایە پەیوەندی ئینتەرنێتەکەت بپشکنە و دڵنیابە کە بە Wi-Fi یان داتای مۆبایل پەیوەندیت هەیە.',
     },
     'tr': {
+      // Session approval (push)
+      'session_approval_title': '{source} cihazından girişi onayla?',
+      'session_approval_hint': 'Yalnızca bu sizseniz onaylayın.',
+      'session_approval_expires_in': 'Süre: {time}',
+      'session_approval_expired': 'İstek süresi doldu',
       // Home Tab
       'home_title': 'Anasayfa',
       'web': 'ağ',

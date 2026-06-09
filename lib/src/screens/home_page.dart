@@ -15,6 +15,7 @@ import '../constent/styles.dart';
 import '../services/connectivity_service.dart';
 import 'no_internet_screen.dart';
 import 'tabs/tabs.dart';
+import 'widgets/home_page_widgets/session_approval_dialog.dart';
 
 /// Digital wallet home page.
 class TrydosWalletHomePage extends StatelessWidget {
@@ -90,36 +91,85 @@ class _TrydosWalletHomePageContentState
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<WalletBloc, WalletState>(
-      buildWhen: (prev, curr) => prev.languageCode != curr.languageCode,
-      builder: (context, state) {
-        return Directionality(
-          textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
-          child: Stack(
-            children: [
-              Scaffold(
-                backgroundColor: Colors.white,
-                body: SafeArea(
-                  child: IndexedStack(
-                    index: _selectedIndex,
-                    children: const [
-                      HomeTab(),
-                      WalletTab(),
-                      AddressesTab(),
-                      SettingsTab(),
-                    ],
-                  ),
-                ),
-                bottomNavigationBar: _buildBottomNav(context, state),
+    // Local listener: this page is always mounted while the library UI is shown
+    // (the welcome screen renders it behind the splash), so it reliably surfaces
+    // the push approval prompt using the library's own context — no host wiring
+    // of navigatorKey/ApiErrorListener required.
+    return BlocListener<WalletBloc, WalletState>(
+      listenWhen: (prev, curr) =>
+          (prev.sessionApprovalRequest != curr.sessionApprovalRequest &&
+              curr.sessionApprovalRequest != null) ||
+          (prev.sessionApprovalSuccessMessage !=
+                  curr.sessionApprovalSuccessMessage &&
+              curr.sessionApprovalSuccessMessage != null) ||
+          (prev.sessionApprovalStatus != curr.sessionApprovalStatus &&
+              curr.sessionApprovalStatus == WalletStatus.failure),
+      listener: (context, state) {
+        // A web/session login wants this device to confirm → prompt the user.
+        if (state.sessionApprovalRequest != null) {
+          showSessionApprovalDialog(context, context.read<WalletBloc>());
+          return;
+        }
+
+        // Responded successfully (dialog closes itself) → notify.
+        final successMessage = state.sessionApprovalSuccessMessage;
+        if (successMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(successMessage),
+              backgroundColor: const Color(0xFF1D1D1D),
+            ),
+          );
+          context.read<WalletBloc>().add(
+            const WalletSessionApprovalResetRequested(),
+          );
+          return;
+        }
+
+        // Respond failed → notify; keep the dialog open so the user can retry.
+        if (state.sessionApprovalStatus == WalletStatus.failure) {
+          final message = state.sessionApprovalErrorMessage;
+          if (message != null && message.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: const Color(0xFF1D1D1D),
               ),
-              if (_isOffline)
-                Positioned.fill(
-                  child: NoInternetScreen(languageCode: state.languageCode),
-                ),
-            ],
-          ),
-        );
+            );
+          }
+        }
       },
+      child: BlocBuilder<WalletBloc, WalletState>(
+        buildWhen: (prev, curr) => prev.languageCode != curr.languageCode,
+        builder: (context, state) {
+          return Directionality(
+            textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
+            child: Stack(
+              children: [
+                Scaffold(
+                  backgroundColor: Colors.white,
+                  body: SafeArea(
+                    child: IndexedStack(
+                      index: _selectedIndex,
+                      children: const [
+                        HomeTab(),
+                        WalletTab(),
+                        AddressesTab(),
+                        SettingsTab(),
+                      ],
+                    ),
+                  ),
+                  bottomNavigationBar: _buildBottomNav(context, state),
+                ),
+                if (_isOffline)
+                  Positioned.fill(
+                    child: NoInternetScreen(languageCode: state.languageCode),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -195,9 +245,11 @@ class _TrydosWalletHomePageContentState
             context.read<WalletBloc>().add(
               const WalletUserProfileRefreshRequested(),
             );
-            context.read<WalletBloc>().add(
-              const WalletActiveSessionsRequested(),
-            );
+
+            // Active sessions are no longer needed in settings.
+            // context.read<WalletBloc>().add(
+            //   const WalletActiveSessionsRequested(),
+            // );
           }
           setState(() => _selectedIndex = index);
         },

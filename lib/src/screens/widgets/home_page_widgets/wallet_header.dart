@@ -9,6 +9,7 @@ import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/qr_scanner_page.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/receive_modal.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/send_modal.dart';
+import 'package:trydos_wallet/src/screens/widgets/setting_widgets/qr_scanner_switch_widget.dart';
 import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
@@ -19,7 +20,39 @@ class WalletHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<WalletBloc, WalletState>(
+    Future<void> openQrScanner() async {
+      // The scanner owns the whole web-login flow: it dispatches the scan,
+      // shows a shimmer in place of the camera, reveals the approve/reject
+      // dialog on top once the scan resolves, and closes both layers when the
+      // action succeeds. Here we only surface a scan-time failure afterwards.
+      await showWalletModal<String>(
+        context: context,
+        builder: (_, __) => const QRScannerSwitchPage(appairBack: false),
+      );
+
+      if (!context.mounted) return;
+
+      final bloc = context.read<WalletBloc>();
+      if (bloc.state.qrScanStatus == WalletStatus.failure) {
+        final message = bloc.state.qrScanErrorMessage;
+        if (message != null && message.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                message,
+                style: context.textTheme.bodyMedium?.rq.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+              backgroundColor: const Color(0xFF1D1D1D),
+            ),
+          );
+        }
+        bloc.add(const WalletQrLoginResetRequested());
+      }
+    }
+
+    final headerContent = BlocBuilder<WalletBloc, WalletState>(
       buildWhen: (previous, current) =>
           previous.balanceCardIsSelected != current.balanceCardIsSelected ||
           previous.selectedAssetId != current.selectedAssetId,
@@ -44,9 +77,7 @@ class WalletHeader extends StatelessWidget {
                     const Spacer(),
                     SizedBox(
                       child: InkWell(
-                        onTap: () {
-                          emitSwitchEvent(SwitchEvent.switchEvent());
-                        },
+                        onTap: openQrScanner,
 
                         child: Column(
                           children: [
@@ -277,6 +308,36 @@ class WalletHeader extends StatelessWidget {
           ),
         );
       },
+    );
+
+    // QR web-login confirmation flow is only relevant in the settings header.
+    if (!fromSettings) {
+      return headerContent;
+    }
+
+    return BlocListener<WalletBloc, WalletState>(
+      listenWhen: (previous, current) =>
+          previous.qrActionSuccessMessage != current.qrActionSuccessMessage &&
+          current.qrActionSuccessMessage != null,
+      listener: (context, state) {
+        // Approve/Reject succeeded (dialog already closed itself) → notify.
+        final successMessage = state.qrActionSuccessMessage;
+        if (successMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                successMessage,
+                style: context.textTheme.bodyMedium?.rq.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+              backgroundColor: const Color(0xFF1D1D1D),
+            ),
+          );
+          context.read<WalletBloc>().add(const WalletQrLoginResetRequested());
+        }
+      },
+      child: headerContent,
     );
   }
 }

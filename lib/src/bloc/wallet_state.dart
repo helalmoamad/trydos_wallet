@@ -113,6 +113,14 @@ class WalletState {
     this.sessionActionStatus = WalletStatus.initial,
     this.sessionActionErrorMessage,
     this.sessionActionSuccessMessage,
+    // Logout
+    this.logoutStatus = WalletStatus.initial,
+    this.logoutErrorMessage,
+    // Session approval (push)
+    this.sessionApprovalRequest,
+    this.sessionApprovalStatus = WalletStatus.initial,
+    this.sessionApprovalErrorMessage,
+    this.sessionApprovalSuccessMessage,
   });
 
   final String languageCode;
@@ -239,6 +247,16 @@ class WalletState {
   final String? sessionActionErrorMessage;
   final String? sessionActionSuccessMessage;
 
+  // Logout
+  final WalletStatus logoutStatus;
+  final String? logoutErrorMessage;
+
+  // Session approval (push via WebSocket)
+  final SessionApprovalRequest? sessionApprovalRequest;
+  final WalletStatus sessionApprovalStatus;
+  final String? sessionApprovalErrorMessage;
+  final String? sessionApprovalSuccessMessage;
+
   /// RTL helper
   bool get isRtl => languageCode == 'ar' || languageCode == 'ku';
 
@@ -343,6 +361,12 @@ class WalletState {
     WalletStatus? sessionActionStatus,
     Object? sessionActionErrorMessage = _unset,
     Object? sessionActionSuccessMessage = _unset,
+    WalletStatus? logoutStatus,
+    Object? logoutErrorMessage = _unset,
+    Object? sessionApprovalRequest = _unset,
+    WalletStatus? sessionApprovalStatus,
+    Object? sessionApprovalErrorMessage = _unset,
+    Object? sessionApprovalSuccessMessage = _unset,
   }) {
     return WalletState(
       languageCode: languageCode ?? this.languageCode,
@@ -497,6 +521,21 @@ class WalletState {
       sessionActionSuccessMessage: sessionActionSuccessMessage == _unset
           ? this.sessionActionSuccessMessage
           : sessionActionSuccessMessage as String?,
+      logoutStatus: logoutStatus ?? this.logoutStatus,
+      logoutErrorMessage: logoutErrorMessage == _unset
+          ? this.logoutErrorMessage
+          : logoutErrorMessage as String?,
+      sessionApprovalRequest: sessionApprovalRequest == _unset
+          ? this.sessionApprovalRequest
+          : sessionApprovalRequest as SessionApprovalRequest?,
+      sessionApprovalStatus:
+          sessionApprovalStatus ?? this.sessionApprovalStatus,
+      sessionApprovalErrorMessage: sessionApprovalErrorMessage == _unset
+          ? this.sessionApprovalErrorMessage
+          : sessionApprovalErrorMessage as String?,
+      sessionApprovalSuccessMessage: sessionApprovalSuccessMessage == _unset
+          ? this.sessionApprovalSuccessMessage
+          : sessionApprovalSuccessMessage as String?,
     );
   }
 }

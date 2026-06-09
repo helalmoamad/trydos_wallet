@@ -30,6 +30,7 @@ export 'src/services/transactions_api_service.dart';
 export 'src/services/bank_deposits_api_service.dart';
 export 'src/services/media_api_service.dart';
 export 'src/services/transfers_api_service.dart';
+export 'src/services/auth_api_service.dart';
 export 'src/localization/localization.dart';
 export 'src/screens/widgets/api_error_listener.dart';
 export 'src/utils/ui_utils.dart';

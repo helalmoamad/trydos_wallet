@@ -19,8 +19,10 @@ import 'package:trydos_wallet/src/services/payment_requests_api_service.dart';
 import 'package:trydos_wallet/src/services/transfer_purposes_api_service.dart';
 import 'package:trydos_wallet/src/services/transactions_api_service.dart';
 import 'package:trydos_wallet/src/services/users_api_service.dart';
+import 'package:trydos_wallet/src/services/auth_api_service.dart';
 import 'package:trydos_wallet/src/services/wallet_websocket_service.dart';
 //////////////////////////////////////////////////////////////////////////
+import '../api/api_interceptors.dart';
 import '../config/trydos_wallet_config.dart';
 import 'wallet_event.dart';
 import 'wallet_state.dart';
@@ -41,6 +43,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     UsersApiService? usersApi,
     QrLoginApiService? qrLoginApiService,
     SessionsApiService? sessionsApi,
+    AuthApiService? authApi,
     WalletWebSocketService? walletWebSocketService,
     String? initialLanguage,
     String? firstName,
@@ -69,6 +72,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
        _usersApi = usersApi ?? UsersApiService(),
        _qrLoginApi = qrLoginApiService ?? QrLoginApiService(),
        _sessionsApi = sessionsApi ?? SessionsApiService(),
+       _authApi = authApi ?? AuthApiService(),
        _walletWebSocketService = walletWebSocketService,
        super(
          WalletState(
@@ -91,6 +95,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
          ),
        ) {
     on<WalletResetRequested>(_onResetRequested);
+    on<WalletLogoutRequested>(_onLogoutRequested);
     on<WalletReconnectWebSocketRequested>(_onReconnectWebSocketRequested);
     on<WalletLanguageChanged>(_onLanguageChanged);
     on<WalletRefreshAllRequested>(_onRefreshAllRequested);
@@ -113,6 +118,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletQrLoginResetRequested>(_onQrLoginResetRequested);
     on<WalletActiveSessionsRequested>(_onActiveSessionsRequested);
     on<WalletSessionDeleteRequested>(_onSessionDeleteRequested);
+    on<WalletSessionApprovalRequestReceived>(_onSessionApprovalRequestReceived);
+    on<WalletSessionApprovalResponded>(_onSessionApprovalResponded);
+    on<WalletSessionApprovalResetRequested>(_onSessionApprovalResetRequested);
     on<WalletKycAnalyzeIdRequested>(_onKycAnalyzeIdRequested);
     on<WalletKycAnalyzeIdResetRequested>(_onKycAnalyzeIdResetRequested);
     on<WalletKycLivenessRequested>(_onKycLivenessRequested);
@@ -137,6 +145,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       }
     });
 
+    // We only own (and therefore dispose) the socket when we created it.
+    // An injected one stays under the caller's control.
+    _ownsWebSocketService = _walletWebSocketService == null;
     _walletWebSocketService ??= _createDefaultWalletWebSocketService();
 
     _walletWebSocketService?.connect();
@@ -157,7 +168,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   final UsersApiService _usersApi;
   final QrLoginApiService _qrLoginApi;
   final SessionsApiService _sessionsApi;
+  final AuthApiService _authApi;
   WalletWebSocketService? _walletWebSocketService;
+  bool _ownsWebSocketService = false;
   StreamSubscription<TrydosWalletConfig>? _configSubscription;
 
   int _currenciesPage = 0;
@@ -178,28 +191,56 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       onLog: (message) {
         debugPrint('[WalletWS] $message');
       },
-      onTrackedEvent: (event, payload) {
-        debugPrint('[WalletWS] Event received: $event');
-        debugPrint('[WalletWS] Payload: $payload');
-        if (!isClosed && event == 'balance:updated' && payload is Map) {
-          add(WalletRealtimeBalanceUpdated(Map<String, dynamic>.from(payload)));
-        }
-        if (!isClosed && event.startsWith('ledger:') && payload is Map) {
-          add(
-            WalletRealtimeTransactionReceived(
-              event,
-              Map<String, dynamic>.from(payload),
-            ),
-          );
-        }
-      },
+      onTrackedEvent: _onRealtimeSocketEvent,
     );
+  }
+
+  /// Single entry point for realtime socket events. Guards against a closed
+  /// bloc and converts the payload safely (never throws) before dispatching.
+  void _onRealtimeSocketEvent(String event, dynamic payload) {
+    if (isClosed) return;
+
+    final data = _asStringKeyedMap(payload);
+    if (data == null) {
+      // Debug-only: surfaces unexpected payload shapes without crashing or
+      // flooding release logs on the realtime hot path.
+      if (kDebugMode) {
+        debugPrint(
+          '[WalletWS] Dropped "$event": payload is not a string-keyed map '
+          '(${payload.runtimeType}).',
+        );
+      }
+      return;
+    }
+
+    if (event == 'balance:updated') {
+      add(WalletRealtimeBalanceUpdated(data));
+    } else if (event.startsWith('ledger:')) {
+      add(WalletRealtimeTransactionReceived(event, data));
+    } else if (event == 'session:approval_request') {
+      add(WalletSessionApprovalRequestReceived(data));
+    }
+  }
+
+  /// Safely converts a socket payload to `Map<String, dynamic>`, returning
+  /// null (instead of throwing) when it isn't a map. Non-string keys are
+  /// coerced via [Object.toString] rather than crashing on a cast.
+  Map<String, dynamic>? _asStringKeyedMap(dynamic payload) {
+    if (payload is! Map) return null;
+    try {
+      return payload.map((key, value) => MapEntry(key.toString(), value));
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
   Future<void> close() {
     _configSubscription?.cancel();
-    _walletWebSocketService?.disconnect();
+    // Only tear down the socket we created; an injected one is the caller's.
+    if (_ownsWebSocketService) {
+      _walletWebSocketService?.disconnect();
+    }
     return super.close();
   }
 
@@ -207,10 +248,27 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     WalletReconnectWebSocketRequested event,
     Emitter<WalletState> emit,
   ) {
-    // Ensure socket is recreated when needed and force a clean reconnect.
-    _walletWebSocketService ??= _createDefaultWalletWebSocketService();
-    _walletWebSocketService?.disconnect();
-    _walletWebSocketService?.connect();
+    final currentToken = TrydosWallet.config.token?.trim() ?? '';
+    final service = _walletWebSocketService;
+
+    // Recreate the socket with the latest token when we own it and the token
+    // changed (e.g. refreshed during a long outage), so reconnection still
+    // authenticates. Otherwise a clean disconnect/connect on the same socket
+    // is enough. An injected socket is left to its caller.
+    final tokenChanged =
+        _ownsWebSocketService &&
+        service != null &&
+        service.token.trim() != currentToken;
+    if (service == null || tokenChanged) {
+      service?.disconnect();
+      _walletWebSocketService = _createDefaultWalletWebSocketService();
+      _ownsWebSocketService = true;
+      _walletWebSocketService?.connect();
+      return;
+    }
+
+    service.disconnect();
+    service.connect();
   }
 
   void _onResetRequested(
@@ -218,6 +276,31 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     Emitter<WalletState> emit,
   ) {
     emit(WalletState(languageCode: state.languageCode));
+  }
+
+  /// Logout - يهمنا فقط نجاح أو فشل الطلب.
+  Future<void> _onLogoutRequested(
+    WalletLogoutRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        logoutStatus: WalletStatus.loading,
+        logoutErrorMessage: null,
+      ),
+    );
+
+    final result = await _authApi.logout();
+    if (result.isSuccess) {
+      emit(state.copyWith(logoutStatus: WalletStatus.success));
+    } else {
+      emit(
+        state.copyWith(
+          logoutStatus: WalletStatus.failure,
+          logoutErrorMessage: result.errorMessage,
+        ),
+      );
+    }
   }
 
   void _onLanguageChanged(
@@ -253,9 +336,13 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       ),
     );
 
-    _walletWebSocketService?.disconnect();
-    _walletWebSocketService = _createDefaultWalletWebSocketService();
-    _walletWebSocketService?.connect();
+    // Reapply the new config to the socket only when we own it; an injected
+    // service is reconfigured by its caller.
+    if (_ownsWebSocketService) {
+      _walletWebSocketService?.disconnect();
+      _walletWebSocketService = _createDefaultWalletWebSocketService();
+      _walletWebSocketService?.connect();
+    }
 
     if (languageChanged) {
       add(const WalletRefreshAllRequested());
@@ -1097,9 +1184,12 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       );
       return;
     }
-    Future.delayed(const Duration(seconds: 1), () {
-      add(const WalletActiveSessionsRequested());
-    });
+    // Active sessions are no longer needed after approving a web sign-in.
+    // Future.delayed(const Duration(seconds: 1), () {
+    //   add(const WalletActiveSessionsRequested());
+    // });
+    // Web sign-in approved → notify host app to switch to the web session.
+    emitSwitchEvent(SwitchEvent.switchEvent());
     emit(
       state.copyWith(
         qrScanStatus: WalletStatus.initial,
@@ -1240,6 +1330,79 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         deleteSessionStatus: event.deleteCurrentSession == true
             ? WalletStatus.success
             : WalletStatus.initial,
+      ),
+    );
+  }
+
+  /// Session approval (push): a web/session login wants this device to confirm.
+  void _onSessionApprovalRequestReceived(
+    WalletSessionApprovalRequestReceived event,
+    Emitter<WalletState> emit,
+  ) {
+    final request = SessionApprovalRequest.fromJson(event.payload);
+    if (request.requestId.isEmpty) return;
+
+    emit(
+      state.copyWith(
+        sessionApprovalRequest: request,
+        sessionApprovalStatus: WalletStatus.initial,
+        sessionApprovalErrorMessage: null,
+        sessionApprovalSuccessMessage: null,
+      ),
+    );
+  }
+
+  /// User approved/rejected the pending session approval → call the API.
+  Future<void> _onSessionApprovalResponded(
+    WalletSessionApprovalResponded event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        sessionApprovalStatus: WalletStatus.loading,
+        sessionApprovalErrorMessage: null,
+      ),
+    );
+
+    final result = await _sessionsApi.respondToApproval(
+      requestId: event.requestId,
+      approve: event.approve,
+    );
+
+    if (result.isSuccess) {
+      // Approving a web/session login → tell the host app to switch.
+      if (event.approve) {
+        emitSwitchEvent(SwitchEvent.switchEvent());
+      }
+      emit(
+        state.copyWith(
+          sessionApprovalStatus: WalletStatus.success,
+          sessionApprovalRequest: null,
+          sessionApprovalSuccessMessage: event.approve
+              ? 'Web signed in successfully'
+              : 'Login declined',
+        ),
+      );
+    } else {
+      emit(
+        state.copyWith(
+          sessionApprovalStatus: WalletStatus.failure,
+          sessionApprovalErrorMessage: result.errorMessage,
+        ),
+      );
+    }
+  }
+
+  void _onSessionApprovalResetRequested(
+    WalletSessionApprovalResetRequested event,
+    Emitter<WalletState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        sessionApprovalRequest: null,
+        sessionApprovalStatus: WalletStatus.initial,
+        sessionApprovalErrorMessage: null,
+        sessionApprovalSuccessMessage: null,
       ),
     );
   }

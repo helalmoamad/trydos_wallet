@@ -29,6 +29,11 @@ class WalletResetRequested extends WalletEvent {
   const WalletResetRequested();
 }
 
+/// Auth - logout (success/failure only)
+class WalletLogoutRequested extends WalletEvent {
+  const WalletLogoutRequested();
+}
+
 /// Localization
 class WalletLanguageChanged extends WalletEvent {
   const WalletLanguageChanged(this.languageCode);
@@ -101,6 +106,27 @@ class WalletSessionDeleteRequested extends WalletEvent {
 
   final String sessionId;
   final bool? deleteCurrentSession;
+}
+
+/// Session approval (push via WebSocket: session:approval_request)
+class WalletSessionApprovalRequestReceived extends WalletEvent {
+  const WalletSessionApprovalRequestReceived(this.payload);
+  final Map<String, dynamic> payload;
+}
+
+/// User responded to a session approval request (approve/reject).
+class WalletSessionApprovalResponded extends WalletEvent {
+  const WalletSessionApprovalResponded({
+    required this.requestId,
+    required this.approve,
+  });
+  final String requestId;
+  final bool approve;
+}
+
+/// Clear the pending session approval (dismissed or expired).
+class WalletSessionApprovalResetRequested extends WalletEvent {
+  const WalletSessionApprovalResetRequested();
 }
 
 /// Balances
