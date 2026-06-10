@@ -9,7 +9,12 @@ class AuthApiService {
   final ApiClient _client;
 
   /// تسجيل الخروج (POST). يهمنا فقط نجاح أو فشل الطلب.
+  ///
+  /// يرسل الـ refreshToken الحالي في جسم الطلب كما يتطلبه الخادم.
   Future<ApiResult<void>> logout() {
-    return _client.post<void>(ApiPaths.authLogout);
+    return _client.post<void>(
+      ApiPaths.authLogout,
+      data: {'refreshToken': TrydosWallet.config.refreshToken},
+    );
   }
 }

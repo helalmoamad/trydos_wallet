@@ -12,6 +12,7 @@ class TrydosWalletConfig {
     required this.baseUrl,
     this.kycBaseUrl,
     this.token,
+    this.refreshToken,
     this.languageCode = 'ar',
     this.isKurdish = false,
     this.applicationVersion = '1.0.0',
@@ -37,6 +38,7 @@ class TrydosWalletConfig {
 
   final String baseUrl;
   final String? kycBaseUrl;
+  final String? refreshToken;
   final String? token;
   final String languageCode;
   final bool isKurdish;
@@ -64,6 +66,7 @@ class TrydosWalletConfig {
     languageCode: languageCode,
     clientIp: clientIp ?? '',
     isKurdish: isKurdish,
+
     applicationVersion: applicationVersion,
     token: token,
     isAndroid: Platform.isAndroid,
@@ -199,6 +202,7 @@ class TrydosWallet {
         applicationVersion: _config!.applicationVersion,
         debug: _config!.debug,
         firstName: _config!.firstName,
+        refreshToken: _config!.refreshToken,
         lastName: _config!.lastName,
         email: _config!.email,
         clientIp: _config!.clientIp,
@@ -231,6 +235,7 @@ class TrydosWallet {
         isKurdish: kurdish,
         applicationVersion: _config!.applicationVersion,
         debug: _config!.debug,
+        refreshToken: _config!.refreshToken,
         firstName: _config!.firstName,
         lastName: _config!.lastName,
         email: _config!.email,
@@ -260,6 +265,7 @@ class TrydosWallet {
     String? email,
     String? clientIp,
     String? phoneNumber,
+    String? refreshToken,
     String? profileImageUrl,
     String? userSubtitle,
     bool? isVerified,
@@ -282,6 +288,7 @@ class TrydosWallet {
         firstName: firstName ?? _config!.firstName,
         displayId: displayId ?? _config!.displayId,
         lastName: lastName ?? _config!.lastName,
+        refreshToken: refreshToken ?? _config!.refreshToken,
         email: email ?? _config!.email,
         phoneNumber: phoneNumber ?? _config!.phoneNumber,
         profileImageUrl: resolvedProfileImageUrl,
@@ -332,6 +339,7 @@ class TrydosWallet {
         baseUrl: _config!.baseUrl,
         kycBaseUrl: _config!.kycBaseUrl,
         token: _config!.token,
+        refreshToken: _config!.refreshToken,
         languageCode: _config!.languageCode,
         isKurdish: _config!.isKurdish,
         applicationVersion: _config!.applicationVersion,
