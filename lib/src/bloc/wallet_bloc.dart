@@ -121,14 +121,16 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletSessionApprovalRequestReceived>(_onSessionApprovalRequestReceived);
     on<WalletSessionApprovalResponded>(_onSessionApprovalResponded);
     on<WalletSessionApprovalResetRequested>(_onSessionApprovalResetRequested);
+    on<WalletKycStatusRequested>(_onKycStatusRequested);
+    on<WalletKycCurrentRequested>(_onKycCurrentRequested);
+    on<WalletKycSessionStartRequested>(_onKycSessionStartRequested);
+    on<WalletKycSessionResetRequested>(_onKycSessionResetRequested);
     on<WalletKycAnalyzeIdRequested>(_onKycAnalyzeIdRequested);
     on<WalletKycAnalyzeIdResetRequested>(_onKycAnalyzeIdResetRequested);
     on<WalletKycLivenessRequested>(_onKycLivenessRequested);
     on<WalletKycLivenessResetRequested>(_onKycLivenessResetRequested);
     on<WalletKycCompareFaceRequested>(_onKycCompareFaceRequested);
     on<WalletKycCompareFaceResetRequested>(_onKycCompareFaceResetRequested);
-    on<WalletKycSelfieUploadRequested>(_onKycSelfieUploadRequested);
-    on<WalletKycSelfieUploadResetRequested>(_onKycSelfieUploadResetRequested);
     on<BalanceCardIsSelected>(_onBalanceCardIsSelected);
     on<WalletDepositFeesRequested>(_onDepositFeesRequested);
     on<WalletDepositRequestsRequested>(_onDepositRequestsRequested);
@@ -152,6 +154,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
 
     _walletWebSocketService?.connect();
     add(const WalletUserProfileRefreshRequested());
+    add(const WalletKycStatusRequested());
   }
 
   final CurrenciesApiService _currenciesApi;
@@ -369,22 +372,10 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         .trim();
     final displayId = (data['displayId'] ?? '').toString().trim();
     final userType = (data['userType'] ?? '').toString().trim();
-    final kycVerification = data['kycVerification'];
-    final kycVerificationData = kycVerification is Map
-        ? Map<String, dynamic>.from(kycVerification)
-        : const <String, dynamic>{};
-    final verificationStatus = (kycVerificationData['status'] ?? '')
-        .toString()
-        .trim()
-        .toLowerCase();
-    final verificationStatusLabel = (kycVerificationData['statusLabel'] ?? '')
-        .toString()
-        .trim()
-        .toLowerCase();
-    final isVerified =
-        data['isVerified'] == true ||
-        verificationStatus == 'verified' ||
-        verificationStatusLabel == 'verified';
+    // NOTE: `isVerified` is intentionally NOT derived here. The dedicated
+    // `GET /api/kyc/status` endpoint (_onKycStatusRequested) is the single
+    // source of truth for the verified flag; omitting it from updateUserInfo
+    // preserves whatever the status request set.
     final isPhoneVerified = data['isPhoneVerified'] == true;
     final isTwoFactorEnabled = data['isTwoFactorEnabled'] == true;
     final isBlocked = data['isBlocked'] == true;
@@ -399,7 +390,6 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       phoneNumber: phoneNumber.isEmpty ? null : phoneNumber,
       profileImageUrl: profilePictureUrl,
       userSubtitle: userType.isEmpty ? null : userType,
-      isVerified: isVerified,
       isPhoneVerified: isPhoneVerified,
       isAccountActive: !isBlocked,
       isTwoFactorEnabled: isTwoFactorEnabled,
@@ -412,6 +402,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     WalletRefreshAllRequested event,
     Emitter<WalletState> emit,
   ) async {
+    add(const WalletKycStatusRequested());
     _currenciesPage = 0;
     _inFlightTransactionsPage = null;
     emit(
@@ -1461,6 +1452,129 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     return false;
   }
 
+  Future<void> _onKycStatusRequested(
+    WalletKycStatusRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(state.copyWith(kycStatusRequestStatus: WalletStatus.loading));
+
+    try {
+      final result = await _kycApi.getStatus();
+      if (result.isFailure || result.data == null) {
+        emit(state.copyWith(kycStatusRequestStatus: WalletStatus.failure));
+        return;
+      }
+
+      final data = result.data!;
+      emit(
+        state.copyWith(
+          kycStatusRequestStatus: WalletStatus.success,
+          kycVerificationStatus: data.status,
+          kycStatusLabel: data.statusLabel,
+          kycRejectionReason: data.rejectionReason,
+        ),
+      );
+
+      // The status endpoint is the backend source of truth for the verified
+      // badge — keep the global verified flag in sync.
+      if (data.isVerified != state.isVerified) {
+        TrydosWallet.updateUserInfo(isVerified: data.isVerified);
+      }
+    } catch (_) {
+      emit(state.copyWith(kycStatusRequestStatus: WalletStatus.failure));
+    }
+  }
+
+  Future<void> _onKycCurrentRequested(
+    WalletKycCurrentRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    // Only meaningful for verified users (the caller already gates on this,
+    // but guard here too to avoid a needless authed call).
+    if (!state.isVerified) {
+      return;
+    }
+
+    emit(state.copyWith(kycCurrentStatus: WalletStatus.loading));
+
+    try {
+      final result = await _kycApi.getCurrent();
+      if (result.isFailure || result.data == null) {
+        emit(state.copyWith(kycCurrentStatus: WalletStatus.failure));
+        return;
+      }
+
+      emit(
+        state.copyWith(
+          kycCurrentStatus: WalletStatus.success,
+          kycCurrentRecord: result.data,
+        ),
+      );
+    } catch (_) {
+      emit(state.copyWith(kycCurrentStatus: WalletStatus.failure));
+    }
+  }
+
+  Future<void> _onKycSessionStartRequested(
+    WalletKycSessionStartRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        kycSessionStatus: WalletStatus.loading,
+        kycSessionErrorMessage: null,
+      ),
+    );
+
+    try {
+      final result = await _kycApi.startSession();
+
+      if (result.isFailure ||
+          result.data == null ||
+          result.data!.sessionId.isEmpty) {
+        emit(
+          state.copyWith(
+            kycSessionStatus: WalletStatus.failure,
+            kycSessionErrorMessage:
+                result.errorMessage ?? 'Failed to start KYC session',
+          ),
+        );
+        return;
+      }
+
+      final data = result.data!;
+      emit(
+        state.copyWith(
+          kycSessionStatus: WalletStatus.success,
+          kycSessionId: data.sessionId,
+          kycSessionExpiresAt: data.expiresAtDate,
+          kycSessionErrorMessage: null,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          kycSessionStatus: WalletStatus.failure,
+          kycSessionErrorMessage: e.toString(),
+        ),
+      );
+    }
+  }
+
+  void _onKycSessionResetRequested(
+    WalletKycSessionResetRequested event,
+    Emitter<WalletState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        kycSessionStatus: WalletStatus.initial,
+        kycSessionId: null,
+        kycSessionExpiresAt: null,
+        kycSessionErrorMessage: null,
+      ),
+    );
+  }
+
   Future<void> _onKycAnalyzeIdRequested(
     WalletKycAnalyzeIdRequested event,
     Emitter<WalletState> emit,
@@ -1527,47 +1641,14 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       final data = result.data!;
 
       if (data.isSuccess) {
+        // Write the cropped crop back to the file so the UI can preview it.
         final croppedImageData = data.croppedImageData;
         if (croppedImageData != null && croppedImageData.isNotEmpty) {
           await _writeBase64ToFile(croppedImageData, event.imagePath);
         }
 
-        // Upload the (possibly cropped) image to media server
-        final uploadResult = await _mediaApi.uploadDirect(
-          filePath: event.imagePath,
-          type: 'image',
-          metadata: {'purpose': 'kyc'},
-        );
-
-        if (uploadResult.isFailure || uploadResult.data == null) {
-          final uploadError = uploadResult.errorMessage ?? 'Upload failed';
-          final isNetworkErr = _isNetworkDioError(uploadResult.error);
-          emit(
-            state.copyWith(
-              kycFrontAnalyzeStatus: isFront
-                  ? WalletStatus.failure
-                  : state.kycFrontAnalyzeStatus,
-              kycBackAnalyzeStatus: isFront
-                  ? state.kycBackAnalyzeStatus
-                  : WalletStatus.failure,
-              kycFrontAnalyzeErrorMessage: isFront
-                  ? uploadError
-                  : state.kycFrontAnalyzeErrorMessage,
-              kycBackAnalyzeErrorMessage: isFront
-                  ? state.kycBackAnalyzeErrorMessage
-                  : uploadError,
-              kycFrontAnalyzeIsNetworkError: isFront
-                  ? isNetworkErr
-                  : state.kycFrontAnalyzeIsNetworkError,
-              kycBackAnalyzeIsNetworkError: isFront
-                  ? state.kycBackAnalyzeIsNetworkError
-                  : isNetworkErr,
-              kycExtractedData: isFront ? null : state.kycExtractedData,
-            ),
-          );
-          return;
-        }
-
+        // No separate media upload: the new submit sends the cropped data URL
+        // directly (the Worker uploads it server-side).
         emit(
           state.copyWith(
             kycFrontAnalyzeStatus: isFront
@@ -1595,12 +1676,13 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
             kycBackAnalyzeErrorMessage: isFront
                 ? state.kycBackAnalyzeErrorMessage
                 : null,
-            kycFrontImageUrl: isFront
-                ? uploadResult.data!.url
-                : state.kycFrontImageUrl,
-            kycBackImageUrl: isFront
-                ? state.kycBackImageUrl
-                : uploadResult.data!.url,
+            // The cropped data URL is what gets sent at submit.
+            kycFrontImageData: isFront
+                ? (croppedImageData ?? state.kycFrontImageData)
+                : state.kycFrontImageData,
+            kycBackImageData: isFront
+                ? state.kycBackImageData
+                : (croppedImageData ?? state.kycBackImageData),
           ),
         );
         return;
@@ -1678,8 +1760,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         kycBackAnalyzeErrorMessage: null,
         kycFrontAnalyzeIsNetworkError: false,
         kycBackAnalyzeIsNetworkError: false,
-        kycFrontImageUrl: null,
-        kycBackImageUrl: null,
+        kycFrontImageData: null,
+        kycBackImageData: null,
       ),
     );
   }
@@ -1724,6 +1806,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           state.copyWith(
             kycLivenessStatus: WalletStatus.success,
             selfieImageData: data.faceImageData,
+            kycLivenessConfidence: data.metrics?.confidence,
             kycLivenessErrorMessage: null,
           ),
         );
@@ -1756,55 +1839,6 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         kycLivenessStatus: WalletStatus.initial,
         selfieImageData: null,
         kycLivenessErrorMessage: null,
-        kycSelfieUploadStatus: WalletStatus.initial,
-        kycSelfieImageUrl: null,
-        kycSelfieUploadErrorMessage: null,
-      ),
-    );
-  }
-
-  Future<void> _onKycSelfieUploadRequested(
-    WalletKycSelfieUploadRequested event,
-    Emitter<WalletState> emit,
-  ) async {
-    emit(
-      state.copyWith(
-        kycSelfieUploadStatus: WalletStatus.loading,
-        kycSelfieUploadErrorMessage: null,
-      ),
-    );
-    final result = await _mediaApi.uploadDirect(
-      filePath: event.imagePath,
-      type: 'image',
-      metadata: {'purpose': 'kyc'},
-    );
-    if (result.isSuccess && result.data != null) {
-      emit(
-        state.copyWith(
-          kycSelfieUploadStatus: WalletStatus.success,
-          kycSelfieImageUrl: result.data!.url,
-        ),
-      );
-    } else {
-      emit(
-        state.copyWith(
-          kycSelfieUploadStatus: WalletStatus.failure,
-          kycSelfieUploadErrorMessage:
-              result.errorMessage ?? 'Selfie upload failed',
-        ),
-      );
-    }
-  }
-
-  void _onKycSelfieUploadResetRequested(
-    WalletKycSelfieUploadResetRequested event,
-    Emitter<WalletState> emit,
-  ) {
-    emit(
-      state.copyWith(
-        kycSelfieUploadStatus: WalletStatus.initial,
-        kycSelfieImageUrl: null,
-        kycSelfieUploadErrorMessage: null,
       ),
     );
   }
@@ -1842,29 +1876,77 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       final data = result.data!;
 
       if (data.isSuccess) {
-        /* final extracted = state.kycExtractedData;
+        // Face matched → submit is the terminal step (video interview removed).
+        final extracted = state.kycExtractedData;
+        final sessionId = state.kycSessionId;
+
+        // A fresh single-use session is mandatory to submit.
+        if (sessionId == null || sessionId.isEmpty) {
+          emit(
+            state.copyWith(
+              kycCompareFaceStatus: WalletStatus.failure,
+              kycCompareFaceErrorMessage:
+                  'Missing verification session. Please restart.',
+              kycCompareFaceErrorCode: 'NO_SESSION',
+            ),
+          );
+          return;
+        }
+
+        // Guard against sending empty image payloads — the backend's document
+        // upload step fails (502) on empty/missing images.
+        final frontImg = state.kycFrontImageData ?? '';
+        final selfieImg = state.selfieImageData ?? '';
+        if (frontImg.isEmpty || selfieImg.isEmpty) {
+          emit(
+            state.copyWith(
+              kycCompareFaceStatus: WalletStatus.failure,
+              kycCompareFaceErrorMessage:
+                  'Missing verification images. Please restart.',
+              kycCompareFaceErrorCode: 'MISSING_IMAGES',
+            ),
+          );
+          return;
+        }
+
         final fullName = (extracted?.name?.trim().isNotEmpty ?? false)
             ? extracted!.name!.trim()
             : '${TrydosWallet.config.firstName} ${TrydosWallet.config.lastName}'
                   .trim();
+        // Same value goes in both number fields so nationalIdNumber is never
+        // empty on the backend. Pick the first NON-EMPTY source (?? only
+        // guards null, not the empty string the OCR sometimes returns).
+        final nationalId =
+            [extracted?.nationalNumber, extracted?.documentNumber]
+                .map((e) => e?.trim() ?? '')
+                .firstWhere((e) => e.isNotEmpty, orElse: () => '');
+        final backImageData = state.kycBackImageData;
 
         final submitPayload = <String, dynamic>{
-          'kycSessionId': '001',
-          'timestamp': DateTime.now().millisecondsSinceEpoch,
-          'nonce': 'kyc_${DateTime.now().microsecondsSinceEpoch}',
-          'fullName': fullName,
-          'nationalityCountryId': extracted?.idName ?? '',
-          'documentType': extracted?.idType ?? 'national_id',
-          'nationalIdNumber':
-              extracted?.nationalNumber ?? extracted?.documentNumber ?? '',
-          'documentFrontImageUrl': state.kycFrontImageUrl ?? '',
-          'documentBackImageUrl': state.kycBackImageUrl ?? '',
-          'selfieImageUrl': state.kycSelfieImageUrl ?? '',
+          'kycSessionId': sessionId,
+          'frontImageData': frontImg,
+          // Omit for passports (no back side was captured).
+          if (backImageData != null && backImageData.isNotEmpty)
+            'backImageData': backImageData,
+          'selfieImageData': selfieImg,
           'selfieVsIdScore': data.matchScore ?? 0,
-          'documentExpiryDate': extracted?.expiryDate ?? '',
-        };*/
-        /* final submitResult = await _kycApi.submitKyc(payload: submitPayload);
-        if (submitResult.isFailure) {
+          if (state.kycLivenessConfidence != null)
+            'livenessConfidence': state.kycLivenessConfidence,
+          'extracted': {
+            'idType': extracted?.idType ?? '',
+            'country': extracted?.country ?? '',
+            'name': fullName,
+            'nationalNumber': nationalId,
+            'documentNumber': nationalId,
+            'birthday': extracted?.birthday ?? '',
+            'expiryDate': extracted?.expiryDate ?? '',
+          },
+        };
+
+        final submitResult = await _kycApi.submitKyc(payload: submitPayload);
+        // The single-use session is spent on a successful POST; clear it so any
+        // retry starts a fresh one.
+        if (submitResult.isFailure || submitResult.data == null) {
           emit(
             state.copyWith(
               kycCompareFaceStatus: WalletStatus.failure,
@@ -1874,13 +1956,47 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
             ),
           );
           return;
-        }*/
+        }
+
+        final body = submitResult.data!;
+        final kycRequest = body['kycRequest'] is Map
+            ? Map<String, dynamic>.from(body['kycRequest'] as Map)
+            : const <String, dynamic>{};
+        final decision = (kycRequest['status'] ?? '')
+            .toString()
+            .trim()
+            .toLowerCase();
+
+        // The backend is the source of truth. 'rejected' → failure (let the
+        // user restart with a new session); 'approved'/'pending' → success.
+        if (decision == 'rejected') {
+          final reason = (kycRequest['rejectionReason'] ?? '')
+              .toString()
+              .trim();
+          emit(
+            state.copyWith(
+              kycCompareFaceStatus: WalletStatus.failure,
+              kycCompareFaceErrorMessage: reason.isNotEmpty
+                  ? reason
+                  : 'Verification rejected',
+              kycCompareFaceErrorCode: 'REJECTED',
+              kycSessionId: null,
+              kycSessionStatus: WalletStatus.initial,
+            ),
+          );
+          return;
+        }
 
         emit(
           state.copyWith(
             kycCompareFaceStatus: WalletStatus.success,
             kycCompareFaceErrorMessage: null,
             kycCompareFaceErrorCode: null,
+            kycVerificationStatus: decision.isEmpty
+                ? state.kycVerificationStatus
+                : decision,
+            kycSessionId: null,
+            kycSessionStatus: WalletStatus.initial,
           ),
         );
       } else {

@@ -192,24 +192,21 @@ class SuccessIdCard extends StatelessWidget {
               context,
               lang,
               AppStrings.get(lang, 'kyc_id_type'),
-              _fallbackValue(
-                extracted?.idType ?? extracted?.idName,
-                'Personal Identity ID',
-              ),
+              _fallbackValue(extracted?.idType ?? extracted?.idName, ''),
             ),
             SizedBox(height: 5.h),
             _fieldInfo(
               context,
               lang,
               AppStrings.get(lang, 'kyc_country'),
-              _fallbackValue(extracted?.country, 'Syria'),
+              _fallbackValue(extracted?.country, ''),
             ),
             SizedBox(height: 5.h),
             _fieldInfo(
               context,
               lang,
               AppStrings.get(lang, 'kyc_name'),
-              _fallbackValue(fullName, 'De Bruijn'),
+              _fallbackValue(fullName, ''),
             ),
             SizedBox(height: 5.h),
             _fieldInfo(
@@ -217,8 +214,10 @@ class SuccessIdCard extends StatelessWidget {
               lang,
               AppStrings.get(lang, 'kyc_national_number'),
               _fallbackValue(
-                extracted?.nationalNumber ?? extracted?.documentNumber,
-                '09982111123332',
+                (extracted?.nationalNumber?.length ?? 0) > 1
+                    ? extracted?.nationalNumber
+                    : extracted?.documentNumber,
+                '',
               ),
             ),
             SizedBox(height: 5.h),
@@ -226,7 +225,7 @@ class SuccessIdCard extends StatelessWidget {
               context,
               lang,
               AppStrings.get(lang, 'kyc_birthday'),
-              _fallbackValue(extracted?.birthday, '01.01.1999'),
+              _fallbackValue(extracted?.birthday, ''),
             ),
             SizedBox(height: 5.h),
 

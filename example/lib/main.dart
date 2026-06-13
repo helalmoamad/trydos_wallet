@@ -16,12 +16,12 @@ void main() {
   TrydosWallet.init(
     TrydosWalletConfig(
       baseUrl: 'https://trydos_wallet_develop.ramaaz.dev/',
-      kycBaseUrl:
-          "https://kyc-ai-ramaaz-digital-banking.yazan-adnof.workers.dev/",
+      kycBaseUrl: "https://api.ramaaz-digital-bank.online/",
       //   "https://kyc-verification-ramaaz-digital-banking.yazan-adnof.workers.dev/",
       token:
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZDEyMDNiOTQxMjM4NWRmMWU5ZmIwYiIsImVtYWlsIjoicGhvbmVfOTYzOTM0MzMwODg5QHRyeWRvcy1vdHAubG9jYWwiLCJ0eXBlIjoidXNlciIsImxhbmciOiJlbiIsImt5Y1N0YXR1cyI6Im5vdF9zdWJtaXR0ZWQiLCJ1c2VyVHlwZSI6InJlZ2lzdGVyZWQiLCJzZXNzaW9uSWQiOiI2YTI5MmIwNDI2ZGM1ZjhmNzdjMzg5NDQiLCJpYXQiOjE3ODEwODI4ODYsImV4cCI6MTc4MTA4MzE4NiwiYXVkIjoidHJ5ZG9zLXVzZXIiLCJpc3MiOiJ0cnlkb3Mtd2FsbGV0IiwianRpIjoiMDQyZmE4ZTAtYjE2Yi00NTAwLTkwMTMtNGM0ZjFlYjQ4YzNkIn0.eXf6KKtNPdmZWd20bPr_HX7AD0M9x2O6bXHFcNYXt70",
-      refreshToken: "dddddddddddddddddddddddddddddddddddd",
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZDEyMDNiOTQxMjM4NWRmMWU5ZmIwYiIsImVtYWlsIjoicGhvbmVfOTYzOTM0MzMwODg5QHRyeWRvcy1vdHAubG9jYWwiLCJ0eXBlIjoidXNlciIsImxhbmciOiJlbiIsImt5Y1N0YXR1cyI6InZlcmlmaWVkIiwidXNlclR5cGUiOiJyZWdpc3RlcmVkIiwic2Vzc2lvbklkIjoiNmEyYWZhYjZkN2I0NGUxODU5N2UzNWFlIiwiaWF0IjoxNzgxMzYxNzUyLCJleHAiOjE3ODEzNjIwNTIsImF1ZCI6InRyeWRvcy11c2VyIiwiaXNzIjoidHJ5ZG9zLXdhbGxldCIsImp0aSI6ImU4OGNiMGIwLWQxNzQtNDRhZC1hMGI2LWQxMWI3Nzk1ZmZhOSJ9.Ik-h2KD0mOL68LoslT53hJ_q_HZ6bn2yKjuyutywsx4",
+      refreshToken:
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZDEyMDNiOTQxMjM4NWRmMWU5ZmIwYiIsInR5cGUiOiJyZWZyZXNoIiwic2Vzc2lvbklkIjoiNmEyYWZhYjZkN2I0NGUxODU5N2UzNWFlIiwiaWF0IjoxNzgxMzUxMDI2LCJleHAiOjE3ODM5NDMwMjYsImF1ZCI6InRyeWRvcy11c2VyIiwiaXNzIjoidHJ5ZG9zLXdhbGxldCIsImp0aSI6ImJjMjM0ZmI4LWYwMGMtNGY3My04OWIxLWFmMWY1NzNmZjFlOSJ9.SWVsfUxBpmquTgIL-l0nuaBZvmkSGq99d5XCO0ISHzs",
       languageCode: 'en',
       isKurdish: false,
       applicationVersion: '1.0.0',

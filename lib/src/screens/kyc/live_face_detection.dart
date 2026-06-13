@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
-
 import 'package:camera/camera.dart';
+import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -387,65 +387,36 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
   Future<void> _completeLivenessSuccessfully() async {
     if (_isCompleted || _hasFailed) return;
 
-    final savedPath = await _saveApiFaceImageToFile(
-      _firstChallengeFaceImageData,
-    );
-    if (savedPath != null) {
-      _capturedSelfiePath = savedPath;
-    } else if (_firstChallengeSelfiePath != null) {
+    // Show the green success frame with the captured selfie immediately so the
+    // 3s hold below is always visible (don't gate it on the file save).
+    if (_firstChallengeSelfiePath != null) {
       _capturedSelfiePath = _firstChallengeSelfiePath;
     }
-
     if (!mounted) return;
-
     setState(() {
       _isCompleted = true;
       _progress = 1.0;
     });
 
-    final selfieToUpload = _capturedSelfiePath;
-    if (selfieToUpload != null && selfieToUpload.isNotEmpty) {
-      await _uploadSelfieAndAdvance(selfieToUpload);
-    } else {
-      // No image path available — advance without upload as fallback
-      if (!_didNotifySuccess && mounted) {
-        _didNotifySuccess = true;
-        widget.onSuccessTap?.call(_capturedSelfiePath ?? '');
-      }
+    // Persist the server-cropped face for downstream display, if available.
+    final savedPath = await _saveApiFaceImageToFile(
+      _firstChallengeFaceImageData,
+    );
+    if (savedPath != null && mounted) {
+      setState(() => _capturedSelfiePath = savedPath);
     }
-  }
 
-  Future<void> _uploadSelfieAndAdvance(String selfiePath) async {
-    if (!mounted) return;
-    final bloc = context.read<WalletBloc>();
-    bloc.add(const WalletKycSelfieUploadResetRequested());
-    bloc.add(WalletKycSelfieUploadRequested(imagePath: selfiePath));
+    // Deliberate manual wait: stay on the green selfie frame for 3s before
+    // moving to the face-match page. This replaces the pause that the (now
+    // removed) selfie upload used to provide. The selfie itself (the
+    // server-cropped liveness faceImageData in state.selfieImageData) is sent
+    // directly as a data URL at submit — no media upload is needed.
+    await Future.delayed(const Duration(seconds: 3));
 
-    try {
-      final uploadState = await bloc.stream.firstWhere(
-        (s) =>
-            s.kycSelfieUploadStatus == WalletStatus.success ||
-            s.kycSelfieUploadStatus == WalletStatus.failure,
-      );
-
-      if (!mounted) return;
-
-      if (uploadState.kycSelfieUploadStatus == WalletStatus.success) {
-        if (!_didNotifySuccess) {
-          _didNotifySuccess = true;
-          widget.onSuccessTap?.call(_capturedSelfiePath ?? '');
-        }
-      }
-      // On failure: UI shows retry via kycSelfieUploadStatus in builder
-    } catch (_) {
-      // Stream closed before upload completed
+    if (!_didNotifySuccess && mounted) {
+      _didNotifySuccess = true;
+      widget.onSuccessTap?.call(_capturedSelfiePath ?? '');
     }
-  }
-
-  Future<void> _retrySelfieUpload() async {
-    final selfieToUpload = _capturedSelfiePath;
-    if (selfieToUpload == null || selfieToUpload.isEmpty) return;
-    await _uploadSelfieAndAdvance(selfieToUpload);
   }
 
   Future<void> _failLiveness() async {
@@ -468,7 +439,6 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
     _capturedSelfiePath = null;
 
     context.read<WalletBloc>().add(const WalletKycLivenessResetRequested());
-    context.read<WalletBloc>().add(const WalletKycSelfieUploadResetRequested());
 
     if (!mounted) return;
 
@@ -491,9 +461,28 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
         return null;
       }
       final file = await _cameraController!.takePicture();
+      await _bakeImageOrientation(file.path);
       return file.path;
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Bakes the JPEG's EXIF orientation into the pixels so the image is upright
+  /// even for consumers that ignore EXIF (the server-side crop). Front-camera
+  /// captures otherwise come back rotated 90°, which would also skew the
+  /// face-match crop sent to compare-face/submit.
+  Future<void> _bakeImageOrientation(String path) async {
+    try {
+      final bytes = await File(path).readAsBytes();
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) return;
+      final baked = img.bakeOrientation(decoded);
+      await File(
+        path,
+      ).writeAsBytes(img.encodeJpg(baked, quality: 92), flush: true);
+    } catch (_) {
+      // Keep the original capture if processing fails.
     }
   }
 
@@ -893,23 +882,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                 SizedBox(height: 35.h),
               ],
             ] else ...[
-              if (state.kycSelfieUploadStatus == WalletStatus.failure) ...[
-                SizedBox(height: 10.h),
-                InkWell(
-                  highlightColor: Colors.transparent,
-                  splashColor: Colors.transparent,
-                  onTap: _retrySelfieUpload,
-                  child: Text(
-                    AppStrings.get(lang, 'kyc_incorrect_try_again'),
-                    style: context.textTheme.titleLarge?.rq.copyWith(
-                      color: const Color(0xffFF6B6B),
-                      letterSpacing: 0.14,
-                      height: 1.43,
-                      fontSize: 14.sp,
-                    ),
-                  ),
-                ),
-              ] else if (state.kycLivenessStatus == WalletStatus.failure) ...[
+              if (state.kycLivenessStatus == WalletStatus.failure) ...[
                 SizedBox(height: 10.h),
                 InkWell(
                   highlightColor: Colors.transparent,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
@@ -23,9 +25,53 @@ class ClientNamePage extends StatelessWidget {
 
   bool get _isRtl => languageCode == 'ar' || languageCode == 'ku';
 
+  /// Renders a document image from a network URL: a shimmer while loading,
+  /// the [fallback] asset on error/missing URL.
+  Widget _docImage({
+    required String? url,
+    required String fallback,
+    required double width,
+    required double height,
+  }) {
+    Widget shimmer() => Shimmer.fromColors(
+      baseColor: const Color(0xffE6E6E6),
+      highlightColor: const Color(0xffF7F7F7),
+      child: Container(
+        width: width,
+        height: height,
+        color: const Color(0xffEDEDED),
+      ),
+    );
+
+    Widget asset() => Image.asset(
+      fallback,
+      package: TrydosWalletStyles.packageName,
+      fit: BoxFit.cover,
+      width: width,
+      height: height,
+    );
+
+    if (url == null || url.isEmpty) return SizedBox.shrink();
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      width: width,
+      height: height,
+      loadingBuilder: (context, child, progress) =>
+          progress == null ? child : shimmer(),
+      errorBuilder: (context, error, stack) => asset(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final fullName = '${firstName.trim()} ${lastName.trim()}'.trim();
+
+    // Real uploaded document URLs from GET /api/kyc/current (verified users).
+    final record = context.watch<WalletBloc>().state.kycCurrentRecord;
+    final selfieUrl = record?.selfieImageUrl?.trim();
+    final frontUrl = record?.documentFrontImageUrl?.trim();
+    final backUrl = record?.documentBackImageUrl?.trim();
 
     return Directionality(
       textDirection: _isRtl ? TextDirection.rtl : TextDirection.ltr,
@@ -229,11 +275,10 @@ class ClientNamePage extends StatelessWidget {
                                             borderRadius: BorderRadius.circular(
                                               15.r,
                                             ),
-                                            child: Image.asset(
-                                              TrydosWalletPngAssets.personImage,
-                                              package: TrydosWalletStyles
-                                                  .packageName,
-                                              fit: BoxFit.cover,
+                                            child: _docImage(
+                                              url: selfieUrl,
+                                              fallback: TrydosWalletPngAssets
+                                                  .personImage,
                                               width: 105.w,
                                               height: 120.h,
                                             ),
@@ -247,34 +292,37 @@ class ClientNamePage extends StatelessWidget {
                                             borderRadius: BorderRadius.circular(
                                               15.r,
                                             ),
-                                            child: Image.asset(
-                                              TrydosWalletPngAssets.frontImage,
-                                              package: TrydosWalletStyles
-                                                  .packageName,
-                                              fit: BoxFit.cover,
+                                            child: _docImage(
+                                              url: frontUrl,
+                                              fallback: TrydosWalletPngAssets
+                                                  .frontImage,
                                               width: 190.w,
                                               height: 120.h,
                                             ),
                                           ),
                                         ),
-                                        SizedBox(width: 5.w),
-                                        SizedBox(
-                                          width: 190.w,
-                                          height: 120.h,
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              15.r,
-                                            ),
-                                            child: Image.asset(
-                                              TrydosWalletPngAssets.backImage,
-                                              package: TrydosWalletStyles
-                                                  .packageName,
-                                              fit: BoxFit.cover,
-                                              width: 190.w,
-                                              height: 120.h,
+                                        // Hide the back side entirely when the
+                                        // document has no back image (e.g.
+                                        // passport → documentBackImageUrl null).
+                                        if (backUrl != null &&
+                                            backUrl.isNotEmpty) ...[
+                                          SizedBox(width: 5.w),
+                                          SizedBox(
+                                            width: 190.w,
+                                            height: 120.h,
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(15.r),
+                                              child: _docImage(
+                                                url: backUrl,
+                                                fallback: TrydosWalletPngAssets
+                                                    .backImage,
+                                                width: 190.w,
+                                                height: 120.h,
+                                              ),
                                             ),
                                           ),
-                                        ),
+                                        ],
                                       ],
                                     ),
                                   ),

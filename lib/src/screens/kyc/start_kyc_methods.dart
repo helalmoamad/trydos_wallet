@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -7,13 +9,15 @@ import 'package:trydos_wallet/src/bloc/wallet_event.dart';
 import 'package:trydos_wallet/src/bloc/wallet_state.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/localization/app_strings.dart';
 import 'package:trydos_wallet/src/screens/kyc/id_matching_with_photo.dart';
 import 'package:trydos_wallet/src/screens/kyc/identity_verification.dart';
 import 'package:trydos_wallet/src/screens/kyc/live_face_detection.dart';
-import 'package:trydos_wallet/src/screens/kyc/start_video.dart';
+// Video interview disabled — imports kept commented for easy re-enable.
+// import 'package:trydos_wallet/src/screens/kyc/start_video.dart';
 import 'package:trydos_wallet/src/screens/kyc/success_id_card.dart';
 import 'package:trydos_wallet/src/screens/kyc/success_verification.dart';
-import 'package:trydos_wallet/src/screens/kyc/video_call_request.dart';
+// import 'package:trydos_wallet/src/screens/kyc/video_call_request.dart';
 import 'package:trydos_wallet/src/screens/home_page.dart';
 
 /// Digital wallet home page.
@@ -54,6 +58,8 @@ class _StartKycMethodsContent extends StatefulWidget {
 class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
   late final ValueNotifier<int> _pageContent;
   late final PageController _pageController;
+  Timer? _sessionExpiryTimer;
+  bool _sessionExpiredHandled = false;
   bool _isTransitioning = false;
   String? _frontImagePath;
   String? _backImagePath;
@@ -67,13 +73,78 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
     super.initState();
     _pageContent = ValueNotifier(0);
     _pageController = PageController();
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _scheduleSessionExpiry(),
+    );
   }
 
   @override
   void dispose() {
+    _sessionExpiryTimer?.cancel();
     _pageController.dispose();
     _pageContent.dispose();
     super.dispose();
+  }
+
+  /// Arms a timer against the session's `expiresAt`. When it fires the flow is
+  /// abandoned with a translated message (the single-use session is gone).
+  void _scheduleSessionExpiry() {
+    if (!mounted) return;
+    _sessionExpiryTimer?.cancel();
+    final expiresAt = context.read<WalletBloc>().state.kycSessionExpiresAt;
+    if (expiresAt == null) return;
+    final remaining = expiresAt.difference(DateTime.now());
+    if (remaining <= Duration.zero) {
+      _onSessionExpired();
+      return;
+    }
+    _sessionExpiryTimer = Timer(remaining, _onSessionExpired);
+  }
+
+  Future<void> _onSessionExpired() async {
+    if (!mounted || _sessionExpiredHandled) return;
+    _sessionExpiredHandled = true;
+    _sessionExpiryTimer?.cancel();
+
+    final bloc = context.read<WalletBloc>();
+    bloc.add(const WalletKycSessionResetRequested());
+    final lang = bloc.state.languageCode;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        content: Text(AppStrings.get(lang, 'kyc_session_expired')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(AppStrings.get(lang, 'ok')),
+          ),
+        ],
+      ),
+    );
+
+    _exitToHome();
+  }
+
+  /// Leaves the KYC flow back to the host's first route (or home as fallback).
+  void _exitToHome() {
+    if (!mounted) return;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    try {
+      if (navigator.canPop()) {
+        navigator.popUntil((route) => route.isFirst);
+      } else {
+        navigator.push(
+          MaterialPageRoute(builder: (_) => const TrydosWalletHomePage()),
+        );
+      }
+    } catch (_) {
+      Navigator.of(
+        context,
+        rootNavigator: true,
+      ).popUntil((route) => route.isFirst);
+    }
   }
 
   Future<void> _goToNextPage() async {
@@ -107,6 +178,9 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
     context.read<WalletBloc>().add(const WalletKycAnalyzeIdResetRequested());
     context.read<WalletBloc>().add(const WalletKycLivenessResetRequested());
     context.read<WalletBloc>().add(const WalletKycCompareFaceResetRequested());
+    // Restarting the flow needs a fresh single-use session — the previous one
+    // may have been spent (e.g. on a rejected submit).
+    context.read<WalletBloc>().add(const WalletKycSessionStartRequested());
     setState(() {
       _isTransitioning = false;
       _frontImagePath = null;
@@ -143,7 +217,17 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<WalletBloc, WalletState>(
+    return BlocConsumer<WalletBloc, WalletState>(
+      // A new session (e.g. after a restart) carries a fresh expiry — re-arm
+      // the timer and clear the handled flag so it can fire again.
+      listenWhen: (prev, curr) =>
+          prev.kycSessionExpiresAt != curr.kycSessionExpiresAt,
+      listener: (context, state) {
+        if (state.kycSessionExpiresAt != null) {
+          _sessionExpiredHandled = false;
+        }
+        _scheduleSessionExpiry();
+      },
       builder: (context, state) {
         final isRtl = state.languageCode == 'ar' || state.languageCode == 'ku';
         return Directionality(
@@ -185,11 +269,18 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
                           onSuccessTap: _onLivenessDone,
                         ),
                         IdMatchingWithPhoto(
+                          // Face match is now the terminal verification step.
+                          // On success it advances straight to SuccessVerification
+                          // (the video interview steps below are disabled).
                           onTapNextPage: _goToNextPage,
                           onMatchError: (_) => _goToFirstPageAndReset(),
                           selfiePath: _selfiePath,
                           frontIdPath: _frontImagePath,
                         ),
+                        // ── Video interview removed (KYC ends at face-match). ──
+                        // Kept commented (not deleted) per integration guide
+                        // "KYC_FLUTTER_INTEGRATION.md (No Video Interview)".
+                        /*
                         VideoCallRequest(
                           onTapNextPage: _goToNextPage,
                           onSkip: () {
@@ -219,6 +310,7 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
                           backIdPath: _backImagePath,
                         ),
                         StartVideo(onTapNextPage: _goToNextPage),
+                        */
                         SuccessVerification(
                           onDone: () {
                             final navigator = Navigator.of(

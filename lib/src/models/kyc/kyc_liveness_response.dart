@@ -85,6 +85,10 @@ class KycLivenessResponse {
   final String? challengeStep;
   final String? faceImageData;
   final KycLivenessMetrics? metrics;
+
+  /// Why the frame failed (e.g. too_dark, too_blurry, not_facing_camera,
+  /// eyes_closed, sunglasses_detected, no_face_detected). Null when live.
+  final String? reason;
   final int? timestamp;
 
   const KycLivenessResponse({
@@ -92,6 +96,7 @@ class KycLivenessResponse {
     this.challengeStep,
     this.faceImageData,
     this.metrics,
+    this.reason,
     this.timestamp,
   });
 
@@ -104,6 +109,7 @@ class KycLivenessResponse {
       metrics: metricsRaw is Map<String, dynamic>
           ? KycLivenessMetrics.fromJson(metricsRaw)
           : null,
+      reason: json['reason'] as String?,
       timestamp: json['timestamp'] as int?,
     );
   }
@@ -113,6 +119,7 @@ class KycLivenessResponse {
     if (challengeStep != null) 'challengeStep': challengeStep,
     if (faceImageData != null) 'faceImageData': faceImageData,
     if (metrics != null) 'metrics': metrics!.toJson(),
+    if (reason != null) 'reason': reason,
     if (timestamp != null) 'timestamp': timestamp,
   };
 }

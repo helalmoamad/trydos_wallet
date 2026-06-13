@@ -345,6 +345,11 @@ class AppStrings {
           'We Need To Verify Your Identity Once To Protect Your Account From Fraud And Comply With Security Regulations One-Time Process To Confirm That You. It Helps Keep Your Account Secure, Prevents Fraud, And Ensures Safe Transactions Just Like Showing Your ID When Opening A Bank Account.',
       'kyc_privacy_safe': 'Your Privacy Is Completely Safe',
       'kyc_start_verification': 'Start Verification',
+      'kyc_session_error': 'Could not start verification. Please try again.',
+      'kyc_under_review':
+          'Your verification is under review. We\'ll notify you once it\'s done.',
+      'kyc_session_expired':
+          'Your verification session has expired. Please start again.',
       'kyc_later_limited': 'Later, Use The Limited Version',
       'kyc_live_detection_id': 'Live Detection Your ID',
       'kyc_start_live_detection': 'Start Live Detection Your ID',
@@ -734,6 +739,9 @@ class AppStrings {
           'نحتاج إلى التحقق من هويتك مرة واحدة لحماية حسابك من الاحتيال والامتثال لأنظمة الأمان، وهي عملية لمرة واحدة لتأكيد هويتك. تساعد على إبقاء حسابك آمناً ومنع الاحتيال وضمان المعاملات الآمنة تماماً مثل تقديم هويتك عند فتح حساب مصرفي.',
       'kyc_privacy_safe': 'خصوصيتك آمنة تماماً',
       'kyc_start_verification': 'بدء التحقق',
+      'kyc_session_error': 'تعذّر بدء التحقق. يرجى المحاولة مرة أخرى.',
+      'kyc_under_review': 'عملية التحقق قيد المراجعة. سنُعلمك فور انتهائها.',
+      'kyc_session_expired': 'انتهت مدة جلسة التحقق. يرجى البدء من جديد.',
       'kyc_later_limited': 'لاحقاً، استخدم النسخة المحدودة',
       'kyc_live_detection_id': 'الكشف المباشر عن هويتك',
       'kyc_start_live_detection': 'بدء الكشف المباشر عن هويتك',
@@ -1130,6 +1138,12 @@ class AppStrings {
           'پێویستمانە ناسنامەت یەک جار پشتڕاست بکرێتەوە بۆ پاراستنی هەژمارەکەت لە خەڵەتکاری و پابەندبوون بە ڕێسا ئیمنیەتەکان، پرۆسەیەکی یەک جارانە بۆ دڵنیاکردنەوە لە ناسنامەکەت. یارمەتی دەدات هەژمارەکەت ئیمن بمێنێتەوە، خەڵەتکاری ڕابگرێت، و مامەڵە ئیمنەکان دڵنیا بکات.',
       'kyc_privacy_safe': 'نهێنیەکەت بە تەواوی ئیمنە',
       'kyc_start_verification': 'دەستپێکردنی پشتڕاستکردنەوە',
+      'kyc_session_error':
+          'نەتوانرا پشتڕاستکردنەوە دەست پێ بکات. تکایە دووبارە هەوڵ بدەرەوە.',
+      'kyc_under_review':
+          'پشتڕاستکردنەوەکەت لەژێر پێداچوونەوەدایە. کاتێک تەواو بوو ئاگادارت دەکەینەوە.',
+      'kyc_session_expired':
+          'کاتی دانیشتنی پشتڕاستکردنەوە بەسەرچوو. تکایە لە سەرەتاوە دەست پێ بکەرەوە.',
       'kyc_later_limited': 'دواتر، وەشانی سنوردارەکە بەکاربهێنە',
       'kyc_live_detection_id': 'کەشفی ڕاستەوخۆی ناسنامەکەت',
       'kyc_start_live_detection': 'دەستپێکردنی کەشفی ڕاستەوخۆی ناسنامەکەت',
@@ -1528,6 +1542,11 @@ class AppStrings {
           'Hesabınızı dolandırıcılıktan korumak ve güvenlik düzenlemelerine uymak için kimliğinizi yalnızca bir kez doğrulamamız gerekiyor. Bu, kimliğinizi onaylamak için tek seferlik bir işlemdir. Hesabınızın güvende kalmasına, dolandırıcılığın önlenmesine ve güvenli işlemler yapılmasına yardımcı olur.',
       'kyc_privacy_safe': 'Gizliliğiniz Tamamen Güvende',
       'kyc_start_verification': 'Doğrulamayı Başlat',
+      'kyc_session_error': 'Doğrulama başlatılamadı. Lütfen tekrar deneyin.',
+      'kyc_under_review':
+          'Doğrulamanız inceleniyor. Tamamlandığında sizi bilgilendireceğiz.',
+      'kyc_session_expired':
+          'Doğrulama oturumunuzun süresi doldu. Lütfen yeniden başlayın.',
       'kyc_later_limited': 'Daha Sonra, Sınırlı Sürümü Kullan',
       'kyc_live_detection_id': 'Kimliğinizi Canlı Tespit Et',
       'kyc_start_live_detection': 'Kimliğinizi Canlı Tespiti Başlat',

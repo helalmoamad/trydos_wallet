@@ -203,6 +203,27 @@ class WalletImageResetRequested extends WalletEvent {
   const WalletImageResetRequested();
 }
 
+/// KYC Status (current verification decision from the backend).
+/// Fetched on app launch and with every refresh.
+class WalletKycStatusRequested extends WalletEvent {
+  const WalletKycStatusRequested();
+}
+
+/// KYC Current (verified record details). Requested on entering settings,
+/// only when the user is verified.
+class WalletKycCurrentRequested extends WalletEvent {
+  const WalletKycCurrentRequested();
+}
+
+/// KYC Session (start a single-use onboarding session → sessionId + expiresAt)
+class WalletKycSessionStartRequested extends WalletEvent {
+  const WalletKycSessionStartRequested();
+}
+
+class WalletKycSessionResetRequested extends WalletEvent {
+  const WalletKycSessionResetRequested();
+}
+
 /// KYC ID Analyze (front/back)
 class WalletKycAnalyzeIdRequested extends WalletEvent {
   const WalletKycAnalyzeIdRequested({
@@ -248,16 +269,6 @@ class WalletKycCompareFaceRequested extends WalletEvent {
 
 class WalletKycCompareFaceResetRequested extends WalletEvent {
   const WalletKycCompareFaceResetRequested();
-}
-
-/// KYC Selfie Upload (after all liveness challenges succeed)
-class WalletKycSelfieUploadRequested extends WalletEvent {
-  const WalletKycSelfieUploadRequested({required this.imagePath});
-  final String imagePath;
-}
-
-class WalletKycSelfieUploadResetRequested extends WalletEvent {
-  const WalletKycSelfieUploadResetRequested();
 }
 
 class BalanceCardIsSelected extends WalletEvent {

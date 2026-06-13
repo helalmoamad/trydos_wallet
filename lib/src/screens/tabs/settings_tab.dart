@@ -200,49 +200,144 @@ class SettingsTab extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              Container(
-                                alignment: Alignment.center,
-                                margin: EdgeInsets.only(top: 12.h),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 12.w,
-                                  vertical: 10.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xffE0EDFF),
-                                  borderRadius: BorderRadius.circular(15.r),
-                                ),
-                                child: InkWell(
-                                  onTap: () {
+                              // Protect-now: starts a KYC session first; shows a
+                              // shimmer in place of the button while the request
+                              // is in flight, then opens the KYC flow on success.
+                              BlocConsumer<WalletBloc, WalletState>(
+                                listenWhen: (prev, curr) =>
+                                    prev.kycSessionStatus !=
+                                    curr.kycSessionStatus,
+                                listener: (context, state) {
+                                  if (state.kycSessionStatus ==
+                                      WalletStatus.success) {
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
                                         builder: (_) => const FirstPageKyc(),
                                       ),
                                     );
-                                  },
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      SvgPicture.asset(
-                                        TrydosWalletAssets.successVerification,
-                                        package: TrydosWalletStyles.packageName,
-                                        height: 15.h,
+                                  } else if (state.kycSessionStatus ==
+                                      WalletStatus.failure) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          state.kycSessionErrorMessage ??
+                                              AppStrings.get(
+                                                state.languageCode,
+                                                'kyc_session_error',
+                                              ),
+                                        ),
                                       ),
-                                      SizedBox(width: 10.w),
-                                      Text(
+                                    );
+                                  }
+                                },
+                                buildWhen: (prev, curr) =>
+                                    prev.kycSessionStatus !=
+                                        curr.kycSessionStatus ||
+                                    prev.kycVerificationStatus !=
+                                        curr.kycVerificationStatus ||
+                                    prev.languageCode != curr.languageCode,
+                                builder: (context, state) {
+                                  // Backend says the previous submission is still
+                                  // under review → no new session, just inform.
+                                  if (state.kycVerificationStatus ==
+                                      'pending') {
+                                    return Container(
+                                      alignment: Alignment.center,
+                                      margin: EdgeInsets.only(top: 12.h),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 12.w,
+                                        vertical: 10.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xffFFF4D6),
+                                        borderRadius: BorderRadius.circular(
+                                          15.r,
+                                        ),
+                                      ),
+                                      child: Text(
                                         AppStrings.get(
                                           state.languageCode,
-                                          'protect_verify_now',
+                                          'kyc_under_review',
                                         ),
+                                        textAlign: TextAlign.center,
                                         style: context.textTheme.bodyMedium?.mq
                                             .copyWith(
-                                              color: const Color(0xFF1D1D1D),
+                                              color: const Color(0xFF8A6D1B),
                                               fontSize: 11.sp,
                                               height: 1.1,
                                             ),
                                       ),
-                                    ],
-                                  ),
-                                ),
+                                    );
+                                  }
+                                  if (state.kycSessionStatus ==
+                                      WalletStatus.loading) {
+                                    return Shimmer.fromColors(
+                                      baseColor: const Color(0xFFE4E4E4),
+                                      highlightColor: const Color(0xFFF3F3F3),
+                                      child: Container(
+                                        margin: EdgeInsets.only(top: 12.h),
+                                        height: 40.h,
+                                        width: 1.sw,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xffE0EDFF),
+                                          borderRadius: BorderRadius.circular(
+                                            15.r,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return Container(
+                                    alignment: Alignment.center,
+                                    margin: EdgeInsets.only(top: 12.h),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 12.w,
+                                      vertical: 10.h,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xffE0EDFF),
+                                      borderRadius: BorderRadius.circular(15.r),
+                                    ),
+                                    child: InkWell(
+                                      onTap: () {
+                                        context.read<WalletBloc>().add(
+                                          const WalletKycSessionStartRequested(),
+                                        );
+                                      },
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          SvgPicture.asset(
+                                            TrydosWalletAssets
+                                                .successVerification,
+                                            package:
+                                                TrydosWalletStyles.packageName,
+                                            height: 15.h,
+                                          ),
+                                          SizedBox(width: 10.w),
+                                          Text(
+                                            AppStrings.get(
+                                              state.languageCode,
+                                              'protect_verify_now',
+                                            ),
+                                            style: context
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.mq
+                                                .copyWith(
+                                                  color: const Color(
+                                                    0xFF1D1D1D,
+                                                  ),
+                                                  fontSize: 11.sp,
+                                                  height: 1.1,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             ],
                           ),

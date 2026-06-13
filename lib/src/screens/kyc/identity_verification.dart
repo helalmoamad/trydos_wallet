@@ -62,6 +62,14 @@ class _IdentityVerificationState extends State<IdentityVerification> {
   String? _frontImagePath;
   String? _backImagePath;
   late final String _sessionHint;
+
+  /// Prefer the real KYC session id so the backend can correlate analyze calls
+  /// with the session; fall back to the stable local key before one exists.
+  String get _effectiveSessionHint {
+    final sid = context.read<WalletBloc>().state.kycSessionId;
+    return (sid != null && sid.isNotEmpty) ? sid : _sessionHint;
+  }
+
   WalletStatus _lastFrontAnalyzeStatus = WalletStatus.initial;
   WalletStatus _lastBackAnalyzeStatus = WalletStatus.initial;
 
@@ -500,7 +508,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
           WalletKycAnalyzeIdRequested(
             imagePath: xFile.path,
             side: 'front',
-            sessionHint: _sessionHint,
+            sessionHint: _effectiveSessionHint,
           ),
         );
       } else if (_step == _ScanStep.back) {
@@ -512,7 +520,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
           WalletKycAnalyzeIdRequested(
             imagePath: xFile.path,
             side: 'back',
-            sessionHint: _sessionHint,
+            sessionHint: _effectiveSessionHint,
           ),
         );
       }
@@ -541,7 +549,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
       WalletKycAnalyzeIdRequested(
         imagePath: imagePath,
         side: side == _ScanStep.front ? 'front' : 'back',
-        sessionHint: _sessionHint,
+        sessionHint: _effectiveSessionHint,
       ),
     );
   }

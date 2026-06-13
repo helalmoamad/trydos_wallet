@@ -41,6 +41,19 @@ class WalletState {
     this.uploadStatus = WalletStatus.initial,
     this.uploadUrl,
     this.uploadErrorMessage,
+    // KYC Status (backend verification decision)
+    this.kycStatusRequestStatus = WalletStatus.initial,
+    this.kycVerificationStatus,
+    this.kycStatusLabel,
+    this.kycRejectionReason,
+    // KYC Current (verified record details)
+    this.kycCurrentStatus = WalletStatus.initial,
+    this.kycCurrentRecord,
+    // KYC Session
+    this.kycSessionStatus = WalletStatus.initial,
+    this.kycSessionId,
+    this.kycSessionExpiresAt,
+    this.kycSessionErrorMessage,
     // KYC Analyze ID
     this.kycFrontAnalyzeStatus = WalletStatus.initial,
     this.kycBackAnalyzeStatus = WalletStatus.initial,
@@ -53,16 +66,14 @@ class WalletState {
     this.kycBackAnalyzeErrorMessage,
     this.kycFrontAnalyzeIsNetworkError = false,
     this.kycBackAnalyzeIsNetworkError = false,
-    // KYC Image Upload URLs
-    this.kycFrontImageUrl,
-    this.kycBackImageUrl,
+    // KYC Cropped image data URLs (sent directly at submit)
+    this.kycFrontImageData,
+    this.kycBackImageData,
     // KYC Selfie Upload
-    this.kycSelfieUploadStatus = WalletStatus.initial,
-    this.kycSelfieImageUrl,
-    this.kycSelfieUploadErrorMessage,
     // KYC Liveness
     this.kycLivenessStatus = WalletStatus.initial,
     this.selfieImageData,
+    this.kycLivenessConfidence,
     this.kycLivenessErrorMessage,
     // KYC Compare Face
     this.kycCompareFaceStatus = WalletStatus.initial,
@@ -181,6 +192,22 @@ class WalletState {
   final String? uploadUrl;
   final String? uploadErrorMessage;
 
+  // KYC Status (backend verification decision)
+  final WalletStatus kycStatusRequestStatus;
+  final String? kycVerificationStatus; // verified|pending|rejected|not_submitted
+  final String? kycStatusLabel;
+  final String? kycRejectionReason;
+
+  // KYC Current (verified record details)
+  final WalletStatus kycCurrentStatus;
+  final KycCurrentResponse? kycCurrentRecord;
+
+  // KYC Session
+  final WalletStatus kycSessionStatus;
+  final String? kycSessionId;
+  final DateTime? kycSessionExpiresAt;
+  final String? kycSessionErrorMessage;
+
   // KYC Analyze ID
   final WalletStatus kycFrontAnalyzeStatus;
   final WalletStatus kycBackAnalyzeStatus;
@@ -194,18 +221,15 @@ class WalletState {
   final bool kycFrontAnalyzeIsNetworkError;
   final bool kycBackAnalyzeIsNetworkError;
 
-  // KYC Image Upload URLs
-  final String? kycFrontImageUrl;
-  final String? kycBackImageUrl;
+  // KYC Cropped image data URLs (sent directly at submit)
+  final String? kycFrontImageData;
+  final String? kycBackImageData;
 
   // KYC Selfie Upload
-  final WalletStatus kycSelfieUploadStatus;
-  final String? kycSelfieImageUrl;
-  final String? kycSelfieUploadErrorMessage;
-
   // KYC Liveness
   final WalletStatus kycLivenessStatus;
   final String? selfieImageData;
+  final double? kycLivenessConfidence;
   final String? kycLivenessErrorMessage;
 
   // KYC Compare Face
@@ -300,6 +324,16 @@ class WalletState {
     bool? balanceCardIsSelected,
     String? uploadUrl,
     String? uploadErrorMessage,
+    WalletStatus? kycStatusRequestStatus,
+    Object? kycVerificationStatus = _unset,
+    Object? kycStatusLabel = _unset,
+    Object? kycRejectionReason = _unset,
+    WalletStatus? kycCurrentStatus,
+    Object? kycCurrentRecord = _unset,
+    WalletStatus? kycSessionStatus,
+    Object? kycSessionId = _unset,
+    Object? kycSessionExpiresAt = _unset,
+    Object? kycSessionErrorMessage = _unset,
     WalletStatus? kycFrontAnalyzeStatus,
     WalletStatus? kycBackAnalyzeStatus,
     Object? kycFrontImagePath = _unset,
@@ -311,13 +345,11 @@ class WalletState {
     Object? kycBackAnalyzeErrorMessage = _unset,
     bool? kycFrontAnalyzeIsNetworkError,
     bool? kycBackAnalyzeIsNetworkError,
-    Object? kycFrontImageUrl = _unset,
-    Object? kycBackImageUrl = _unset,
-    WalletStatus? kycSelfieUploadStatus,
-    Object? kycSelfieImageUrl = _unset,
-    Object? kycSelfieUploadErrorMessage = _unset,
+    Object? kycFrontImageData = _unset,
+    Object? kycBackImageData = _unset,
     WalletStatus? kycLivenessStatus,
     Object? selfieImageData = _unset,
+    Object? kycLivenessConfidence = _unset,
     Object? kycLivenessErrorMessage = _unset,
     WalletStatus? kycCompareFaceStatus,
     Object? kycCompareFaceErrorMessage = _unset,
@@ -407,6 +439,31 @@ class WalletState {
       uploadStatus: uploadStatus ?? this.uploadStatus,
       uploadUrl: uploadUrl ?? this.uploadUrl,
       uploadErrorMessage: uploadErrorMessage ?? this.uploadErrorMessage,
+      kycStatusRequestStatus:
+          kycStatusRequestStatus ?? this.kycStatusRequestStatus,
+      kycVerificationStatus: kycVerificationStatus == _unset
+          ? this.kycVerificationStatus
+          : kycVerificationStatus as String?,
+      kycStatusLabel: kycStatusLabel == _unset
+          ? this.kycStatusLabel
+          : kycStatusLabel as String?,
+      kycRejectionReason: kycRejectionReason == _unset
+          ? this.kycRejectionReason
+          : kycRejectionReason as String?,
+      kycCurrentStatus: kycCurrentStatus ?? this.kycCurrentStatus,
+      kycCurrentRecord: kycCurrentRecord == _unset
+          ? this.kycCurrentRecord
+          : kycCurrentRecord as KycCurrentResponse?,
+      kycSessionStatus: kycSessionStatus ?? this.kycSessionStatus,
+      kycSessionId: kycSessionId == _unset
+          ? this.kycSessionId
+          : kycSessionId as String?,
+      kycSessionExpiresAt: kycSessionExpiresAt == _unset
+          ? this.kycSessionExpiresAt
+          : kycSessionExpiresAt as DateTime?,
+      kycSessionErrorMessage: kycSessionErrorMessage == _unset
+          ? this.kycSessionErrorMessage
+          : kycSessionErrorMessage as String?,
       kycFrontAnalyzeStatus:
           kycFrontAnalyzeStatus ?? this.kycFrontAnalyzeStatus,
       kycBackAnalyzeStatus: kycBackAnalyzeStatus ?? this.kycBackAnalyzeStatus,
@@ -435,24 +492,19 @@ class WalletState {
           kycFrontAnalyzeIsNetworkError ?? this.kycFrontAnalyzeIsNetworkError,
       kycBackAnalyzeIsNetworkError:
           kycBackAnalyzeIsNetworkError ?? this.kycBackAnalyzeIsNetworkError,
-      kycFrontImageUrl: kycFrontImageUrl == _unset
-          ? this.kycFrontImageUrl
-          : kycFrontImageUrl as String?,
-      kycBackImageUrl: kycBackImageUrl == _unset
-          ? this.kycBackImageUrl
-          : kycBackImageUrl as String?,
-      kycSelfieUploadStatus:
-          kycSelfieUploadStatus ?? this.kycSelfieUploadStatus,
-      kycSelfieImageUrl: kycSelfieImageUrl == _unset
-          ? this.kycSelfieImageUrl
-          : kycSelfieImageUrl as String?,
-      kycSelfieUploadErrorMessage: kycSelfieUploadErrorMessage == _unset
-          ? this.kycSelfieUploadErrorMessage
-          : kycSelfieUploadErrorMessage as String?,
+      kycFrontImageData: kycFrontImageData == _unset
+          ? this.kycFrontImageData
+          : kycFrontImageData as String?,
+      kycBackImageData: kycBackImageData == _unset
+          ? this.kycBackImageData
+          : kycBackImageData as String?,
       kycLivenessStatus: kycLivenessStatus ?? this.kycLivenessStatus,
       selfieImageData: selfieImageData == _unset
           ? this.selfieImageData
           : selfieImageData as String?,
+      kycLivenessConfidence: kycLivenessConfidence == _unset
+          ? this.kycLivenessConfidence
+          : kycLivenessConfidence as double?,
       kycLivenessErrorMessage: kycLivenessErrorMessage == _unset
           ? this.kycLivenessErrorMessage
           : kycLivenessErrorMessage as String?,

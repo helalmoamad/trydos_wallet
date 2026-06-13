@@ -89,6 +89,18 @@ abstract class ApiPaths {
   static const String myProfile = '/users/me';
 
   // ─── KYC ───
+  /// Start a single-use KYC onboarding session (POST). User-authed.
+  /// Returns: { sessionId, expiresAt (ISO-8601) }
+  static const String kycSession = '/api/kyc/session';
+
+  /// Current KYC verification status (GET). User-authed.
+  /// Returns: { status, statusLabel, expiresAt, rejectionReason }
+  static const String kycStatus = '/api/kyc/status';
+
+  /// Current verified KYC record/details (GET). User-authed.
+  /// Requested on entering settings, only when the user is verified.
+  static const String kycCurrent = '/api/kyc/current';
+
   /// Analyze front/back ID image (POST).
   /// Body: imageData (data URL), side (front|back), sessionHint?
   static const String kycAnalyzeId = '/api/kyc/analyze-id';
@@ -101,11 +113,12 @@ abstract class ApiPaths {
   /// Body: selfieImageData (data URL), idFaceImageData (data URL)
   static const String kycCompareFace = '/api/kyc/compare-face';
 
-  /// Submit final KYC request (POST).
-  /// Body: kycSessionId, timestamp, nonce, fullName, nationalityCountryId,
-  /// documentType, nationalIdNumber, documentFrontImageUrl,
-  /// documentBackImageUrl, selfieImageUrl, selfieVsIdScore, documentExpiryDate
-  static const String kycSubmit = '/kyc/submit';
+  /// Submit final KYC request (POST). User-authed, on the Worker origin.
+  /// Body: kycSessionId, frontImageData, backImageData (omit for passports),
+  /// selfieImageData, selfieVsIdScore, livenessConfidence, extracted{ idType,
+  /// country, name, nationalNumber, documentNumber, birthday, expiryDate }.
+  /// All image fields are base64 data URLs.
+  static const String kycSubmit = '/api/kyc/submit';
 
   /// AWS liveness session lifecycle (POST create session, GET result by sessionId).
   static const String kycAwsLiveness = '/api/kyc/liveness-aws';
