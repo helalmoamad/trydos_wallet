@@ -31,6 +31,12 @@ class _SuccessVerificationState extends State<SuccessVerification> {
     super.initState();
     // Confirm the submission actually landed on the backend before leaving.
     context.read<WalletBloc>().add(const WalletKycStatusRequested());
+    // KYC just completed: immediately refresh the user record (user/me) so the
+    // real verified name resolves here, and refresh the current session.
+    context.read<WalletBloc>().add(
+      const WalletUserProfileRefreshRequested(silent: true),
+    );
+    context.read<WalletBloc>().add(const WalletActiveSessionsRequested());
     // Fallback so we never hang on the success screen if status is slow/fails.
     _fallbackTimer = Timer(const Duration(seconds: 5), _close);
     // The status request may have already completed (it's also fired at
@@ -101,7 +107,7 @@ class _SuccessVerificationState extends State<SuccessVerification> {
             ),
             SizedBox(height: 20.h),
             Text(
-              "Mohamad Katmawi",
+              '${state.firstName} ${state.lastName}'.trim(),
               style: context.textTheme.titleLarge?.mq.copyWith(
                 color: const Color(0xff1D1D1D),
                 letterSpacing: 0.14,
