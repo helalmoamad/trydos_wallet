@@ -353,7 +353,9 @@ class AppStrings {
       'kyc_later_limited': 'Later, Use The Limited Version',
       'kyc_live_detection_id': 'Live Detection Your ID',
       'kyc_start_live_detection': 'Start Live Detection Your ID',
+      'kyc_id_matching_in_progress': 'ID Matching With Your Photo…',
       'kyc_id_matching_not_correct': 'ID Matching With Your Photo Not Correct',
+      'kyc_id_matching_done': 'ID Matching With Your Photo Done',
       'kyc_id_discrepancy':
           'We Noticed A Discrepancy In The Image And There Is Also Doubt About The Personal Identity.',
       'kyc_try_again_correction': 'Try Again With The Correction',
@@ -745,7 +747,9 @@ class AppStrings {
       'kyc_later_limited': 'لاحقاً، استخدم النسخة المحدودة',
       'kyc_live_detection_id': 'الكشف المباشر عن هويتك',
       'kyc_start_live_detection': 'بدء الكشف المباشر عن هويتك',
+      'kyc_id_matching_in_progress': 'مطابقة الهوية مع صورتك…',
       'kyc_id_matching_not_correct': 'الهوية لا تتطابق مع صورتك',
+      'kyc_id_matching_done': 'تمت مطابقة الهوية مع صورتك',
       'kyc_id_discrepancy':
           'لاحظنا وجود تباين في الصورة وهناك أيضاً شك في الهوية الشخصية.',
       'kyc_try_again_correction': 'حاول مرة أخرى مع التصحيح',
@@ -1147,7 +1151,9 @@ class AppStrings {
       'kyc_later_limited': 'دواتر، وەشانی سنوردارەکە بەکاربهێنە',
       'kyc_live_detection_id': 'کەشفی ڕاستەوخۆی ناسنامەکەت',
       'kyc_start_live_detection': 'دەستپێکردنی کەشفی ڕاستەوخۆی ناسنامەکەت',
+      'kyc_id_matching_in_progress': 'گونجاندنی ناسنامە لەگەڵ وێنەکەت…',
       'kyc_id_matching_not_correct': 'ناسنامەکە لەگەڵ وێنەکەت دەگونجێت نییە',
+      'kyc_id_matching_done': 'ناسنامەکە لەگەڵ وێنەکەت گونجا',
       'kyc_id_discrepancy':
           'جیاوازییەکمان تێبینی کرد لە وێنەکەدا و هەروەها گومانیش هەیە لەسەر ناسنامەی کەسیەکە.',
       'kyc_try_again_correction': 'دووبارە هەوڵ بدە لەگەڵ سەرستکردنەوە',
@@ -1550,7 +1556,9 @@ class AppStrings {
       'kyc_later_limited': 'Daha Sonra, Sınırlı Sürümü Kullan',
       'kyc_live_detection_id': 'Kimliğinizi Canlı Tespit Et',
       'kyc_start_live_detection': 'Kimliğinizi Canlı Tespiti Başlat',
+      'kyc_id_matching_in_progress': 'Kimlik Fotoğrafınızla Eşleştiriliyor…',
       'kyc_id_matching_not_correct': 'Kimlik Fotoğrafınızla Eşleşmiyor',
+      'kyc_id_matching_done': 'Kimlik Fotoğrafınızla Eşleşti',
       'kyc_id_discrepancy':
           'Görüntüde Bir Tutarsızlık Fark Ettik Ve Kişisel Kimlik Konusunda Da Şüphe Var.',
       'kyc_try_again_correction': 'Düzeltmeyle Tekrar Deneyin',

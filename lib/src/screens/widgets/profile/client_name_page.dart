@@ -577,13 +577,18 @@ class _EditableNameCellState extends State<_EditableNameCell> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
 
+  /// The currently-saved name. Updated after a successful save so the Save
+  /// button hides once the new name is persisted.
+  late String _baselineName;
+
   String get _initialFullName =>
       '${widget.firstName.trim()} ${widget.lastName.trim()}'.trim();
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: _initialFullName);
+    _baselineName = _initialFullName;
+    _controller = TextEditingController(text: _baselineName);
     _focusNode = FocusNode();
     _controller.addListener(() {
       if (mounted) setState(() {});
@@ -600,7 +605,7 @@ class _EditableNameCellState extends State<_EditableNameCell> {
   /// Show Save only once the user entered a different name of >6 characters.
   bool get _canSave {
     final text = _controller.text.trim();
-    return text.length > 6 && text != _initialFullName;
+    return text.length > 6 && text != _baselineName;
   }
 
   void _save() {
@@ -636,6 +641,8 @@ class _EditableNameCellState extends State<_EditableNameCell> {
             const WalletUserNameUpdateResetRequested(),
           );
         } else if (state.nameUpdateStatus == WalletStatus.success) {
+          // Adopt the saved name as the new baseline → Save button disappears.
+          setState(() => _baselineName = _controller.text.trim());
           context.read<WalletBloc>().add(
             const WalletUserNameUpdateResetRequested(),
           );

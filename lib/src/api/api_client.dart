@@ -4,6 +4,7 @@ import 'package:trydos_wallet/src/api/api_client_io.dart'
     as api_io;
 import 'package:trydos_wallet/src/api/api_headers.dart';
 import 'package:trydos_wallet/src/api/api_interceptors.dart';
+import 'package:trydos_wallet/src/api/api_log.dart';
 
 /// نتيجة موحدة لطلبات API.
 class ApiResult<T> {
@@ -58,6 +59,8 @@ class ApiClient {
     // _dio.interceptors.add(ApiErrorInterceptor()); // Removed in favor of direct handling
     _dio.interceptors.add(ApiDebugInterceptor(enabled: debug));
     _dio.interceptors.add(ApiAuthInterceptor());
+    // Capture every request/response into the in-app network inspector.
+    _dio.interceptors.add(ApiLogInterceptor());
   }
 
   final Dio _dio;

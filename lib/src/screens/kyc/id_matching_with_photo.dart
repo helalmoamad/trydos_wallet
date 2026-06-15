@@ -163,6 +163,12 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
         final isFailed = state.kycCompareFaceStatus == WalletStatus.failure;
         final outerIsFaded = !_isMatched && !_showPersonStrong;
         final innerIsFaded = !_isMatched && _showPersonStrong;
+        // Matching status text: in-progress while comparing, then done/failed.
+        final matchingTextKey = _isMatched
+            ? 'kyc_id_matching_done'
+            : isFailed
+            ? 'kyc_id_matching_not_correct'
+            : 'kyc_id_matching_in_progress';
         return Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
@@ -194,7 +200,7 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
                 ),
                 SizedBox(width: 10.w),
                 Text(
-                  AppStrings.get(lang, 'kyc_id_matching_not_correct'),
+                  AppStrings.get(lang, matchingTextKey),
                   style: context.textTheme.titleLarge?.mq.copyWith(
                     color: const Color(0xff1D1D1D),
                     letterSpacing: 0.14,

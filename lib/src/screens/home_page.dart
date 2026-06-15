@@ -15,6 +15,7 @@ import '../constent/styles.dart';
 import '../services/connectivity_service.dart';
 import 'no_internet_screen.dart';
 import 'tabs/tabs.dart';
+import 'dev/api_logs_page.dart';
 import 'widgets/home_page_widgets/session_approval_dialog.dart';
 
 /// Digital wallet home page.
@@ -253,6 +254,12 @@ class _TrydosWalletHomePageContentState
           }
           setState(() => _selectedIndex = index);
         },
+        // Long-press the Settings tab to open the in-app API network inspector.
+        onLongPress: index == 3
+            ? () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ApiLogsPage()),
+              )
+            : null,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
