@@ -29,7 +29,7 @@ class ClientNamePage extends StatelessWidget {
   /// the [fallback] asset on error/missing URL.
   Widget _docImage({
     required String? url,
-    required String fallback,
+
     required double width,
     required double height,
   }) {
@@ -43,14 +43,6 @@ class ClientNamePage extends StatelessWidget {
       ),
     );
 
-    Widget asset() => Image.asset(
-      fallback,
-      package: TrydosWalletStyles.packageName,
-      fit: BoxFit.cover,
-      width: width,
-      height: height,
-    );
-
     if (url == null || url.isEmpty) return SizedBox.shrink();
     return Image.network(
       url,
@@ -59,7 +51,7 @@ class ClientNamePage extends StatelessWidget {
       height: height,
       loadingBuilder: (context, child, progress) =>
           progress == null ? child : shimmer(),
-      errorBuilder: (context, error, stack) => asset(),
+      errorBuilder: (context, error, stack) => SizedBox.shrink(),
     );
   }
 
@@ -277,8 +269,7 @@ class ClientNamePage extends StatelessWidget {
                                             ),
                                             child: _docImage(
                                               url: selfieUrl,
-                                              fallback: TrydosWalletPngAssets
-                                                  .personImage,
+
                                               width: 105.w,
                                               height: 120.h,
                                             ),
@@ -294,8 +285,7 @@ class ClientNamePage extends StatelessWidget {
                                             ),
                                             child: _docImage(
                                               url: frontUrl,
-                                              fallback: TrydosWalletPngAssets
-                                                  .frontImage,
+
                                               width: 190.w,
                                               height: 120.h,
                                             ),
@@ -315,8 +305,7 @@ class ClientNamePage extends StatelessWidget {
                                                   BorderRadius.circular(15.r),
                                               child: _docImage(
                                                 url: backUrl,
-                                                fallback: TrydosWalletPngAssets
-                                                    .backImage,
+
                                                 width: 190.w,
                                                 height: 120.h,
                                               ),

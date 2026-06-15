@@ -245,7 +245,6 @@ class _TrydosWalletHomePageContentState
             context.read<WalletBloc>().add(
               const WalletUserProfileRefreshRequested(),
             );
-            context.read<WalletBloc>().add(const WalletKycCurrentRequested());
 
             // Active sessions are no longer needed in settings.
             // context.read<WalletBloc>().add(

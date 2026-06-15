@@ -833,6 +833,7 @@ Widget _personInfoWidget(
   }
 
   void openProfileInfoPage() {
+    context.read<WalletBloc>().add(const WalletKycCurrentRequested());
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ProfileInfoPage(
