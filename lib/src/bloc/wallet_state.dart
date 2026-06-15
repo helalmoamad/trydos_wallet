@@ -73,6 +73,7 @@ class WalletState {
     // KYC Liveness
     this.kycLivenessStatus = WalletStatus.initial,
     this.selfieImageData,
+    this.kycFrontSelfieImageData,
     this.kycLivenessConfidence,
     this.kycLivenessErrorMessage,
     // KYC Compare Face
@@ -124,6 +125,9 @@ class WalletState {
     this.sessionActionStatus = WalletStatus.initial,
     this.sessionActionErrorMessage,
     this.sessionActionSuccessMessage,
+    // Profile name update
+    this.nameUpdateStatus = WalletStatus.initial,
+    this.nameUpdateErrorMessage,
     // Logout
     this.logoutStatus = WalletStatus.initial,
     this.logoutErrorMessage,
@@ -229,6 +233,12 @@ class WalletState {
   // KYC Liveness
   final WalletStatus kycLivenessStatus;
   final String? selfieImageData;
+
+  /// The front-facing (`look_straight`) liveness face — the image shown in the
+  /// green success frame. This is the canonical selfie sent to compare-face and
+  /// KYC submit; unlike [selfieImageData] it is NOT overwritten by the later
+  /// turn-right/turn-left challenges.
+  final String? kycFrontSelfieImageData;
   final double? kycLivenessConfidence;
   final String? kycLivenessErrorMessage;
 
@@ -280,6 +290,10 @@ class WalletState {
   final WalletStatus sessionApprovalStatus;
   final String? sessionApprovalErrorMessage;
   final String? sessionApprovalSuccessMessage;
+
+  // Profile name update (unverified users editing their display name)
+  final WalletStatus nameUpdateStatus;
+  final String? nameUpdateErrorMessage;
 
   /// RTL helper
   bool get isRtl => languageCode == 'ar' || languageCode == 'ku';
@@ -349,6 +363,7 @@ class WalletState {
     Object? kycBackImageData = _unset,
     WalletStatus? kycLivenessStatus,
     Object? selfieImageData = _unset,
+    Object? kycFrontSelfieImageData = _unset,
     Object? kycLivenessConfidence = _unset,
     Object? kycLivenessErrorMessage = _unset,
     WalletStatus? kycCompareFaceStatus,
@@ -393,6 +408,8 @@ class WalletState {
     WalletStatus? sessionActionStatus,
     Object? sessionActionErrorMessage = _unset,
     Object? sessionActionSuccessMessage = _unset,
+    WalletStatus? nameUpdateStatus,
+    Object? nameUpdateErrorMessage = _unset,
     WalletStatus? logoutStatus,
     Object? logoutErrorMessage = _unset,
     Object? sessionApprovalRequest = _unset,
@@ -502,6 +519,9 @@ class WalletState {
       selfieImageData: selfieImageData == _unset
           ? this.selfieImageData
           : selfieImageData as String?,
+      kycFrontSelfieImageData: kycFrontSelfieImageData == _unset
+          ? this.kycFrontSelfieImageData
+          : kycFrontSelfieImageData as String?,
       kycLivenessConfidence: kycLivenessConfidence == _unset
           ? this.kycLivenessConfidence
           : kycLivenessConfidence as double?,
@@ -573,6 +593,10 @@ class WalletState {
       sessionActionSuccessMessage: sessionActionSuccessMessage == _unset
           ? this.sessionActionSuccessMessage
           : sessionActionSuccessMessage as String?,
+      nameUpdateStatus: nameUpdateStatus ?? this.nameUpdateStatus,
+      nameUpdateErrorMessage: nameUpdateErrorMessage == _unset
+          ? this.nameUpdateErrorMessage
+          : nameUpdateErrorMessage as String?,
       logoutStatus: logoutStatus ?? this.logoutStatus,
       logoutErrorMessage: logoutErrorMessage == _unset
           ? this.logoutErrorMessage

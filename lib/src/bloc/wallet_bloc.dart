@@ -140,6 +140,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletRealtimeTransactionReceived>(_onRealtimeTransactionReceived);
     on<WalletConfigUpdated>(_onConfigUpdated);
     on<WalletUserProfileRefreshRequested>(_onUserProfileRefreshRequested);
+    on<WalletUserNameUpdateRequested>(_onUserNameUpdateRequested);
+    on<WalletUserNameUpdateResetRequested>(_onUserNameUpdateResetRequested);
 
     _configSubscription = TrydosWallet.configChanges.listen((config) {
       if (!isClosed) {
@@ -394,6 +396,59 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       isAccountActive: !isBlocked,
       isTwoFactorEnabled: isTwoFactorEnabled,
       memberSince: memberSince,
+    );
+  }
+
+  /// Update the user's display name (unverified users only). Sends the
+  /// existing profile picture unchanged, then propagates the new name to every
+  /// consumer via the central config update so all screens refresh.
+  Future<void> _onUserNameUpdateRequested(
+    WalletUserNameUpdateRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    final firstName = event.firstName.trim();
+    final lastName = event.lastName.trim();
+
+    emit(
+      state.copyWith(
+        nameUpdateStatus: WalletStatus.loading,
+        nameUpdateErrorMessage: null,
+      ),
+    );
+
+    // Send the user's current profile picture unchanged.
+    final result = await _usersApi.updateMyProfile(
+      firstName: firstName,
+      lastName: lastName,
+      profilePictureURL: state.profileImageUrl?.trim() ?? '',
+    );
+
+    if (result.isFailure) {
+      emit(
+        state.copyWith(
+          nameUpdateStatus: WalletStatus.failure,
+          nameUpdateErrorMessage: result.errorMessage,
+        ),
+      );
+      return;
+    }
+
+    // Source of truth: push the new name into config → emits WalletConfigUpdated
+    // → updates state.firstName/lastName everywhere it is shown.
+    TrydosWallet.updateUserInfo(firstName: firstName, lastName: lastName);
+
+    emit(state.copyWith(nameUpdateStatus: WalletStatus.success));
+  }
+
+  void _onUserNameUpdateResetRequested(
+    WalletUserNameUpdateResetRequested event,
+    Emitter<WalletState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        nameUpdateStatus: WalletStatus.initial,
+        nameUpdateErrorMessage: null,
+      ),
     );
   }
 
@@ -1802,10 +1857,19 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       final data = result.data!;
 
       if (data.isLive && data.faceImageData != null) {
+        // Only the front-facing (`look_straight`) challenge image is kept as
+        // the canonical selfie shown in the green frame and sent to
+        // compare-face/submit. The later turn challenges still update
+        // `selfieImageData` (for the per-challenge liveness gate) but must NOT
+        // overwrite the front face.
+        final isFrontChallenge = event.challengeStep == 'look_straight';
         emit(
           state.copyWith(
             kycLivenessStatus: WalletStatus.success,
             selfieImageData: data.faceImageData,
+            kycFrontSelfieImageData: isFrontChallenge
+                ? data.faceImageData
+                : state.kycFrontSelfieImageData,
             kycLivenessConfidence: data.metrics?.confidence,
             kycLivenessErrorMessage: null,
           ),
@@ -1896,7 +1960,11 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         // Guard against sending empty image payloads — the backend's document
         // upload step fails (502) on empty/missing images.
         final frontImg = state.kycFrontImageData ?? '';
-        final selfieImg = state.selfieImageData ?? '';
+        // The front-facing (look_straight) selfie — same image matched against
+        // the ID and shown in the green frame. Fall back to the last liveness
+        // frame only if the front one is somehow missing.
+        final selfieImg =
+            state.kycFrontSelfieImageData ?? state.selfieImageData ?? '';
         if (frontImg.isEmpty || selfieImg.isEmpty) {
           emit(
             state.copyWith(

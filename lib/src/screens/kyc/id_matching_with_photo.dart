@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 //import 'package:dotted_border/dotted_border.dart';
 import 'package:dotted_border/dotted_border.dart';
@@ -46,6 +48,26 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
   bool _requestSent = false;
   WalletStatus _lastCompareFaceStatus = WalletStatus.initial;
 
+  /// Decoded bytes of the EXACT images sent to compare-face, so the preview
+  /// shows what the API actually receives (not a separate display file).
+  Uint8List? _sentSelfieBytes;
+  Uint8List? _sentIdFaceBytes;
+
+  /// Decode a `data:image/...;base64,<data>` URL into raw bytes for preview.
+  Uint8List? _decodeDataUrl(String? dataUrl) {
+    if (dataUrl == null || dataUrl.isEmpty) return null;
+    try {
+      final commaIndex = dataUrl.indexOf(',');
+      final base64Part = commaIndex >= 0
+          ? dataUrl.substring(commaIndex + 1)
+          : dataUrl;
+      if (base64Part.isEmpty) return null;
+      return base64Decode(base64Part);
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -53,8 +75,14 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
     // Send compare-face request on first frame using BLoC state data
 
     final state = context.read<WalletBloc>().state;
-    final selfie = state.selfieImageData ?? '';
+    // Front-facing selfie (the green-frame image shown on screen) — same image
+    // sent to submit, so the comparison validates exactly what we display/store.
+    final selfie = state.kycFrontSelfieImageData ?? state.selfieImageData ?? '';
     final idFace = state.kycIdFaceImageData ?? '';
+
+    // Preview exactly what gets sent to compare-face (decode once, here).
+    _sentSelfieBytes = _decodeDataUrl(selfie);
+    _sentIdFaceBytes = _decodeDataUrl(idFace);
 
     if (selfie.isNotEmpty && idFace.isNotEmpty && !_requestSent) {
       _requestSent = true;
@@ -96,7 +124,8 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
     if (!mounted) return;
     final bloc = context.read<WalletBloc>();
     // Read selfie/idFace before resetting (reset clears nothing here but ensures clean status)
-    final selfie = bloc.state.selfieImageData ?? '';
+    final selfie =
+        bloc.state.kycFrontSelfieImageData ?? bloc.state.selfieImageData ?? '';
     final idFace = bloc.state.kycIdFaceImageData ?? '';
     bloc.add(const WalletKycCompareFaceResetRequested());
     if (selfie.isNotEmpty && idFace.isNotEmpty) {
@@ -215,9 +244,16 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(30.r),
-                          child:
-                              widget.selfiePath != null &&
-                                  widget.selfiePath!.isNotEmpty
+                          // Show the EXACT selfie bytes sent to compare-face.
+                          child: _sentSelfieBytes != null
+                              ? Image.memory(
+                                  _sentSelfieBytes!,
+                                  height: 400.h,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                )
+                              : widget.selfiePath != null &&
+                                    widget.selfiePath!.isNotEmpty
                               ? Image.file(
                                   File(widget.selfiePath!),
                                   height: 400.h,
@@ -266,9 +302,16 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(30.r),
-                            child:
-                                widget.frontIdPath != null &&
-                                    widget.frontIdPath!.isNotEmpty
+                            // Show the EXACT ID-face bytes sent to compare-face.
+                            child: _sentIdFaceBytes != null
+                                ? Image.memory(
+                                    _sentIdFaceBytes!,
+                                    height: 157.h,
+                                    width: 280.w,
+                                    fit: BoxFit.cover,
+                                  )
+                                : widget.frontIdPath != null &&
+                                      widget.frontIdPath!.isNotEmpty
                                 ? Image.file(
                                     File(widget.frontIdPath!),
                                     height: 157.h,

@@ -73,6 +73,23 @@ class WalletUserProfileRefreshRequested extends WalletEvent {
   final bool silent;
 }
 
+/// Update the current user's display name (KYC-unverified users only).
+/// The existing profile picture is sent unchanged.
+class WalletUserNameUpdateRequested extends WalletEvent {
+  const WalletUserNameUpdateRequested({
+    required this.firstName,
+    required this.lastName,
+  });
+
+  final String firstName;
+  final String lastName;
+}
+
+/// Clear the name-update status (e.g. after consuming success/failure in UI).
+class WalletUserNameUpdateResetRequested extends WalletEvent {
+  const WalletUserNameUpdateResetRequested();
+}
+
 /// QR login from web wallet
 class WalletQrScanRequested extends WalletEvent {
   const WalletQrScanRequested(this.qrToken);

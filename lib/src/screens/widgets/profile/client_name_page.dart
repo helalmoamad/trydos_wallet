@@ -57,8 +57,6 @@ class ClientNamePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fullName = '${firstName.trim()} ${lastName.trim()}'.trim();
-
     // Real uploaded document URLs from GET /api/kyc/current (verified users).
     final record = context.watch<WalletBloc>().state.kycCurrentRecord;
     final selfieUrl = record?.selfieImageUrl?.trim();
@@ -112,62 +110,12 @@ class ClientNamePage extends StatelessWidget {
                   padding: EdgeInsets.symmetric(horizontal: 12.w),
                   child: Column(
                     children: [
-                      // Client Name Cell
-                      Container(
-                        height: 56.h,
-                        width: double.infinity,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 12.w,
-                          vertical: 6.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xffFFFFFF),
-                          borderRadius: BorderRadius.circular(15.r),
-                          border: Border.all(color: const Color(0xffC3C3C3)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              AppStrings.get(languageCode, 'client_name'),
-                              style: context.textTheme.bodySmall?.rq.copyWith(
-                                color: const Color(0xff8D8D8D),
-                                fontSize: 12.sp,
-                                height: 1.1,
-                              ),
-                            ),
-                            const Spacer(),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                Text(
-                                  fullName.isEmpty
-                                      ? AppStrings.get(
-                                          languageCode,
-                                          'not_provided',
-                                        )
-                                      : fullName,
-                                  style: context.textTheme.bodyMedium?.mq
-                                      .copyWith(
-                                        color: const Color(0xFF1D1D1D),
-                                        fontSize: 14.sp,
-                                        height: 1.2,
-                                      ),
-                                ),
-                                Spacer(),
-                                !isVerified
-                                    ? SizedBox.shrink()
-                                    : SvgPicture.asset(
-                                        TrydosWalletAssets.nVerify,
-                                        height: 18.h,
-                                        // ignore: deprecated_member_use
-                                        color: const Color(0xff388CFF),
-                                        package: TrydosWalletStyles.packageName,
-                                      ),
-                              ],
-                            ),
-                          ],
-                        ),
+                      // Client Name Cell — editable for unverified users.
+                      _EditableNameCell(
+                        languageCode: languageCode,
+                        firstName: firstName,
+                        lastName: lastName,
+                        isVerified: isVerified,
                       ),
                       SizedBox(height: 5.h),
                       !isVerified
@@ -598,6 +546,238 @@ class _InfoBox extends StatelessWidget {
                   ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The client-name cell. For KYC-unverified users it is an editable field:
+/// tapping it opens the keyboard, and once the name is changed to more than
+/// 6 characters a Save button appears. Saving dispatches a BLoC event; while
+/// in flight the value shows a shimmer, failures surface a SnackBar, and on
+/// success the new name propagates everywhere via the central config update.
+class _EditableNameCell extends StatefulWidget {
+  final String languageCode;
+  final String firstName;
+  final String lastName;
+  final bool isVerified;
+
+  const _EditableNameCell({
+    required this.languageCode,
+    required this.firstName,
+    required this.lastName,
+    required this.isVerified,
+  });
+
+  @override
+  State<_EditableNameCell> createState() => _EditableNameCellState();
+}
+
+class _EditableNameCellState extends State<_EditableNameCell> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  String get _initialFullName =>
+      '${widget.firstName.trim()} ${widget.lastName.trim()}'.trim();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: _initialFullName);
+    _focusNode = FocusNode();
+    _controller.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  /// Show Save only once the user entered a different name of >6 characters.
+  bool get _canSave {
+    final text = _controller.text.trim();
+    return text.length > 6 && text != _initialFullName;
+  }
+
+  void _save() {
+    final fullName = _controller.text.trim();
+    if (fullName.length <= 6) return;
+    final parts = fullName.split(RegExp(r'\s+'));
+    final firstName = parts.first;
+    final lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+    _focusNode.unfocus();
+    context.read<WalletBloc>().add(
+      WalletUserNameUpdateRequested(firstName: firstName, lastName: lastName),
+    );
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<WalletBloc, WalletState>(
+      listenWhen: (prev, curr) =>
+          prev.nameUpdateStatus != curr.nameUpdateStatus,
+      listener: (context, state) {
+        if (state.nameUpdateStatus == WalletStatus.failure) {
+          _showMessage(
+            state.nameUpdateErrorMessage ??
+                AppStrings.get(widget.languageCode, 'error'),
+          );
+          context.read<WalletBloc>().add(
+            const WalletUserNameUpdateResetRequested(),
+          );
+        } else if (state.nameUpdateStatus == WalletStatus.success) {
+          context.read<WalletBloc>().add(
+            const WalletUserNameUpdateResetRequested(),
+          );
+        }
+      },
+      buildWhen: (prev, curr) => prev.nameUpdateStatus != curr.nameUpdateStatus,
+      builder: (context, state) {
+        final isSaving = state.nameUpdateStatus == WalletStatus.loading;
+        final showSave = !widget.isVerified && !isSaving && _canSave;
+        return Column(
+          children: [
+            _buildCell(context, isSaving),
+            if (showSave) _buildSaveButton(context),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildCell(BuildContext context, bool isSaving) {
+    return Container(
+      height: 56.h,
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: const Color(0xffFFFFFF),
+        borderRadius: BorderRadius.circular(15.r),
+        border: Border.all(color: const Color(0xffC3C3C3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppStrings.get(widget.languageCode, 'client_name'),
+            style: context.textTheme.bodySmall?.rq.copyWith(
+              color: const Color(0xff8D8D8D),
+              fontSize: 12.sp,
+              height: 1.1,
+            ),
+          ),
+          const Spacer(),
+          isSaving
+              ? Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Shimmer.fromColors(
+                    baseColor: const Color(0xffE6E6E6),
+                    highlightColor: const Color(0xffF7F7F7),
+                    child: Container(
+                      width: 140.w,
+                      height: 14.h,
+                      decoration: BoxDecoration(
+                        color: const Color(0xffEDEDED),
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                    ),
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: widget.isVerified
+                          ? Text(
+                              _initialFullName.isEmpty
+                                  ? AppStrings.get(
+                                      widget.languageCode,
+                                      'not_provided',
+                                    )
+                                  : _initialFullName,
+                              style: context.textTheme.bodyMedium?.mq.copyWith(
+                                color: const Color(0xFF1D1D1D),
+                                fontSize: 14.sp,
+                                height: 1.2,
+                              ),
+                            )
+                          : TextField(
+                              controller: _controller,
+                              focusNode: _focusNode,
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: (_) {
+                                if (_canSave) _save();
+                              },
+                              style: context.textTheme.bodyMedium?.mq.copyWith(
+                                color: const Color(0xFF1D1D1D),
+                                fontSize: 14.sp,
+                                height: 1.2,
+                              ),
+                              decoration: InputDecoration(
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                                border: InputBorder.none,
+                                hintText: AppStrings.get(
+                                  widget.languageCode,
+                                  'not_provided',
+                                ),
+                                hintStyle: context.textTheme.bodyMedium?.mq
+                                    .copyWith(
+                                      color: const Color(0xff8D8D8D),
+                                      fontSize: 14.sp,
+                                      height: 1.2,
+                                    ),
+                              ),
+                            ),
+                    ),
+                    if (widget.isVerified)
+                      SvgPicture.asset(
+                        TrydosWalletAssets.nVerify,
+                        height: 18.h,
+                        // ignore: deprecated_member_use
+                        color: const Color(0xff388CFF),
+                        package: TrydosWalletStyles.packageName,
+                      ),
+                  ],
+                ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSaveButton(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(top: 8.h),
+      child: InkWell(
+        onTap: _save,
+        borderRadius: BorderRadius.circular(15.r),
+        child: Container(
+          width: double.infinity,
+          alignment: Alignment.center,
+          padding: EdgeInsets.symmetric(vertical: 12.h),
+          decoration: BoxDecoration(
+            color: const Color(0xff388CFF),
+            borderRadius: BorderRadius.circular(15.r),
+          ),
+          child: Text(
+            AppStrings.get(widget.languageCode, 'save'),
+            style: context.textTheme.bodyMedium?.mq.copyWith(
+              color: Colors.white,
+              fontSize: 14.sp,
+              height: 1.1,
+            ),
+          ),
+        ),
       ),
     );
   }
