@@ -168,6 +168,8 @@ class _QRScannerSwitchPageState extends State<QRScannerSwitchPage>
   }
 
   /// Shows the approve/reject dialog on top of the shimmering scanner sheet.
+  /// Currently unused: scan success auto-approves. Kept for an easy revert.
+  // ignore: unused_element
   void _showConfirmDialog(BuildContext sheetContext) {
     final bloc = sheetContext.read<WalletBloc>();
     _dialogOpen = true;
@@ -220,11 +222,16 @@ class _QRScannerSwitchPageState extends State<QRScannerSwitchPage>
               return;
             }
 
-            // Scan succeeded → reveal the approve/reject dialog on top of the
-            // shimmering sheet (only once).
+            // Scan succeeded → auto-approve directly (skip the approve/reject
+            // dialog). The dialog flow is kept commented out below in case we
+            // revert to asking the user.
             if (state.qrLoginRequest != null && !_dialogShown) {
               _dialogShown = true;
-              _showConfirmDialog(context);
+              context.read<WalletBloc>().add(
+                WalletQrApproveRequested(state.qrLoginRequest!.linkId),
+              );
+              // --- Previous behavior: show the approve/reject dialog ---
+              // _showConfirmDialog(context);
               return;
             }
 
