@@ -51,7 +51,6 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
   /// Decoded bytes of the EXACT images sent to compare-face, so the preview
   /// shows what the API actually receives (not a separate display file).
   Uint8List? _sentSelfieBytes;
-  Uint8List? _sentIdFaceBytes;
 
   /// Decode a `data:image/...;base64,<data>` URL into raw bytes for preview.
   Uint8List? _decodeDataUrl(String? dataUrl) {
@@ -82,7 +81,6 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
 
     // Preview exactly what gets sent to compare-face (decode once, here).
     _sentSelfieBytes = _decodeDataUrl(selfie);
-    _sentIdFaceBytes = _decodeDataUrl(idFace);
 
     if (selfie.isNotEmpty && idFace.isNotEmpty && !_requestSent) {
       _requestSent = true;
@@ -156,7 +154,8 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
         if (status == WalletStatus.success) {
           _onSuccess();
         }
-        // Failure (any type) is handled directly in the builder UI
+        // Failure (any type) shows the real reason via the app-wide message
+        // listener — emitted from the BLoC. The builder also renders failure UI.
       },
       builder: (context, state) {
         final lang = state.languageCode;
@@ -309,28 +308,12 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(30.r),
                             // Show the EXACT ID-face bytes sent to compare-face.
-                            child: _sentIdFaceBytes != null
-                                ? Image.memory(
-                                    _sentIdFaceBytes!,
-                                    height: 157.h,
-                                    width: 280.w,
-                                    fit: BoxFit.cover,
-                                  )
-                                : widget.frontIdPath != null &&
-                                      widget.frontIdPath!.isNotEmpty
-                                ? Image.file(
-                                    File(widget.frontIdPath!),
-                                    height: 157.h,
-                                    width: 280.w,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Image.asset(
-                                    TrydosWalletPngAssets.frontImage,
-                                    package: TrydosWalletStyles.packageName,
-                                    height: 157.h,
-                                    width: 280.w,
-                                    fit: BoxFit.cover,
-                                  ),
+                            child: Image.file(
+                              File(widget.frontIdPath!),
+                              height: 157.h,
+                              width: 280.w,
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                       ),

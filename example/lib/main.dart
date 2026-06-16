@@ -19,7 +19,7 @@ void main() {
       kycBaseUrl: "https://api.ramaaz-digital-bank.online/",
       //   "https://kyc-verification-ramaaz-digital-banking.yazan-adnof.workers.dev/",
       token:
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMmZlNDZmZDdiNDRlMTg1OTgyNThmYyIsImVtYWlsIjoicGhvbmVfOTYzMjI1ODg3NDEyQHJkYi5sb2NhbCIsInR5cGUiOiJ1c2VyIiwibGFuZyI6ImVuIiwia3ljU3RhdHVzIjoibm90X3N1Ym1pdHRlZCIsInVzZXJUeXBlIjoicmVnaXN0ZXJlZCIsInNlc3Npb25JZCI6IjZhMmZlNDcwZDdiNDRlMTg1OTgyNTkwOSIsImlhdCI6MTc4MTUyMzU3MSwiZXhwIjoxNzgxNTIzODcxLCJhdWQiOiJ0cnlkb3MtdXNlciIsImlzcyI6InRyeWRvcy13YWxsZXQiLCJqdGkiOiIyNjgzZGQ1Ni0xMDBiLTQyYTEtOThjMy05MDIxZTQxZGU0NTMifQ.PEgPJlJ9-nIDfY51NZH9LrQCGHklbHfLZ5R0BTy0_04",
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMzEwYzE4ZDdiNDRlMTg1OTgzMzhlNyIsImVtYWlsIjoicGhvbmVfNzU1MjIyMjIyMjRAcmRiLmxvY2FsIiwidHlwZSI6InVzZXIiLCJsYW5nIjoiZW4iLCJreWNTdGF0dXMiOiJ2ZXJpZmllZCIsInVzZXJUeXBlIjoicmVnaXN0ZXJlZCIsInNlc3Npb25JZCI6IjZhMzEwYzE5ZDdiNDRlMTg1OTgzMzhmNSIsImlhdCI6MTc4MTYwMDcwNSwiZXhwIjoxNzgxNjAxMDA1LCJhdWQiOiJ0cnlkb3MtdXNlciIsImlzcyI6InRyeWRvcy13YWxsZXQiLCJqdGkiOiJhNTMxOGY2Ny03Y2RkLTQ5NzctYmE1NC1iYTcwN2FhYThmNDEifQ.UNqRAnMxExKpAmJ5isoQRVmMU4g1jbZsoh4yxRGe5v0",
       refreshToken:
           "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZDEyMDNiOTQxMjM4NWRmMWU5ZmIwYiIsInR5cGUiOiJyZWZyZXNoIiwic2Vzc2lvbklkIjoiNmEyYWZhYjZkN2I0NGUxODU5N2UzNWFlIiwiaWF0IjoxNzgxMzUxMDI2LCJleHAiOjE3ODM5NDMwMjYsImF1ZCI6InRyeWRvcy11c2VyIiwiaXNzIjoidHJ5ZG9zLXdhbGxldCIsImp0aSI6ImJjMjM0ZmI4LWYwMGMtNGY3My04OWIxLWFmMWY1NzNmZjFlOSJ9.SWVsfUxBpmquTgIL-l0nuaBZvmkSGq99d5XCO0ISHzs",
       languageCode: 'en',
@@ -55,6 +55,7 @@ class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp> {
   StreamSubscription? _languageSubscription;
   StreamSubscription? _lockSubscription;
   StreamSubscription? _switchSubscription;
+  StreamSubscription? _errorSubscription;
 
   @override
   void initState() {
@@ -76,6 +77,15 @@ class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp> {
     _lockSubscription = lockEvents.listen((event) {
       debugPrint('[App] Lock event received: ${event.toString()}');
     });
+
+    // Listen to API error events emitted by the library (e.g. 400s, KYC
+    // compare/submit failures). The library's ApiErrorListener already shows
+    // them on screen; this hook lets the host app log/handle them too.
+    _errorSubscription = errorEvents.listen((event) {
+      debugPrint(
+        '[App] API error event: ${event.message} (status: ${event.statusCode})',
+      );
+    });
   }
 
   @override
@@ -84,6 +94,7 @@ class _TrydosWalletExampleAppState extends State<TrydosWalletExampleApp> {
     _languageSubscription?.cancel();
     _lockSubscription?.cancel();
     _switchSubscription?.cancel();
+    _errorSubscription?.cancel();
     super.dispose();
   }
 

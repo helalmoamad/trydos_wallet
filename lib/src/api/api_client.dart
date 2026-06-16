@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:trydos_wallet/src/api/api_client_io.dart'
     if (dart.library.html) 'package:trydos_wallet/src/api/api_client_stub.dart'
@@ -89,13 +91,39 @@ class ApiClient {
   String? _extractErrorMessageFromData(dynamic data) {
     if (data == null) return null;
     if (data is Map) {
+      // Prefer the precise backend reason carried in `detail` (often a nested
+      // object or a JSON-encoded string) over the generic top-level `error`.
       return data['message']?.toString() ??
+          _extractFromDetail(data['detail']) ??
           data['error']?.toString() ??
           data['msg']?.toString();
     } else if (data is String && data.isNotEmpty) {
       return data;
     }
     return null;
+  }
+
+  /// Pull a message out of a `detail` field that may be a nested map or a
+  /// JSON-encoded string, e.g. {"message":"You are already verified",...}.
+  String? _extractFromDetail(dynamic detail) {
+    if (detail == null) return null;
+    Map<dynamic, dynamic>? map;
+    if (detail is Map) {
+      map = detail;
+    } else if (detail is String && detail.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(detail);
+        if (decoded is Map) {
+          map = decoded;
+        } else {
+          return detail; // plain string detail
+        }
+      } catch (_) {
+        return detail; // not JSON → use as-is
+      }
+    }
+    if (map == null) return null;
+    return map['message']?.toString() ?? map['error']?.toString();
   }
 
   void _handle400(dynamic data) {

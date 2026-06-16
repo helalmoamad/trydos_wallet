@@ -1926,14 +1926,15 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       );
 
       if (result.isFailure || result.data == null) {
+        final msg = result.errorMessage ?? 'Face comparison failed';
         emit(
           state.copyWith(
             kycCompareFaceStatus: WalletStatus.failure,
-            kycCompareFaceErrorMessage:
-                result.errorMessage ?? 'Face comparison failed',
+            kycCompareFaceErrorMessage: msg,
             kycCompareFaceErrorCode: null,
           ),
         );
+        emitApiErrorEvent(ApiErrorEvent(msg));
         return;
       }
 
@@ -1946,14 +1947,15 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
 
         // A fresh single-use session is mandatory to submit.
         if (sessionId == null || sessionId.isEmpty) {
+          const msg = 'Missing verification session. Please restart.';
           emit(
             state.copyWith(
               kycCompareFaceStatus: WalletStatus.failure,
-              kycCompareFaceErrorMessage:
-                  'Missing verification session. Please restart.',
+              kycCompareFaceErrorMessage: msg,
               kycCompareFaceErrorCode: 'NO_SESSION',
             ),
           );
+          emitApiErrorEvent(const ApiErrorEvent(msg));
           return;
         }
 
@@ -1966,14 +1968,15 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         final selfieImg =
             state.kycFrontSelfieImageData ?? state.selfieImageData ?? '';
         if (frontImg.isEmpty || selfieImg.isEmpty) {
+          const msg = 'Missing verification images. Please restart.';
           emit(
             state.copyWith(
               kycCompareFaceStatus: WalletStatus.failure,
-              kycCompareFaceErrorMessage:
-                  'Missing verification images. Please restart.',
+              kycCompareFaceErrorMessage: msg,
               kycCompareFaceErrorCode: 'MISSING_IMAGES',
             ),
           );
+          emitApiErrorEvent(const ApiErrorEvent(msg));
           return;
         }
 
@@ -2015,14 +2018,15 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         // The single-use session is spent on a successful POST; clear it so any
         // retry starts a fresh one.
         if (submitResult.isFailure || submitResult.data == null) {
+          final msg = submitResult.errorMessage ?? 'KYC submit failed';
           emit(
             state.copyWith(
               kycCompareFaceStatus: WalletStatus.failure,
-              kycCompareFaceErrorMessage:
-                  submitResult.errorMessage ?? 'KYC submit failed',
+              kycCompareFaceErrorMessage: msg,
               kycCompareFaceErrorCode: null,
             ),
           );
+          emitApiErrorEvent(ApiErrorEvent(msg));
           return;
         }
 
@@ -2041,17 +2045,17 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           final reason = (kycRequest['rejectionReason'] ?? '')
               .toString()
               .trim();
+          final msg = reason.isNotEmpty ? reason : 'Verification rejected';
           emit(
             state.copyWith(
               kycCompareFaceStatus: WalletStatus.failure,
-              kycCompareFaceErrorMessage: reason.isNotEmpty
-                  ? reason
-                  : 'Verification rejected',
+              kycCompareFaceErrorMessage: msg,
               kycCompareFaceErrorCode: 'REJECTED',
               kycSessionId: null,
               kycSessionStatus: WalletStatus.initial,
             ),
           );
+          emitApiErrorEvent(ApiErrorEvent(msg));
           return;
         }
 
@@ -2068,13 +2072,15 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           ),
         );
       } else {
+        final msg = data.message ?? 'Face match failed';
         emit(
           state.copyWith(
             kycCompareFaceStatus: WalletStatus.failure,
-            kycCompareFaceErrorMessage: data.message ?? 'Face match failed',
+            kycCompareFaceErrorMessage: msg,
             kycCompareFaceErrorCode: data.code,
           ),
         );
+        emitApiErrorEvent(ApiErrorEvent(msg));
       }
     } catch (e) {
       emit(
@@ -2084,6 +2090,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           kycCompareFaceErrorCode: null,
         ),
       );
+      emitApiErrorEvent(ApiErrorEvent(e.toString()));
     }
   }
 
