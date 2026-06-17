@@ -13,6 +13,7 @@ import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
 import '../widgets/widgets.dart';
+import '../widgets/home_page_widgets/transaction_details_page.dart';
 
 /// Home tab (balances + transactions list).
 class HomeTab extends StatefulWidget {
@@ -310,6 +311,18 @@ class _HomeTabState extends State<HomeTab> {
       amt.truncateToDouble() == amt ? 0 : 2,
     );
     return '$prefix$fmt ';
+  }
+
+  /// Open a view-only details sheet for the tapped transaction. Closes via the
+  /// Done button, the Android back button, or tapping outside (modal default).
+  void _openTransactionDetails(BuildContext context, Transaction transaction) {
+    showWalletModal(
+      context: context,
+      builder: (modalContext, scrollController) => TransactionDetailsPage(
+        transaction: transaction,
+        onDone: () => Navigator.of(modalContext).pop(),
+      ),
+    );
   }
 
   @override
@@ -860,6 +873,10 @@ class _HomeTabState extends State<HomeTab> {
                                             setState(
                                               () => _selectedTransactionIndex =
                                                   index,
+                                            );
+                                            _openTransactionDetails(
+                                              context,
+                                              transaction,
                                             );
                                           },
                                         ),

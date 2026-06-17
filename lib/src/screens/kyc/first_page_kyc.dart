@@ -196,7 +196,10 @@ class _FirstPageKycContent extends StatelessWidget {
                   child: InkWell(
                     highlightColor: Colors.transparent,
                     splashColor: Colors.transparent,
-                    onTap: () async {},
+                    // "Later": close the KYC flow and return to settings.
+                    onTap: () {
+                      Navigator.of(context).pop();
+                    },
                     child: Padding(
                       padding: EdgeInsets.symmetric(vertical: 10.h),
                       child: Text(
