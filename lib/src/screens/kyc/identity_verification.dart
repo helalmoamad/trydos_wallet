@@ -17,6 +17,7 @@ import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
+import 'package:trydos_wallet/src/utils/ui_utils.dart';
 
 enum _ScanStep { front, back, done }
 
@@ -604,6 +605,55 @@ class _IdentityVerificationState extends State<IdentityVerification> {
     }
   }
 
+  /// The analyze call can succeed but return no extracted data. When the name
+  /// is missing we can't proceed: warn the user, drop BOTH captured images, and
+  /// restart the scan from the front side.
+  Future<void> _resetScanFromStart(String lang) async {
+    if (!mounted) return;
+
+    showMessage(
+      AppStrings.get(lang, 'kyc_no_info_try_again'),
+      context: context,
+      type: MessageType.error,
+    );
+
+    // Delete both captured image files.
+    for (final path in [_frontImagePath, _backImagePath]) {
+      if (path != null) {
+        try {
+          await File(path).delete();
+        } catch (_) {}
+      }
+    }
+
+    // ignore: use_build_context_synchronously
+    context.read<WalletBloc>().add(const WalletKycAnalyzeIdResetRequested());
+
+    setState(() {
+      _frontImagePath = null;
+      _backImagePath = null;
+      _step = _ScanStep.front;
+      _detectProgress = 0.0;
+      _consecutiveDocFrames = 0;
+      _isCapturing = false;
+    });
+
+    // Restart the camera stream (or re-init the camera) so the user can rescan.
+    if (_cameraController != null &&
+        _cameraController!.value.isInitialized &&
+        !_isStreamActive) {
+      if (!widget.isActive) return;
+      try {
+        await _cameraController!.startImageStream(_onCameraImage);
+        _isStreamActive = true;
+        _resetCameraInactivityTimer();
+      } catch (_) {}
+    } else if (_cameraController == null ||
+        !(_cameraController?.value.isInitialized ?? false)) {
+      await _initCamera();
+    }
+  }
+
   Future<void> _handleFrontAnalyzeSuccess(String imagePath) async {
     if (!mounted) return;
     setState(() {
@@ -778,6 +828,13 @@ class _IdentityVerificationState extends State<IdentityVerification> {
           if (frontStatus == WalletStatus.success &&
               _step == _ScanStep.front &&
               state.kycFrontImagePath != null) {
+            // Extra guard: the analyze call can succeed but return no extracted
+            // data. Require a non-empty name — otherwise restart from scratch.
+            final extractedName = state.kycExtractedData?.name?.trim() ?? '';
+            if (extractedName.isEmpty) {
+              _resetScanFromStart(state.languageCode);
+              return;
+            }
             // Check if nextStep requires back side
             final nextStep = state.kycNextStep?.toUpperCase() ?? '';
             if (nextStep == 'REQUIRE_BACK') {
