@@ -9,6 +9,7 @@ import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
+import 'package:trydos_wallet/src/analytics/wallet_analytics.dart';
 import 'package:trydos_wallet/src/models/models.dart';
 import 'package:trydos_wallet/src/utils/ui_utils.dart';
 
@@ -44,6 +45,12 @@ class _TransactionDetailsPageState extends State<TransactionDetailsPage> {
 
   bool get _isSuccess => _t.status.toUpperCase() == 'COMPLETED';
   bool get _isFailed => _t.status.toUpperCase() == 'FAILED';
+
+  @override
+  void initState() {
+    super.initState();
+    WalletAnalytics.screen(WalletScreens.transactionDetails);
+  }
 
   @override
   void didChangeDependencies() {

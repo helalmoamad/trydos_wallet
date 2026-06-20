@@ -1237,6 +1237,10 @@ class _TransferSendModalState extends State<TransferSendModal>
     if (!mounted) return;
 
     if (result.isSuccess && result.data != null && result.data!.isCompleted) {
+      WalletAnalytics.capture(
+        WalletScreens.eventTransferCompleted,
+        properties: {'amount': amount, 'currency': selectedAsset.symbol},
+      );
       setState(() {
         _lastFulfilledRequest = null;
         _lastSendResult = result.data;

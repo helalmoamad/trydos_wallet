@@ -19,6 +19,7 @@ import 'package:trydos_wallet/src/screens/kyc/success_id_card.dart';
 import 'package:trydos_wallet/src/screens/kyc/success_verification.dart';
 // import 'package:trydos_wallet/src/screens/kyc/video_call_request.dart';
 import 'package:trydos_wallet/src/screens/home_page.dart';
+import 'package:trydos_wallet/src/analytics/wallet_analytics.dart';
 
 /// Digital wallet home page.
 class StartKycMethods extends StatelessWidget {
@@ -71,6 +72,7 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
   @override
   void initState() {
     super.initState();
+    WalletAnalytics.screen(WalletScreens.kycMethods);
     _pageContent = ValueNotifier(0);
     _pageController = PageController();
     WidgetsBinding.instance.addPostFrameCallback(

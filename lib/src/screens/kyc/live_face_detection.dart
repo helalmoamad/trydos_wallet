@@ -64,6 +64,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
   @override
   void initState() {
     super.initState();
+    WalletAnalytics.screen(WalletScreens.kycLiveness);
     if (widget.isActive) {
       _initCamera();
     }

@@ -97,6 +97,7 @@ class _ReceiveModalState extends State<ReceiveModal> {
   @override
   void initState() {
     super.initState();
+    WalletAnalytics.screen(WalletScreens.receive);
   }
 
   void _syncModalBackButton() {

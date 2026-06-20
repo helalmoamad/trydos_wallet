@@ -11,6 +11,7 @@ import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
 import 'package:trydos_wallet/src/screens/kyc/start_kyc_methods.dart';
+import 'package:trydos_wallet/src/analytics/wallet_analytics.dart';
 
 /// Digital wallet home page.
 class FirstPageKyc extends StatelessWidget {
@@ -39,8 +40,19 @@ class FirstPageKyc extends StatelessWidget {
   }
 }
 
-class _FirstPageKycContent extends StatelessWidget {
+class _FirstPageKycContent extends StatefulWidget {
   const _FirstPageKycContent();
+
+  @override
+  State<_FirstPageKycContent> createState() => _FirstPageKycContentState();
+}
+
+class _FirstPageKycContentState extends State<_FirstPageKycContent> {
+  @override
+  void initState() {
+    super.initState();
+    WalletAnalytics.screen(WalletScreens.kycStart);
+  }
 
   @override
   Widget build(BuildContext context) {

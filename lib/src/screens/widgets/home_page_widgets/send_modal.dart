@@ -10,6 +10,7 @@ import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/transfer_send_modal.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
+import 'package:trydos_wallet/src/analytics/wallet_analytics.dart';
 import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 import 'package:trydos_wallet/src/utils/ui_utils.dart';
 
@@ -79,6 +80,7 @@ class _SendModalState extends State<SendModal> {
   @override
   void initState() {
     super.initState();
+    WalletAnalytics.screen(WalletScreens.send);
     final hasInitialRaw = (widget.initialScanRaw ?? '').trim().isNotEmpty;
     _hasInitialMainStep = widget.initialPayload == null && !hasInitialRaw;
     _currentView = _hasInitialMainStep

@@ -22,6 +22,7 @@ import 'package:trydos_wallet/src/services/users_api_service.dart';
 import 'package:trydos_wallet/src/services/auth_api_service.dart';
 import 'package:trydos_wallet/src/services/wallet_websocket_service.dart';
 //////////////////////////////////////////////////////////////////////////
+import '../analytics/wallet_analytics.dart';
 import '../api/api_interceptors.dart';
 import '../config/trydos_wallet_config.dart';
 import 'wallet_event.dart';
@@ -1132,6 +1133,14 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       idempotencyKey: params.idempotencyKey,
     );
     if (result.isSuccess) {
+      WalletAnalytics.capture(
+        WalletScreens.eventDepositSubmitted,
+        properties: {
+          'amount': params.amount,
+          'currency_id': params.currencyId,
+          'bank_id': params.bankId,
+        },
+      );
       emit(state.copyWith(depositStatus: WalletStatus.success));
     } else {
       emit(
@@ -2059,6 +2068,10 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           return;
         }
 
+        WalletAnalytics.capture(
+          WalletScreens.eventKycSubmitted,
+          properties: {'decision': decision.isEmpty ? 'pending' : decision},
+        );
         emit(
           state.copyWith(
             kycCompareFaceStatus: WalletStatus.success,

@@ -12,6 +12,7 @@ import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
+import 'package:trydos_wallet/src/analytics/wallet_analytics.dart';
 
 /// Digital wallet home page.
 class SuccessVerification extends StatefulWidget {
@@ -29,6 +30,7 @@ class _SuccessVerificationState extends State<SuccessVerification> {
   @override
   void initState() {
     super.initState();
+    WalletAnalytics.screen(WalletScreens.kycSuccess);
     // Confirm the submission actually landed on the backend before leaving.
     context.read<WalletBloc>().add(const WalletKycStatusRequested());
     // KYC just completed: immediately refresh the user record (user/me) so the

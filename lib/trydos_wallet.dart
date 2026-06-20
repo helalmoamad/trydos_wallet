@@ -23,6 +23,7 @@ export 'src/api/api_interceptors.dart'
 export 'src/bloc/bloc.dart';
 export 'src/config/trydos_wallet_config.dart';
 export 'src/models/models.dart';
+export 'src/analytics/wallet_analytics.dart';
 export 'src/services/currencies_api_service.dart';
 export 'src/services/balances_api_service.dart';
 export 'src/services/banks_api_service.dart';

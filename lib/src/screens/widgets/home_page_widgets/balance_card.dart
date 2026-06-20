@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
 import 'package:trydos_wallet/src/bloc/wallet_state.dart';
 import 'package:trydos_wallet/src/constent/assets.dart';
@@ -121,13 +122,16 @@ class BalanceCard extends StatelessWidget {
                                 ),
                               )
                             else
-                              Text(
-                                amount,
-                                style: context.textTheme.bodyMedium?.rq
-                                    .copyWith(
-                                      color: Colors.white,
-                                      fontSize: 25.sp,
-                                    ),
+                              // Mask the balance amount in session recordings.
+                              PostHogMaskWidget(
+                                child: Text(
+                                  amount,
+                                  style: context.textTheme.bodyMedium?.rq
+                                      .copyWith(
+                                        color: Colors.white,
+                                        fontSize: 25.sp,
+                                      ),
+                                ),
                               ),
                             SizedBox(width: 6.w),
                             Padding(
@@ -287,13 +291,16 @@ class BalanceCard extends StatelessWidget {
                                 ),
                               )
                             else
-                              Text(
-                                amount,
-                                style: context.textTheme.bodyMedium?.mq
-                                    .copyWith(
-                                      color: Colors.white,
-                                      fontSize: 25.sp,
-                                    ),
+                              // Mask the balance amount in session recordings.
+                              PostHogMaskWidget(
+                                child: Text(
+                                  amount,
+                                  style: context.textTheme.bodyMedium?.mq
+                                      .copyWith(
+                                        color: Colors.white,
+                                        fontSize: 25.sp,
+                                      ),
+                                ),
                               ),
                             const SizedBox(width: 6),
                             Padding(

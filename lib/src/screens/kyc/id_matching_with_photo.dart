@@ -17,6 +17,7 @@ import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
+import 'package:trydos_wallet/src/analytics/wallet_analytics.dart';
 
 /// Digital wallet home page.
 class IdMatchingWithPhoto extends StatefulWidget {
@@ -70,6 +71,7 @@ class _IdMatchingWithPhotoState extends State<IdMatchingWithPhoto> {
   @override
   void initState() {
     super.initState();
+    WalletAnalytics.screen(WalletScreens.kycFaceMatch);
     _startBlinking();
     // Send compare-face request on first frame using BLoC state data
 

@@ -18,6 +18,7 @@ import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
 import 'package:trydos_wallet/src/utils/ui_utils.dart';
+import 'package:trydos_wallet/src/analytics/wallet_analytics.dart';
 
 enum _ScanStep { front, back, done }
 
@@ -87,6 +88,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
   @override
   void initState() {
     super.initState();
+    WalletAnalytics.screen(WalletScreens.kycIdentity);
     _sessionHint = DateTime.now().millisecondsSinceEpoch.toString();
     context.read<WalletBloc>().add(const WalletKycAnalyzeIdResetRequested());
     _initDetector();

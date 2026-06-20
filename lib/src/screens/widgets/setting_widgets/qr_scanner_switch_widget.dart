@@ -70,6 +70,7 @@ class _QRScannerSwitchPageState extends State<QRScannerSwitchPage>
   @override
   void initState() {
     super.initState();
+    WalletAnalytics.screen(WalletScreens.qrScanner);
     WidgetsBinding.instance.addObserver(this);
   }
 

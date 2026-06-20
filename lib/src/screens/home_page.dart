@@ -16,6 +16,7 @@ import '../services/connectivity_service.dart';
 import 'no_internet_screen.dart';
 import 'tabs/tabs.dart';
 import 'dev/api_logs_page.dart';
+import '../analytics/wallet_analytics.dart';
 import 'widgets/home_page_widgets/session_approval_dialog.dart';
 
 /// Digital wallet home page.
@@ -66,6 +67,8 @@ class _TrydosWalletHomePageContentState
       if (!mounted) return;
       context.read<WalletBloc>().add(const WalletResetRequested());
     });
+    // Track the initial tab as a screen view.
+    WalletAnalytics.screen(_screenNameForIndex(_selectedIndex));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final bloc = context.read<WalletBloc>();
@@ -174,6 +177,21 @@ class _TrydosWalletHomePageContentState
     );
   }
 
+  /// PostHog screen name for each bottom-nav tab.
+  String _screenNameForIndex(int index) {
+    switch (index) {
+      case 1:
+        return WalletScreens.walletBalances;
+      case 2:
+        return WalletScreens.addresses;
+      case 3:
+        return WalletScreens.settings;
+      case 0:
+      default:
+        return WalletScreens.home;
+    }
+  }
+
   Widget _buildBottomNav(BuildContext context, WalletState state) {
     final labels = [
       AppStrings.get(state.languageCode, 'home_title'),
@@ -251,6 +269,9 @@ class _TrydosWalletHomePageContentState
             // context.read<WalletBloc>().add(
             //   const WalletActiveSessionsRequested(),
             // );
+          }
+          if (index != _selectedIndex) {
+            WalletAnalytics.screen(_screenNameForIndex(index));
           }
           setState(() => _selectedIndex = index);
         },
