@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:camera/camera.dart';
+import 'package:dotted_border/dotted_border.dart';
 import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -204,6 +205,18 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
     } catch (_) {
       // Keep default device zoom if zoom levels are unavailable.
     }
+  }
+
+  /// Color of the face-guide oval, reflecting the liveness check state:
+  /// yellow = idle / in-progress, red = a check failed, green = success.
+  Color _faceOvalColor(WalletStatus livenessStatus) {
+    if (_isCompleted || livenessStatus == WalletStatus.success) {
+      return const Color(0xffA3FF38); // green
+    }
+    if (_hasFailed || livenessStatus == WalletStatus.failure) {
+      return const Color(0xffFF6B6B); // red
+    }
+    return const Color(0xffF5C518); // yellow
   }
 
   Widget _buildCameraPreview() {
@@ -753,6 +766,23 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                         height: 18.h,
                       ),
                     ),
+                    // Face-guide oval: keep the face inside it. The color
+                    // tracks the liveness state (yellow → red → green). Hidden
+                    // once completed (we then show the captured selfie alone).
+                    if (!_isCameraError && !_isCameraTimedOut && !_isCompleted)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Center(
+                            child: DottedBorder(
+                              borderType: BorderType.Oval,
+                              color: _faceOvalColor(state.kycLivenessStatus),
+                              strokeWidth: 2.5,
+                              dashPattern: const [8, 6],
+                              child: SizedBox(width: 190.w, height: 250.h),
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),

@@ -169,8 +169,8 @@ class _QRScannerSwitchPageState extends State<QRScannerSwitchPage>
   }
 
   /// Shows the approve/reject dialog on top of the shimmering scanner sheet.
-  /// Currently unused: scan success auto-approves. Kept for an easy revert.
-  // ignore: unused_element
+  /// Used for cross-city logins (`sameCity == false`); same-city logins
+  /// auto-approve without this dialog.
   void _showConfirmDialog(BuildContext sheetContext) {
     final bloc = sheetContext.read<WalletBloc>();
     _dialogOpen = true;
@@ -212,7 +212,8 @@ class _QRScannerSwitchPageState extends State<QRScannerSwitchPage>
         child: BlocConsumer<WalletBloc, WalletState>(
           listenWhen: (previous, current) =>
               previous.qrScanStatus != current.qrScanStatus ||
-              previous.qrLoginRequest != current.qrLoginRequest,
+              previous.qrLoginRequest != current.qrLoginRequest ||
+              previous.qrActionStatus != current.qrActionStatus,
           listener: (context, state) {
             if (!_isProcessing || _closing) return;
 
@@ -223,16 +224,39 @@ class _QRScannerSwitchPageState extends State<QRScannerSwitchPage>
               return;
             }
 
-            // Scan succeeded → auto-approve directly (skip the approve/reject
-            // dialog). The dialog flow is kept commented out below in case we
-            // revert to asking the user.
+            // Scan succeeded → decide by location trust (sameCity):
+            //   • sameCity == true  → trusted: auto-approve directly.
+            //   • sameCity == false → ask the user (approve/reject dialog).
             if (state.qrLoginRequest != null && !_dialogShown) {
               _dialogShown = true;
-              context.read<WalletBloc>().add(
-                WalletQrApproveRequested(state.qrLoginRequest!.linkId),
+              final request = state.qrLoginRequest!;
+              if (request.sameCity) {
+                context.read<WalletBloc>().add(
+                  WalletQrApproveRequested(request.linkId),
+                );
+              } else {
+                _showConfirmDialog(context);
+              }
+              return;
+            }
+
+            // Auto-approve failed (no dialog showing): the BLoC does NOT clear
+            // the request on failure, so the sheet would hang on the shimmer.
+            // Surface the error and close it ourselves.
+            if (_dialogShown &&
+                !_dialogOpen &&
+                state.qrActionStatus == WalletStatus.failure) {
+              _closing = true;
+              showMessage(
+                state.qrActionErrorMessage ??
+                    AppStrings.get(state.languageCode, 'error'),
+                context: context,
+                type: MessageType.error,
               );
-              // --- Previous behavior: show the approve/reject dialog ---
-              // _showConfirmDialog(context);
+              context.read<WalletBloc>().add(
+                const WalletQrLoginResetRequested(),
+              );
+              _closeSheet(context);
               return;
             }
 
@@ -482,6 +506,7 @@ class _QrLoginConfirmDialogState extends State<_QrLoginConfirmDialog> {
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
         final request = state.qrLoginRequest;
+
         if (request == null) {
           return const SizedBox.shrink();
         }
@@ -521,9 +546,9 @@ class _QrLoginConfirmDialogState extends State<_QrLoginConfirmDialog> {
                           : 'soon',
                     )
                   : AppStrings.get(
-                      languageCode,
-                      'qr_login_dialog_location_warning',
-                    )
+                          languageCode,
+                          'qr_login_dialog_location_warning',
+                        )
                         .replaceAll('{webCity}', request.webCity ?? 'Unknown')
                         .replaceAll('{appCity}', request.appCity ?? 'Unknown'),
               style: context.textTheme.bodyMedium?.rq.copyWith(
