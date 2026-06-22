@@ -100,6 +100,41 @@ class TrydosWallet {
   static Stream<TrydosWalletConfig> get configChanges =>
       _configChangesController.stream;
 
+  /// Incoming session-approval requests delivered out-of-band by the HOST app
+  /// (e.g. a Firebase push `approval_request` opened from a closed app). The
+  /// WalletBloc listens to this and shows the approve/reject dialog.
+  static final StreamController<Map<String, dynamic>>
+  _sessionApprovalController =
+      StreamController<Map<String, dynamic>>.broadcast();
+
+  /// Buffers an approval that arrives before the WalletBloc has subscribed
+  /// (cold start from a notification tap). Drained once via
+  /// [consumePendingSessionApproval].
+  static Map<String, dynamic>? _pendingSessionApproval;
+
+  static Stream<Map<String, dynamic>> get sessionApprovalRequests =>
+      _sessionApprovalController.stream;
+
+  /// HOST entry point: call when a push notification carrying a session
+  /// `approval_request` is received/opened. Pass the request payload (the same
+  /// shape the WebSocket `session:approval_request` event delivers). If the
+  /// wallet isn't mounted yet (cold start) the payload is buffered and replayed
+  /// when the WalletBloc comes up.
+  static void handleSessionApprovalRequest(Map<String, dynamic> payload) {
+    if (_sessionApprovalController.hasListener) {
+      _sessionApprovalController.add(payload);
+    } else {
+      _pendingSessionApproval = payload;
+    }
+  }
+
+  /// Returns and clears any buffered cold-start approval payload.
+  static Map<String, dynamic>? consumePendingSessionApproval() {
+    final pending = _pendingSessionApproval;
+    _pendingSessionApproval = null;
+    return pending;
+  }
+
   static TrydosWalletConfig get config {
     if (_config == null) {
       throw StateError(

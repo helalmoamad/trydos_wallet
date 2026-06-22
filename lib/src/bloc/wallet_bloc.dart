@@ -150,6 +150,20 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       }
     });
 
+    // Session-approval requests pushed by the host (e.g. Firebase notification).
+    _sessionApprovalSubscription = TrydosWallet.sessionApprovalRequests.listen((
+      payload,
+    ) {
+      if (!isClosed) {
+        add(WalletSessionApprovalRequestReceived(payload));
+      }
+    });
+    // Cold start: replay an approval that arrived before this bloc subscribed.
+    final pendingApproval = TrydosWallet.consumePendingSessionApproval();
+    if (pendingApproval != null) {
+      add(WalletSessionApprovalRequestReceived(pendingApproval));
+    }
+
     // We only own (and therefore dispose) the socket when we created it.
     // An injected one stays under the caller's control.
     _ownsWebSocketService = _walletWebSocketService == null;
@@ -178,6 +192,11 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   WalletWebSocketService? _walletWebSocketService;
   bool _ownsWebSocketService = false;
   StreamSubscription<TrydosWalletConfig>? _configSubscription;
+  StreamSubscription<Map<String, dynamic>>? _sessionApprovalSubscription;
+
+  /// Last session approval requestId we've shown — dedupes the same request
+  /// arriving via both the WebSocket and a Firebase push.
+  String? _lastApprovalRequestId;
 
   int _currenciesPage = 0;
   int _banksPage = 0;
@@ -243,6 +262,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   @override
   Future<void> close() {
     _configSubscription?.cancel();
+    _sessionApprovalSubscription?.cancel();
     // Only tear down the socket we created; an injected one is the caller's.
     if (_ownsWebSocketService) {
       _walletWebSocketService?.disconnect();
@@ -1396,6 +1416,13 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   ) {
     final request = SessionApprovalRequest.fromJson(event.payload);
     if (request.requestId.isEmpty) return;
+
+    // Dedupe by requestId: the SAME approval can arrive via BOTH the WebSocket
+    // and a Firebase push (possibly at the same time). Show it only once —
+    // `_lastApprovalRequestId` persists across the response so a late duplicate
+    // can't reopen an already-handled prompt. (requestIds are unique per login.)
+    if (request.requestId == _lastApprovalRequestId) return;
+    _lastApprovalRequestId = request.requestId;
 
     emit(
       state.copyWith(
