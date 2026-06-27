@@ -91,6 +91,10 @@ class TrydosWalletConfig {
 class TrydosWallet {
   static const String _profileImageUrlPrefKey =
       'trydos_wallet_profile_image_url';
+  static const String _fcmTokenPrefKey = 'trydos_wallet_fcm_token';
+
+  /// In-memory cache of the last known FCM token (synchronous access).
+  static String? _fcmToken;
   static TrydosWalletConfig? _config;
   static ApiClient? _apiClient;
   static ApiClient? _kycApiClient;
@@ -172,6 +176,7 @@ class TrydosWallet {
 
     _applyConfig(config, emitLanguageChanged: languageChanged);
     unawaited(_restorePersistedProfileImageUrl());
+    unawaited(loadFcmToken());
   }
 
   static void _applyConfig(
@@ -342,6 +347,35 @@ class TrydosWallet {
     );
 
     unawaited(_persistProfileImageUrl(resolvedProfileImageUrl));
+  }
+
+  /// Last known FCM token (in-memory). Returns null until [setFcmToken] runs or
+  /// [loadFcmToken] restores it from storage.
+  static String? get fcmToken => _fcmToken;
+
+  /// HOST entry point: call whenever Firebase creates or refreshes the FCM
+  /// token (`onTokenRefresh` / after `getToken()`). Persists it to
+  /// SharedPreferences and caches it in memory. Pass null/empty to clear it
+  /// (e.g. on logout).
+  static Future<void> setFcmToken(String? token) async {
+    final normalized = token?.trim();
+    _fcmToken = (normalized == null || normalized.isEmpty) ? null : normalized;
+
+    final prefs = await SharedPreferences.getInstance();
+    if (_fcmToken == null) {
+      await prefs.remove(_fcmTokenPrefKey);
+    } else {
+      await prefs.setString(_fcmTokenPrefKey, _fcmToken!);
+    }
+  }
+
+  /// Reads the persisted FCM token from SharedPreferences into the in-memory
+  /// cache and returns it (null if none stored).
+  static Future<String?> loadFcmToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getString(_fcmTokenPrefKey)?.trim();
+    _fcmToken = (stored == null || stored.isEmpty) ? null : stored;
+    return _fcmToken;
   }
 
   static Future<void> _persistProfileImageUrl(String? profileImageUrl) async {

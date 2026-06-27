@@ -316,8 +316,27 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       ),
     );
 
+    // First unregister this device's FCM token (if any), then log out. Both
+    // steps share the single `logoutStatus`. If unregister fails we stop and
+    // surface the error — logout only runs once the device is unregistered.
+    final fcmToken = TrydosWallet.fcmToken;
+    if (fcmToken != null && fcmToken.isNotEmpty) {
+      final unregister = await _authApi.unregisterDevice(fcmToken);
+      if (unregister.isFailure) {
+        emit(
+          state.copyWith(
+            logoutStatus: WalletStatus.failure,
+            logoutErrorMessage: unregister.errorMessage,
+          ),
+        );
+        return;
+      }
+    }
+
     final result = await _authApi.logout();
     if (result.isSuccess) {
+      // Device is unregistered + logged out → drop the local FCM token.
+      await TrydosWallet.setFcmToken(null);
       emit(state.copyWith(logoutStatus: WalletStatus.success));
     } else {
       emit(

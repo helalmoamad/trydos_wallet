@@ -35,6 +35,12 @@ abstract class ApiPaths {
   /// Query: page (0-indexed), limit (default: 10, max: 100)
   static const String banks = '/banks';
 
+  // ─── Notifications ───
+  /// Unregister a device FCM token from push notifications (POST).
+  /// Body: { fcmToken }
+  static const String notificationsUnregisterDevice =
+      '/notifications/devices/unregister';
+
   // ─── Authentication ───
   /// Logout current session (POST). Success/failure only.
   static const String authLogout = '/auth/logout';

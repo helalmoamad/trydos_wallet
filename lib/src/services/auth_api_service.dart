@@ -17,4 +17,12 @@ class AuthApiService {
       data: {'refreshToken': TrydosWallet.config.refreshToken},
     );
   }
+
+  /// إلغاء تسجيل جهاز من إشعارات الدفع (POST). يُرسَل قبل تسجيل الخروج.
+  Future<ApiResult<void>> unregisterDevice(String fcmToken) {
+    return _client.post<void>(
+      ApiPaths.notificationsUnregisterDevice,
+      data: {'fcmToken': fcmToken},
+    );
+  }
 }
