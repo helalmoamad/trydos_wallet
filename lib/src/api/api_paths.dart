@@ -94,6 +94,10 @@ abstract class ApiPaths {
   /// Body: profilePictureURL, firstName, lastName
   static const String myProfile = '/users/me';
 
+  /// Current user's login history (GET), paginated.
+  /// Query: page (0-indexed), limit (1–100), status? (success|failure)
+  static const String loginHistory = '/users/me/login-history';
+
   // ─── KYC ───
   /// Start a single-use KYC onboarding session (POST). User-authed.
   /// Returns: { sessionId, expiresAt (ISO-8601) }

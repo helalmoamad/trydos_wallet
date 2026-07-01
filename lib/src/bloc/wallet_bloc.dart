@@ -143,6 +143,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletUserProfileRefreshRequested>(_onUserProfileRefreshRequested);
     on<WalletUserNameUpdateRequested>(_onUserNameUpdateRequested);
     on<WalletUserNameUpdateResetRequested>(_onUserNameUpdateResetRequested);
+    on<WalletLoginHistoryRequested>(_onLoginHistoryRequested);
+    on<WalletLoginHistoryLoadMoreRequested>(_onLoginHistoryLoadMoreRequested);
 
     _configSubscription = TrydosWallet.configChanges.listen((config) {
       if (!isClosed) {
@@ -490,6 +492,89 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         nameUpdateErrorMessage: null,
       ),
     );
+  }
+
+  static const int _loginHistoryLimit = 20;
+
+  /// First page (replaces the list). Also sets the active status filter.
+  Future<void> _onLoginHistoryRequested(
+    WalletLoginHistoryRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        loginHistoryStatus: WalletStatus.loading,
+        loginHistoryErrorMessage: null,
+        loginHistoryFilter: event.status,
+      ),
+    );
+
+    final result = await _usersApi.getLoginHistory(
+      page: 0,
+      limit: _loginHistoryLimit,
+      status: event.status,
+    );
+
+    if (result.isSuccess && result.data != null) {
+      final data = result.data!;
+      emit(
+        state.copyWith(
+          loginHistoryStatus: WalletStatus.success,
+          loginHistory: data.items,
+          loginHistoryPage: data.page,
+          loginHistoryHasNext: data.hasNext,
+          loginHistoryLoadingMore: false,
+        ),
+      );
+    } else {
+      // Drop the previous list/pagination so a failed (re)load never shows stale
+      // data from an earlier filter — only the failure message is shown.
+      emit(
+        state.copyWith(
+          loginHistoryStatus: WalletStatus.failure,
+          loginHistoryErrorMessage: result.errorMessage,
+          loginHistory: const [],
+          loginHistoryHasNext: false,
+          loginHistoryPage: 0,
+          loginHistoryLoadingMore: false,
+        ),
+      );
+    }
+  }
+
+  /// Next page (appends). Keeps the current filter; no-op if already loading or
+  /// there's no next page.
+  Future<void> _onLoginHistoryLoadMoreRequested(
+    WalletLoginHistoryLoadMoreRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    if (state.loginHistoryLoadingMore ||
+        !state.loginHistoryHasNext ||
+        state.loginHistoryStatus == WalletStatus.loading) {
+      return;
+    }
+
+    emit(state.copyWith(loginHistoryLoadingMore: true));
+
+    final result = await _usersApi.getLoginHistory(
+      page: state.loginHistoryPage + 1,
+      limit: _loginHistoryLimit,
+      status: state.loginHistoryFilter,
+    );
+
+    if (result.isSuccess && result.data != null) {
+      final data = result.data!;
+      emit(
+        state.copyWith(
+          loginHistoryLoadingMore: false,
+          loginHistory: [...state.loginHistory, ...data.items],
+          loginHistoryPage: data.page,
+          loginHistoryHasNext: data.hasNext,
+        ),
+      );
+    } else {
+      emit(state.copyWith(loginHistoryLoadingMore: false));
+    }
   }
 
   /// Currencies

@@ -9,6 +9,7 @@ import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/screens/widgets/profile/profile_info_page.dart';
 import 'package:trydos_wallet/src/screens/widgets/profile/profile_photo_page.dart';
+import 'package:trydos_wallet/src/screens/widgets/setting_widgets/login_history_page.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
 import '../widgets/widgets.dart';
@@ -394,14 +395,7 @@ class SettingsTab extends StatelessWidget {
                           SizedBox(height: 5.h, width: 1.sw),
                           _languageActionWidget(context: context, state: state),
                           SizedBox(height: 5.h, width: 1.sw),
-                          InkWell(
-                            child: _actionWidget(
-                              TrydosWalletAssets.history,
-                              AppStrings.get(state.languageCode, 'history'),
-                              context,
-                              true,
-                            ),
-                          ),
+                          const _LoginHistoryButton(),
                           SizedBox(height: 5.h, width: 1.sw),
                           BlocListener<WalletBloc, WalletState>(
                             listenWhen: (previous, current) =>
@@ -702,6 +696,92 @@ Widget _actionWidget(
       ],
     ),
   );
+}
+
+/// The Settings "History" row. Requesting the login history shows a shimmer on
+/// this row; on success it navigates to [LoginHistoryPage]. Uses a local
+/// `_awaitingOpen` flag so in-page reloads (filter/refresh) — which also flip
+/// `loginHistoryStatus` — don't re-trigger navigation or the shimmer here.
+class _LoginHistoryButton extends StatefulWidget {
+  const _LoginHistoryButton();
+
+  @override
+  State<_LoginHistoryButton> createState() => _LoginHistoryButtonState();
+}
+
+class _LoginHistoryButtonState extends State<_LoginHistoryButton> {
+  bool _awaitingOpen = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<WalletBloc, WalletState>(
+      listenWhen: (previous, current) =>
+          previous.loginHistoryStatus != current.loginHistoryStatus,
+      listener: (context, state) {
+        if (!_awaitingOpen) return;
+        if (state.loginHistoryStatus == WalletStatus.success) {
+          _awaitingOpen = false;
+          final bloc = context.read<WalletBloc>();
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => BlocProvider.value(
+                value: bloc,
+                child: const LoginHistoryPage(),
+              ),
+            ),
+          );
+        } else if (state.loginHistoryStatus == WalletStatus.failure) {
+          _awaitingOpen = false;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                state.loginHistoryErrorMessage ??
+                    AppStrings.get(state.languageCode, 'error'),
+              ),
+            ),
+          );
+        }
+      },
+      buildWhen: (previous, current) =>
+          previous.loginHistoryStatus != current.loginHistoryStatus ||
+          previous.languageCode != current.languageCode,
+      builder: (context, state) {
+        final showShimmer =
+            _awaitingOpen && state.loginHistoryStatus == WalletStatus.loading;
+        return showShimmer
+            ? Shimmer.fromColors(
+                baseColor: const Color(0xFFE4E4E4),
+                highlightColor: const Color(0xFFF3F3F3),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 20.h,
+                  ),
+                  height: 58.h,
+                  width: 1.sw,
+                  decoration: BoxDecoration(
+                    color: const Color(0xffF8F8F8),
+                    borderRadius: BorderRadius.circular(15.r),
+                  ),
+                ),
+              )
+            : InkWell(
+                onTap: () {
+                  setState(() => _awaitingOpen = true);
+                  context.read<WalletBloc>().add(
+                    const WalletLoginHistoryRequested(),
+                  );
+                },
+                child: _actionWidget(
+                  TrydosWalletAssets.history,
+                  AppStrings.get(state.languageCode, 'history'),
+                  context,
+                  true,
+                ),
+              );
+      },
+    );
+  }
 }
 
 Widget _languageActionWidget({

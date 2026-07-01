@@ -128,6 +128,14 @@ class WalletState {
     // Profile name update
     this.nameUpdateStatus = WalletStatus.initial,
     this.nameUpdateErrorMessage,
+    // Login history
+    this.loginHistory = const [],
+    this.loginHistoryStatus = WalletStatus.initial,
+    this.loginHistoryErrorMessage,
+    this.loginHistoryHasNext = false,
+    this.loginHistoryPage = 0,
+    this.loginHistoryFilter,
+    this.loginHistoryLoadingMore = false,
     // Logout
     this.logoutStatus = WalletStatus.initial,
     this.logoutErrorMessage,
@@ -295,6 +303,17 @@ class WalletState {
   final WalletStatus nameUpdateStatus;
   final String? nameUpdateErrorMessage;
 
+  // Login history
+  final List<LoginHistoryItem> loginHistory;
+  final WalletStatus loginHistoryStatus;
+  final String? loginHistoryErrorMessage;
+  final bool loginHistoryHasNext;
+  final int loginHistoryPage;
+
+  /// Active status filter: 'success' | 'failure' | null (all).
+  final String? loginHistoryFilter;
+  final bool loginHistoryLoadingMore;
+
   /// RTL helper
   bool get isRtl => languageCode == 'ar' || languageCode == 'ku';
 
@@ -410,6 +429,13 @@ class WalletState {
     Object? sessionActionSuccessMessage = _unset,
     WalletStatus? nameUpdateStatus,
     Object? nameUpdateErrorMessage = _unset,
+    List<LoginHistoryItem>? loginHistory,
+    WalletStatus? loginHistoryStatus,
+    Object? loginHistoryErrorMessage = _unset,
+    bool? loginHistoryHasNext,
+    int? loginHistoryPage,
+    Object? loginHistoryFilter = _unset,
+    bool? loginHistoryLoadingMore,
     WalletStatus? logoutStatus,
     Object? logoutErrorMessage = _unset,
     Object? sessionApprovalRequest = _unset,
@@ -597,6 +623,18 @@ class WalletState {
       nameUpdateErrorMessage: nameUpdateErrorMessage == _unset
           ? this.nameUpdateErrorMessage
           : nameUpdateErrorMessage as String?,
+      loginHistory: loginHistory ?? this.loginHistory,
+      loginHistoryStatus: loginHistoryStatus ?? this.loginHistoryStatus,
+      loginHistoryErrorMessage: loginHistoryErrorMessage == _unset
+          ? this.loginHistoryErrorMessage
+          : loginHistoryErrorMessage as String?,
+      loginHistoryHasNext: loginHistoryHasNext ?? this.loginHistoryHasNext,
+      loginHistoryPage: loginHistoryPage ?? this.loginHistoryPage,
+      loginHistoryFilter: loginHistoryFilter == _unset
+          ? this.loginHistoryFilter
+          : loginHistoryFilter as String?,
+      loginHistoryLoadingMore:
+          loginHistoryLoadingMore ?? this.loginHistoryLoadingMore,
       logoutStatus: logoutStatus ?? this.logoutStatus,
       logoutErrorMessage: logoutErrorMessage == _unset
           ? this.logoutErrorMessage

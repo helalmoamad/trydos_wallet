@@ -90,6 +90,20 @@ class WalletUserNameUpdateResetRequested extends WalletEvent {
   const WalletUserNameUpdateResetRequested();
 }
 
+/// Load the first page of the current user's login history (replaces the list).
+/// Used by the History button and by the status filter in the page.
+class WalletLoginHistoryRequested extends WalletEvent {
+  const WalletLoginHistoryRequested({this.status});
+
+  /// Optional filter: 'success' | 'failure' | null (all).
+  final String? status;
+}
+
+/// Load the next page of login history and append to the current list.
+class WalletLoginHistoryLoadMoreRequested extends WalletEvent {
+  const WalletLoginHistoryLoadMoreRequested();
+}
+
 /// QR login from web wallet
 class WalletQrScanRequested extends WalletEvent {
   const WalletQrScanRequested(this.qrToken);
