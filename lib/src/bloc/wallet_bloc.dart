@@ -25,6 +25,7 @@ import 'package:trydos_wallet/src/services/wallet_websocket_service.dart';
 import '../analytics/wallet_analytics.dart';
 import '../api/api_interceptors.dart';
 import '../config/trydos_wallet_config.dart';
+import '../utils/kyc_image_compressor.dart';
 import 'wallet_event.dart';
 import 'wallet_state.dart';
 
@@ -2133,13 +2134,24 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
                 .firstWhere((e) => e.isNotEmpty, orElse: () => '');
         final backImageData = state.kycBackImageData;
 
+        // Keep each image under the worker's upload limit — oversized payloads
+        // fail the submit pipeline with 502 "Failed to upload verification
+        // documents." Compression runs off the UI thread and is a no-op when
+        // the image is already small enough.
+        final frontPayload = await compressKycImageDataUrl(frontImg);
+        final selfiePayload = await compressKycImageDataUrl(selfieImg);
+        final backPayload =
+            (backImageData != null && backImageData.isNotEmpty)
+            ? await compressKycImageDataUrl(backImageData)
+            : null;
+
         final submitPayload = <String, dynamic>{
           'kycSessionId': sessionId,
-          'frontImageData': frontImg,
+          'frontImageData': frontPayload,
           // Omit for passports (no back side was captured).
-          if (backImageData != null && backImageData.isNotEmpty)
-            'backImageData': backImageData,
-          'selfieImageData': selfieImg,
+          if (backPayload != null && backPayload.isNotEmpty)
+            'backImageData': backPayload,
+          'selfieImageData': selfiePayload,
           'selfieVsIdScore': data.matchScore ?? 0,
           if (state.kycLivenessConfidence != null)
             'livenessConfidence': state.kycLivenessConfidence,
