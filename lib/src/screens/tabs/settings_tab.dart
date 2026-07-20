@@ -213,6 +213,9 @@ class SettingsTab extends StatelessWidget {
                                       WalletStatus.success) {
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
+                                        settings: const RouteSettings(
+                                          name: kycRouteName,
+                                        ),
                                         builder: (_) => const FirstPageKyc(),
                                       ),
                                     );

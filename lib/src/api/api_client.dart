@@ -40,6 +40,9 @@ class ApiClient {
     bool allowBadCertificate = false,
     Duration? connectTimeout,
     Duration? receiveTimeout,
+    // KYC client passes false: its 401s stay inside the library (see
+    // ApiAuthInterceptor.emitAuthEvents).
+    bool emitAuthEvents = true,
   }) : _dio = Dio(
          BaseOptions(
            baseUrl: baseUrl,
@@ -60,7 +63,9 @@ class ApiClient {
     }
     // _dio.interceptors.add(ApiErrorInterceptor()); // Removed in favor of direct handling
     _dio.interceptors.add(ApiDebugInterceptor(enabled: debug));
-    _dio.interceptors.add(ApiAuthInterceptor());
+    _dio.interceptors.add(
+      ApiAuthInterceptor(emitAuthEvents: emitAuthEvents),
+    );
     // Capture every request/response into the in-app network inspector.
     _dio.interceptors.add(ApiLogInterceptor());
   }

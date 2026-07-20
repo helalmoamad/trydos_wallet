@@ -84,6 +84,9 @@ class TrydosWalletConfig {
     headersConfig: headersConfig,
     debug: debug,
     allowBadCertificate: allowBadCertificate,
+    // A 401 during KYC must not reach the host (no token refresh expected);
+    // the KYC flow shows a message and exits its pages instead.
+    emitAuthEvents: false,
   );
 }
 

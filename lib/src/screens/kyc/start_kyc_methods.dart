@@ -20,6 +20,9 @@ import 'package:trydos_wallet/src/screens/kyc/success_verification.dart';
 // import 'package:trydos_wallet/src/screens/kyc/video_call_request.dart';
 import 'package:trydos_wallet/src/screens/home_page.dart';
 import 'package:trydos_wallet/src/analytics/wallet_analytics.dart';
+import 'package:trydos_wallet/src/api/api_interceptors.dart';
+import 'package:trydos_wallet/src/screens/kyc/first_page_kyc.dart';
+import 'package:trydos_wallet/src/utils/ui_utils.dart';
 
 /// Digital wallet home page.
 class StartKycMethods extends StatelessWidget {
@@ -69,12 +72,18 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
   int _identitySession = 0;
   int _currentPage = 0;
 
+  StreamSubscription<KycUnauthorizedEvent>? _kycUnauthorizedSubscription;
+
   @override
   void initState() {
     super.initState();
     WalletAnalytics.screen(WalletScreens.kycMethods);
     _pageContent = ValueNotifier(0);
     _pageController = PageController();
+    // A 401 on any KYC request never reaches the host app; handle it here.
+    _kycUnauthorizedSubscription = kycUnauthorizedEvents.listen(
+      (_) => _handleKycUnauthorized(),
+    );
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _scheduleSessionExpiry(),
     );
@@ -83,9 +92,39 @@ class _StartKycMethodsContentState extends State<_StartKycMethodsContent> {
   @override
   void dispose() {
     _sessionExpiryTimer?.cancel();
+    _kycUnauthorizedSubscription?.cancel();
     _pageController.dispose();
     _pageContent.dispose();
     super.dispose();
+  }
+
+  /// A KYC request returned 401 (expired session). No token refresh is expected
+  /// from the host — show the message and leave the whole KYC flow, landing
+  /// back on the Profile/Settings screen that opened it.
+  void _handleKycUnauthorized() {
+    if (!mounted || _sessionExpiredHandled) return;
+    _sessionExpiredHandled = true;
+    _sessionExpiryTimer?.cancel();
+
+    final bloc = context.read<WalletBloc>();
+    bloc.add(const WalletKycSessionResetRequested());
+
+    showMessage(
+      AppStrings.get(bloc.state.languageCode, 'kyc_session_expired'),
+      context: context,
+      type: MessageType.error,
+    );
+
+    _exitKycFlow();
+  }
+
+  /// Pops every KYC route (they all share [kycRouteName]) so the user returns
+  /// to whatever opened KYC — the Profile/Settings screen.
+  void _exitKycFlow() {
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).popUntil(
+      (route) => route.isFirst || route.settings.name != kycRouteName,
+    );
   }
 
   /// Arms a timer against the session's `expiresAt`. When it fires the flow is

@@ -45,6 +45,14 @@ class ApiErrorEvent {
   const ApiErrorEvent(this.message, {this.statusCode});
 }
 
+/// انتهاء صلاحية الجلسة أثناء تدفّق KYC (401 على طلبات KYC).
+///
+/// لا يُرسَل للتطبيق المضيف: لا حاجة لتجديد التوكن هنا — تدفّق KYC نفسه يعرض
+/// رسالة ويخرج من صفحاته عائداً للبروفايل/الإعدادات.
+class KycUnauthorizedEvent {
+  const KycUnauthorizedEvent();
+}
+
 /// حدث تسجيل الخروج.
 class LogoutEvent {
   final String reason;
@@ -72,6 +80,8 @@ final StreamController<ApiErrorEvent> _errorEventController =
     StreamController<ApiErrorEvent>.broadcast();
 final StreamController<LogoutEvent> _logoutEventController =
     StreamController<LogoutEvent>.broadcast();
+final StreamController<KycUnauthorizedEvent> _kycUnauthorizedEventController =
+    StreamController<KycUnauthorizedEvent>.broadcast();
 final StreamController<LanguageChangeEvent> _languageChangeEventController =
     StreamController<LanguageChangeEvent>.broadcast();
 
@@ -89,6 +99,10 @@ Stream<SwitchEvent> get switchEvents => _switchEventController.stream;
 
 /// ستستعملها التطبيقات للاستماع لأخطاء API لعرض SnackBars.
 Stream<ApiErrorEvent> get errorEvents => _errorEventController.stream;
+
+/// داخلي للمكتبة: 401 على طلبات KYC. تدفّق KYC يستمع له ليعرض رسالة ويخرج.
+Stream<KycUnauthorizedEvent> get kycUnauthorizedEvents =>
+    _kycUnauthorizedEventController.stream;
 
 /// مفتاح عالمي لـ ScaffoldMessenger لضمان إمكانية عرض SnackBars من أي مكان.
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
@@ -132,6 +146,14 @@ void emitLogoutEvent(LogoutEvent evt) {
 void emitLanguageChangeEvent(LanguageChangeEvent evt) {
   try {
     _languageChangeEventController.add(evt);
+  } catch (_) {
+    // ignore stream errors
+  }
+}
+
+void emitKycUnauthorizedEvent() {
+  try {
+    _kycUnauthorizedEventController.add(const KycUnauthorizedEvent());
   } catch (_) {
     // ignore stream errors
   }
@@ -222,7 +244,12 @@ class ApiDebugInterceptor extends Interceptor {
 
 /// Interceptor للكشف عن أخطاء المصادقة (مثال: 401 أو رسالة تحتوي على 'unAthu').
 class ApiAuthInterceptor extends Interceptor {
-  ApiAuthInterceptor();
+  ApiAuthInterceptor({this.emitAuthEvents = true});
+
+  /// When false (the KYC client) a 401 is NOT forwarded to the host app — no
+  /// token refresh is expected there. It is emitted as a [KycUnauthorizedEvent]
+  /// so the KYC flow can show a message and exit its pages instead.
+  final bool emitAuthEvents;
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
@@ -254,7 +281,12 @@ class ApiAuthInterceptor extends Interceptor {
 
     if (isAuthError) {
       try {
-        emitAuthEvent(AuthEvent.unauthenticated());
+        if (emitAuthEvents) {
+          emitAuthEvent(AuthEvent.unauthenticated());
+        } else {
+          // KYC client → keep it inside the library.
+          emitKycUnauthorizedEvent();
+        }
       } catch (_) {
         // swallow errors to avoid breaking the interceptor chain
       }

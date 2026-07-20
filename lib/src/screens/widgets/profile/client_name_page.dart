@@ -398,6 +398,9 @@ class ClientNamePage extends StatelessWidget {
                                       onTap: () {
                                         Navigator.of(context).push(
                                           MaterialPageRoute(
+                                            settings: const RouteSettings(
+                                              name: kycRouteName,
+                                            ),
                                             builder: (_) =>
                                                 const FirstPageKyc(),
                                           ),

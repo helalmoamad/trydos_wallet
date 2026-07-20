@@ -13,6 +13,10 @@ import 'package:trydos_wallet/src/localization/app_strings.dart';
 import 'package:trydos_wallet/src/screens/kyc/start_kyc_methods.dart';
 import 'package:trydos_wallet/src/analytics/wallet_analytics.dart';
 
+/// Route name given to EVERY KYC route, so the flow can pop itself entirely
+/// (back to Profile/Settings) — e.g. when the session expires with a 401.
+const String kycRouteName = 'trydos_wallet/kyc';
+
 /// Digital wallet home page.
 class FirstPageKyc extends StatelessWidget {
   const FirstPageKyc({super.key});
@@ -168,6 +172,7 @@ class _FirstPageKycContentState extends State<_FirstPageKycContent> {
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
+                          settings: const RouteSettings(name: kycRouteName),
                           builder: (_) => const StartKycMethods(),
                         ),
                       );
