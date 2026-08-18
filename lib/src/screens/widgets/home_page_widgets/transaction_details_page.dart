@@ -141,8 +141,7 @@ class _TransactionDetailsPageState extends State<TransactionDetailsPage> {
                     vertical: 8.h,
                   ),
                   decoration: BoxDecoration(
-                    // ignore: deprecated_member_use
-                    color: _statusColor.withOpacity(0.12),
+                    color: _statusColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20.r),
                   ),
                   child: Row(

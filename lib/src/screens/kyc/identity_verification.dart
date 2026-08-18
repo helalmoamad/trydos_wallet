@@ -1042,8 +1042,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
                             vertical: 8.h,
                           ),
                           decoration: BoxDecoration(
-                            // ignore: deprecated_member_use
-                            color: Colors.orange.withOpacity(0.88),
+                            color: Colors.orange.withValues(alpha: 0.88),
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                           child: Row(

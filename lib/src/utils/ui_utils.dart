@@ -163,8 +163,7 @@ Future<T?> showWalletModal<T>({
     context: context,
     barrierDismissible: isDismissible,
     barrierLabel: 'Wallet Modal',
-    // ignore: deprecated_member_use
-    barrierColor: const Color(0xff1D1D1D).withOpacity(0.9),
+    barrierColor: const Color(0xff1D1D1D).withValues(alpha: 0.9),
     transitionDuration: const Duration(milliseconds: 900),
     pageBuilder: (dialogContext, animation, secondaryAnimation) {
       return SafeArea(
