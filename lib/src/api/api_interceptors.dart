@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:trydos_wallet/src/api/api_redaction.dart';
 
 import 'dart:async';
 
@@ -183,12 +185,12 @@ class ApiDebugInterceptor extends Interceptor {
     _log('═══════════════════════════════════════');
     _log('$prefix REQUEST');
     _log('${options.method} ${options.uri}');
-    _log('Headers: ${options.headers}');
+    _log('Headers: ${redactHeaders(options.headers)}');
     if (options.queryParameters.isNotEmpty) {
-      _log('Query: ${options.queryParameters}');
+      _log('Query: ${redactData(options.queryParameters)}');
     }
     if (options.data != null) {
-      _log('Body: ${options.data}');
+      _log('Body: ${redactData(options.data)}');
     }
     _log('═══════════════════════════════════════');
     handler.next(options);
@@ -207,7 +209,7 @@ class ApiDebugInterceptor extends Interceptor {
     _log('$prefix RESPONSE [SUCCESS]');
     _log('${response.requestOptions.method} ${response.requestOptions.uri}');
     _log('Status: ${response.statusCode}');
-    _log('Data: ${response.data}');
+    _log('Data: ${redactData(response.data)}');
     _log('───────────────────────────────────────');
     handler.next(response);
   }
@@ -227,7 +229,7 @@ class ApiDebugInterceptor extends Interceptor {
     _log('Message: ${err.message ?? "—"}');
     _log('Underlying Error: ${err.error ?? "—"}');
     if (res?.data != null) {
-      _log('Response Data: ${res!.data}');
+      _log('Response Data: ${redactData(res!.data)}');
     } else {
       _log('Response Data: N/A (network error, disconnect, or timeout)');
     }
@@ -237,8 +239,12 @@ class ApiDebugInterceptor extends Interceptor {
   }
 
   void _log(String msg) {
-    // ignore: avoid_print
-    print(msg);
+    // kDebugMode is a compile-time constant, so the whole call is tree-shaken
+    // out of release builds. `enabled` alone is not enough: it comes from the
+    // host app's `debug` flag, so a host that ships with debug:true would
+    // otherwise stream request/response logs to logcat in production.
+    if (!kDebugMode) return;
+    debugPrint(msg);
   }
 }
 
@@ -300,10 +306,12 @@ class ApiAuthInterceptor extends Interceptor {
 class ApiErrorInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    // ignore: avoid_print
-    print(
-      '[ApiErrorInterceptor] onError called. Status: ${err.response?.statusCode}',
-    );
+    if (kDebugMode) {
+      debugPrint(
+        '[ApiErrorInterceptor] onError called. '
+        'Status: ${err.response?.statusCode}',
+      );
+    }
 
     if (err.response?.statusCode == 400) {
       final res = err.response;
@@ -311,8 +319,11 @@ class ApiErrorInterceptor extends Interceptor {
 
       if (res?.data != null) {
         final data = res!.data;
-        // ignore: avoid_print
-        print('[ApiErrorInterceptor] Response data type: ${data.runtimeType}');
+        if (kDebugMode) {
+          debugPrint(
+            '[ApiErrorInterceptor] Response data type: ${data.runtimeType}',
+          );
+        }
 
         if (data is Map) {
           errorMessage =
@@ -327,8 +338,11 @@ class ApiErrorInterceptor extends Interceptor {
       errorMessage ??= err.message;
 
       if (errorMessage != null) {
-        // ignore: avoid_print
-        print('[ApiErrorInterceptor] Emitting error event: $errorMessage');
+        if (kDebugMode) {
+          debugPrint(
+            '[ApiErrorInterceptor] Emitting error event: $errorMessage',
+          );
+        }
         emitApiErrorEvent(ApiErrorEvent(errorMessage, statusCode: 400));
       }
     }

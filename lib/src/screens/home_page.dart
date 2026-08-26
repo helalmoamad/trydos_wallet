@@ -15,6 +15,8 @@ import '../constent/styles.dart';
 import '../services/connectivity_service.dart';
 import 'no_internet_screen.dart';
 import 'tabs/tabs.dart';
+import 'package:trydos_wallet/src/api/api_log.dart';
+
 import 'dev/api_logs_page.dart';
 import '../analytics/wallet_analytics.dart';
 import 'widgets/home_page_widgets/session_approval_dialog.dart';
@@ -59,6 +61,7 @@ class _TrydosWalletHomePageContentState
   int _selectedIndex = 0;
   StreamSubscription<LogoutEvent>? _logoutSubscription;
   bool _isOffline = false;
+  bool _connectivityAcquired = false;
 
   @override
   void initState() {
@@ -74,7 +77,8 @@ class _TrydosWalletHomePageContentState
       final bloc = context.read<WalletBloc>();
       bloc.add(const WalletRefreshAllRequested());
       bloc.add(const WalletTransferPurposesLoadRequested());
-      ConnectivityService.instance.initialize().then((_) {
+      _connectivityAcquired = true;
+      ConnectivityService.instance.acquire().then((_) {
         if (!mounted) return;
         setState(() {
           _isOffline = !ConnectivityService.instance.isOnline.value;
@@ -90,6 +94,12 @@ class _TrydosWalletHomePageContentState
     ConnectivityService.instance.isOnline.removeListener(
       _onConnectivityChanged,
     );
+    // Only release what we actually acquired: the post-frame callback above
+    // can be skipped entirely if this page is disposed before its first frame.
+    if (_connectivityAcquired) {
+      _connectivityAcquired = false;
+      ConnectivityService.instance.release();
+    }
     super.dispose();
   }
 
@@ -276,7 +286,12 @@ class _TrydosWalletHomePageContentState
           setState(() => _selectedIndex = index);
         },
         // Long-press the Settings tab to open the in-app API network inspector.
-        onLongPress: index == 3
+        // Debug builds only: the inspector shows full response bodies —
+        // balances, transaction history, transfers, KYC data — and offers a
+        // copy button, so in a shipped app anyone holding the phone could read
+        // and exfiltrate them. ApiLogStore.isAvailable is const false in
+        // release, so this branch is tree-shaken away entirely.
+        onLongPress: index == 3 && ApiLogStore.isAvailable
             ? () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const ApiLogsPage()),
               )

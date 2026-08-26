@@ -953,7 +953,7 @@ class _TransferSendModalState extends State<TransferSendModal>
 
   String _generateIdempotencyKey() {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    final random = Random();
+    final random = Random.secure();
     final suffix = List.generate(
       9,
       (_) => chars[random.nextInt(chars.length)],

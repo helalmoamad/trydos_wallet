@@ -1,0 +1,258 @@
+# Semgrep rules for the trydos_wallet Flutter library.
+#
+# Run:  semgrep --config .semgrep/trydos-wallet.yaml lib example test
+#
+# Written against what this codebase actually does (TLS bypass switch, an
+# in-app network inspector that captures headers, JWTs in the example app),
+# not a generic mobile checklist.
+rules:
+  # ---------------------------------------------------------------- TLS ----
+  - id: trydos-tls-bad-certificate-callback
+    languages: [dart]
+    severity: ERROR
+    message: >-
+      badCertificateCallback unconditionally returns true, which disables TLS
+      certificate validation and allows any man-in-the-middle. This is only
+      acceptable behind an explicit development flag. Never let it reach a
+      release build.
+    metadata:
+      category: security
+      cwe: "CWE-295: Improper Certificate Validation"
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: $CLIENT.badCertificateCallback = (...) => true;
+          - pattern: $CLIENT.badCertificateCallback = (...) { return true; };
+
+  - id: trydos-tls-http-overrides-global
+    languages: [dart]
+    severity: WARNING
+    message: >-
+      HttpOverrides.global is process-wide: it rewrites networking for the
+      entire host application, not just this library. Chain to the previous
+      HttpOverrides.current instead of replacing it, and restore it when done.
+    metadata:
+      category: security
+      cwe: "CWE-295: Improper Certificate Validation"
+      confidence: MEDIUM
+    pattern: HttpOverrides.global = $X;
+
+  - id: trydos-tls-validate-certificate-always-true
+    languages: [dart]
+    severity: ERROR
+    message: >-
+      Dio's validateCertificate always returns true, accepting any leaf
+      certificate. Remove it or gate it behind a development-only flag.
+    metadata:
+      category: security
+      cwe: "CWE-295: Improper Certificate Validation"
+      confidence: HIGH
+    pattern-either:
+      - pattern: "$F(..., validateCertificate: (...) => true, ...)"
+      - pattern: $A.validateCertificate = (...) => true;
+
+  # ------------------------------------------------------------ secrets ----
+  - id: trydos-hardcoded-jwt
+    languages: [dart]
+    severity: ERROR
+    message: >-
+      Hardcoded JWT in source. Tokens committed to a repository are leaked
+      credentials even after they expire — they disclose the signing algorithm,
+      claim shape, audience and issuer. Load them from the environment or a
+      login flow instead.
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+    pattern-regex: '"eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+"'
+
+  - id: trydos-secret-in-shared-preferences
+    languages: [dart]
+    severity: WARNING
+    message: >-
+      SharedPreferences is plaintext on disk (an unencrypted XML file on
+      Android) and is readable on a rooted or backed-up device. Credentials
+      belong in flutter_secure_storage / Keychain / EncryptedSharedPreferences.
+    metadata:
+      category: security
+      cwe: "CWE-312: Cleartext Storage of Sensitive Information"
+      confidence: MEDIUM
+    patterns:
+      - pattern: $PREFS.setString($KEY, ...)
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: '(?i).*(token|password|passwd|pin|secret|credential|refresh|jwt|apikey|api_key).*'
+
+  # ------------------------------------------------------------ logging ----
+  - id: trydos-logs-request-headers
+    languages: [dart]
+    severity: WARNING
+    message: >-
+      Request headers carry the Authorization bearer token. Logging or
+      capturing them verbatim writes credentials to logcat / the in-app
+      inspector, where any app with log access or anyone holding the device can
+      read them. Redact Authorization and Cookie before logging.
+    metadata:
+      category: security
+      cwe: "CWE-532: Insertion of Sensitive Information into Log File"
+      confidence: MEDIUM
+    pattern-either:
+      - pattern: $LOG("...${$OPTS.headers}...")
+      - pattern: $LOG("...${$OPTS.headers}...", ...)
+      - pattern: debugPrint("...${$OPTS.headers}...")
+      - pattern: print("...${$OPTS.headers}...")
+
+  - id: trydos-print-in-library
+    languages: [dart]
+    severity: INFO
+    message: >-
+      print() reaches logcat in release builds too — and neither debugPrint()
+      nor a `debug` flag the host app controls changes that. Guard the call
+      with kDebugMode (which the compiler tree-shakes away in release) so
+      production builds cannot emit it at all.
+    metadata:
+      category: best-practice
+      confidence: HIGH
+    paths:
+      include:
+        - "**/lib/**"
+    pattern: print(...)
+
+  # ---------------------------------------------------------- randomness ----
+  - id: trydos-insecure-random-for-secret
+    languages: [dart]
+    severity: WARNING
+    message: >-
+      dart:math Random() is a predictable PRNG seeded from the clock. If this
+      value guards anything (nonce, token, key, OTP, salt), use Random.secure().
+    metadata:
+      category: security
+      cwe: "CWE-338: Use of Cryptographically Weak PRNG"
+      confidence: LOW
+    patterns:
+      - pattern-inside: |
+          $TYPE $FUNC(...) { ... }
+      - pattern: Random()
+      - metavariable-regex:
+          metavariable: $FUNC
+          regex: '(?i).*(token|key|nonce|otp|secret|salt|iv|password|session).*'
+
+  - id: trydos-api-inspector-must-stay-debug-only
+    languages: [dart]
+    severity: ERROR
+    message: >-
+      ApiLogStore.isAvailable must stay bound to kDebugMode. It is the single
+      switch behind the in-app network inspector, whose buffer holds full
+      response bodies — balances, transaction history, transfers, KYC data —
+      and offers a copy button. Hardcoding it true ships that to end users.
+    metadata:
+      category: security
+      cwe: "CWE-489: Active Debug Code"
+      confidence: HIGH
+    # Note: `static const bool ... = $X;` is a parse error in Semgrep's Dart
+    # grammar and silently matches nothing. `const bool` parses and still
+    # matches the static field.
+    patterns:
+      - pattern: const bool isAvailable = $X;
+      - pattern-not: const bool isAvailable = kDebugMode;
+
+  # ------------------------------------------------------------- android ----
+  # These are intentional development settings in this repo. The rules exist so
+  # they stay visible and can never reach a release build unnoticed.
+  - id: trydos-android-cleartext-traffic-permitted
+    languages: [generic]
+    severity: WARNING
+    message: >-
+      cleartextTrafficPermitted="true" re-enables unencrypted HTTP, which
+      Android blocks by default since API 28. Traffic on this config is
+      readable and modifiable on any shared network. Scope it to specific
+      development domains with <domain-config>, or keep it out of release.
+    metadata:
+      category: security
+      cwe: "CWE-319: Cleartext Transmission of Sensitive Information"
+      confidence: HIGH
+    paths:
+      include: ["*.xml"]
+    pattern-regex: 'cleartextTrafficPermitted\s*=\s*"true"'
+
+  - id: trydos-android-uses-cleartext-traffic
+    languages: [generic]
+    severity: WARNING
+    message: >-
+      android:usesCleartextTraffic="true" allows plaintext HTTP app-wide on
+      API 23 and below. Confirm this is a development manifest.
+    metadata:
+      category: security
+      cwe: "CWE-319: Cleartext Transmission of Sensitive Information"
+      confidence: HIGH
+    paths:
+      include: ["*.xml"]
+    pattern-regex: 'android:usesCleartextTraffic\s*=\s*"true"'
+
+  - id: trydos-android-trusts-user-ca
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      Trusting user-installed CAs lets anyone who can install a certificate on
+      the device intercept HTTPS. Acceptable in a debug source set for proxy
+      debugging; a release build must trust the system store only.
+    metadata:
+      category: security
+      cwe: "CWE-295: Improper Certificate Validation"
+      confidence: HIGH
+    paths:
+      include: ["*.xml"]
+      exclude: ["**/src/debug/**"]
+    pattern-regex: '<certificates\s+src\s*=\s*"user"'
+
+  # Absence rules. Everything above matches text that IS present; a dangerous
+  # *default* leaves no text to match. These match the <application> tag and
+  # subtract the safe form, so an unset attribute is what fires.
+  - id: trydos-android-backup-not-disabled
+    languages: [generic]
+    severity: WARNING
+    message: >-
+      <application> does not set android:allowBackup, which defaults to TRUE.
+      Android then uploads the app's SharedPreferences (FlutterSharedPreferences.xml)
+      to the user's Google Drive and exposes it to `adb backup`. For a wallet,
+      set android:allowBackup="false".
+    metadata:
+      category: security
+      cwe: "CWE-530: Exposure of Backup File to an Unauthorized Control Sphere"
+      confidence: HIGH
+    paths:
+      include: ["**/AndroidManifest.xml"]
+    patterns:
+      - pattern-regex: '<application\b[^>]*>'
+      - pattern-not-regex: '<application\b[^>]*android:allowBackup[^>]*>'
+
+  - id: trydos-android-missing-data-extraction-rules
+    languages: [generic]
+    severity: WARNING
+    message: >-
+      <application> sets no android:dataExtractionRules. On Android 12+ (API 31)
+      allowBackup="false" stops cloud backup but NOT device-to-device transfer —
+      only a <device-transfer> exclude does. Add @xml/data_extraction_rules.
+    metadata:
+      category: security
+      cwe: "CWE-530: Exposure of Backup File to an Unauthorized Control Sphere"
+      confidence: MEDIUM
+    paths:
+      include: ["**/AndroidManifest.xml"]
+    patterns:
+      - pattern-regex: '<application\b[^>]*>'
+      - pattern-not-regex: '<application\b[^>]*android:dataExtractionRules[^>]*>'
+
+  - id: trydos-android-debuggable
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      android:debuggable="true" in a manifest lets any process attach a
+      debugger and read app memory, including tokens. Never ship it.
+    metadata:
+      category: security
+      cwe: "CWE-489: Active Debug Code"
+      confidence: HIGH
+    paths:
+      include: ["*.xml"]
+    pattern-regex: 'android:debuggable\s*=\s*"true"'

@@ -1,9 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
+// ignore: implementation_imports
+import 'package:trydos_wallet/src/services/connectivity_service.dart';
 
 void main() {
+  // TrydosWallet.init() kicks off unawaited SharedPreferences reads. Without a
+  // mock store the platform channel is absent and those futures reject, which
+  // used to surface as "this test failed after it had already completed" in
+  // whichever test happened to be running next.
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    // Keep the wallet screens off the real network.
+    ConnectivityService.disabledForTesting = true;
+  });
+
+  tearDown(() {
+    ConnectivityService.disabledForTesting = false;
+  });
+
   TrydosWalletConfig buildConfig({
     required String baseUrl,
     required String languageCode,
@@ -79,7 +97,9 @@ void main() {
     await bloc.close();
   });
 
-  testWidgets('صفحة البداية تعرض نص الترحيب', (WidgetTester tester) async {
+  testWidgets('شاشة البداية تعرض splash بلغة الإعداد', (
+    WidgetTester tester,
+  ) async {
     TrydosWallet.init(
       buildConfig(
         baseUrl: 'https://example.test',
@@ -95,6 +115,11 @@ void main() {
       ),
     );
 
-    expect(find.text('مرحبا بك في المحفظه'), findsOneWidget);
+    // The screen used to greet with 'مرحبا بك في المحفظه'; the redesign
+    // replaced it with a splash overlay, so assert on what it renders now:
+    // the localized "powered by" line, which also proves the configured
+    // language reached the widget tree.
+    expect(find.text(AppStrings.get('ar', 'powered_by')), findsOneWidget);
+    expect(find.text('مدعوم من'), findsOneWidget);
   });
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:trydos_wallet/src/api/api_client_io.dart'
     if (dart.library.html) 'package:trydos_wallet/src/api/api_client_stub.dart'
     as api_io;
@@ -58,8 +59,9 @@ class ApiClient {
     if (headersConfig != null) {
       ApiHeaders.apply(_dio, headersConfig);
     }
+    _allowBadCertificate = allowBadCertificate;
     if (allowBadCertificate) {
-      api_io.configureAllowBadCertificate(_dio);
+      api_io.configureAllowBadCertificate(_dio, allow: true);
     }
     // _dio.interceptors.add(ApiErrorInterceptor()); // Removed in favor of direct handling
     _dio.interceptors.add(ApiDebugInterceptor(enabled: debug));
@@ -67,12 +69,23 @@ class ApiClient {
       ApiAuthInterceptor(emitAuthEvents: emitAuthEvents),
     );
     // Capture every request/response into the in-app network inspector.
-    _dio.interceptors.add(ApiLogInterceptor());
+    // Not registered at all in release builds — see ApiLogStore.isAvailable.
+    if (ApiLogStore.isAvailable) {
+      _dio.interceptors.add(ApiLogInterceptor());
+    }
   }
 
   final Dio _dio;
 
+  /// Mirrors the adapter's current TLS mode so [updateAllowBadCertificate] can
+  /// skip rebuilding the adapter (and dropping its connection pool) on every
+  /// config refresh — `_applyConfig` runs on each token/profile update.
+  bool _allowBadCertificate = false;
+
   Dio get dio => _dio;
+
+  /// Whether SSL certificate validation is currently bypassed.
+  bool get allowBadCertificate => _allowBadCertificate;
 
   void updateBaseUrl(String baseUrl) {
     _dio.options.baseUrl = baseUrl;
@@ -83,10 +96,15 @@ class ApiClient {
     ApiHeaders.apply(_dio, config);
   }
 
+  /// Turns the SSL-validation bypass on *or off* at runtime.
+  ///
+  /// Passing `false` genuinely restores certificate validation; previously the
+  /// flag was one-way, so a client that had ever been created insecurely stayed
+  /// insecure for the rest of the process.
   void updateAllowBadCertificate(bool allowBadCertificate) {
-    if (allowBadCertificate) {
-      api_io.configureAllowBadCertificate(_dio);
-    }
+    if (allowBadCertificate == _allowBadCertificate) return;
+    _allowBadCertificate = allowBadCertificate;
+    api_io.configureAllowBadCertificate(_dio, allow: allowBadCertificate);
   }
 
   String? _extractErrorMessage(DioException e) {
@@ -134,8 +152,9 @@ class ApiClient {
   void _handle400(dynamic data) {
     final msg = _extractErrorMessageFromData(data);
     if (msg != null) {
-      // ignore: avoid_print
-      print('[ApiClient] Radical 400 emission: $msg');
+      if (kDebugMode) {
+        debugPrint('[ApiClient] Radical 400 emission: $msg');
+      }
       emitApiErrorEvent(ApiErrorEvent(msg, statusCode: 400));
     }
   }

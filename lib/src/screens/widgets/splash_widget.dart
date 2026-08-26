@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -23,6 +25,12 @@ class _SplashWidgetState extends State<SplashWidget>
   late AnimationController _controller;
   bool _showSplash = true;
 
+  /// Held so dispose() can cancel it. A bare Future.delayed leaves an
+  /// uncancellable pending timer that keeps this State alive after the widget
+  /// is gone — harmless in production thanks to the `mounted` guards, but a
+  /// real leak, and it fails widget tests with "A Timer is still pending".
+  Timer? _startTimer;
+
   @override
   void initState() {
     super.initState();
@@ -35,20 +43,21 @@ class _SplashWidgetState extends State<SplashWidget>
         });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          _controller.forward().then((_) {
-            if (mounted) {
-              setState(() => _showSplash = false);
-            }
-          });
-        }
+      if (!mounted) return;
+      _startTimer = Timer(const Duration(milliseconds: 500), () {
+        if (!mounted) return;
+        _controller.forward().then((_) {
+          if (mounted) {
+            setState(() => _showSplash = false);
+          }
+        });
       });
     });
   }
 
   @override
   void dispose() {
+    _startTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }

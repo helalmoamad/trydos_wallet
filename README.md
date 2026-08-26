@@ -64,6 +64,92 @@ void main() {
 | `debug` | `bool` | طباعة الطلبات والردود |
 | `allowBadCertificate` | `bool` | تجاوز التحقق من SSL (تطوير فقط) |
 
+#### إعداد الشبكة على Android (HTTP + الشهادات)
+
+Android 9 (API 28) فما فوق يحجب الاتصالات النصية `http://` افتراضياً، فإن كان
+الـ `baseUrl` يشير إلى سيرفر تطوير بدون TLS ستفشل كل الطلبات قبل أن تصل
+للمكتبة. أضف في تطبيقك المستضيف ملف
+`android/app/src/main/res/xml/network_security_config.xml`:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
+```
+
+ثم اربطه في `android/app/src/main/AndroidManifest.xml`:
+
+```xml
+<application
+    android:usesCleartextTraffic="true"
+    android:networkSecurityConfig="@xml/network_security_config"
+    ... >
+```
+
+> `usesCleartextTraffic` يخدم API 23 فما دون، و`networkSecurityConfig` هو
+> المعتمد من API 24 فصاعداً — لذلك يوضع الاثنان معاً.
+
+للتفتيش على الطلبات عبر بروكسي (Charles / Proxyman / mitmproxy) ضع نسخة
+بنفس الاسم تحت `android/app/src/debug/res/xml/` وأضف فيها
+`<certificates src="user" />`، فتُطبَّق في بناء الـ debug وحده ويبقى بناء
+الـ release معتمداً على شهادات النظام فقط. راجع
+[`example/android/app/src/`](example/android/app/src/) للنموذج الكامل.
+
+> ⚠️ `allowBadCertificate: true` يعطّل التحقق من الشهادات لكل طلبات المكتبة
+> ولاتصال الـ WebSocket. اجعله `false` في بناء الإنتاج.
+
+#### النسخ الاحتياطي لبيانات المحفظة (اختياري — غير مفعّل في المثال)
+
+`android:allowBackup` قيمته الافتراضية **`true`** عند عدم تحديدها، فيرفع Android
+ملف `FlutterSharedPreferences.xml` — حيث تحفظ المكتبة توكن الإشعارات ورابط
+صورة الحساب وخيار إخفاء الرصيد — إلى Google Drive، ويصبح متاحاً كذلك عبر
+`adb backup`.
+
+تطبيق المثال **يترك هذا على الوضع الافتراضي عمداً**، حتى تُستعاد تفضيلات
+المستخدم عند نقل الهاتف. إن أردت منعه في تطبيقك، في `AndroidManifest.xml`:
+
+```xml
+<application
+    android:allowBackup="false"
+    android:fullBackupContent="@xml/backup_rules"
+    android:dataExtractionRules="@xml/data_extraction_rules"
+    ... >
+```
+
+> على Android 12 فأحدث (API 31) الـ `allowBackup="false"` يمنع النسخ السحابي
+> **لكنه لا يمنع النقل بين الأجهزة** (device-to-device) — هذا يضبطه قسم
+> `<device-transfer>` في `dataExtractionRules` وحده.
+
+إن كان تطبيقك يحتاج النسخ الاحتياطي لبياناته هو، أبقِ `allowBackup="true"`
+واستثنِ بيانات المحفظة فقط في `res/xml/data_extraction_rules.xml`:
+
+```xml
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="FlutterSharedPreferences.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="FlutterSharedPreferences.xml" />
+    </device-transfer>
+</data-extraction-rules>
+```
+
+#### فحص أمني
+
+قواعد Semgrep جاهزة في [`.semgrep/trydos-wallet.yaml`](.semgrep/trydos-wallet.yaml)،
+وتشمل قواعد تكشف **غياب** هذه السمات لا وجودها فقط. لذلك تُبلّغ عن
+`allowBackup` غير المحدَّد وعن مفتّش الشبكة المفتوح في الإنتاج — وهي
+**مخاطر مقبولة بقرار الفريق**، تبقى ظاهرة في كل فحص بدل أن تُنسى:
+
+```bash
+semgrep --config .semgrep/trydos-wallet.yaml lib example test
+```
+
 ---
 
 ### الخطوة 3: استخدام شاشات المحفظة

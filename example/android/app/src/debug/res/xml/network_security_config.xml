@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only override of the main network security config.
+
+  On top of allowing cleartext HTTP, this trusts user-installed CA certificates
+  so tools like Charles / Proxyman / mitmproxy can terminate TLS and inspect
+  wallet traffic. It ships only in debug builds — release builds keep the
+  system-only trust anchors from src/main.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

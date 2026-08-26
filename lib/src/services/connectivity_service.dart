@@ -23,7 +23,45 @@ class ConnectivityService {
   static const Duration _onlineInterval = Duration(seconds: 10);
   static const Duration _offlineInterval = Duration(seconds: 5);
 
+  /// Live consumers (mounted wallet screens).
+  ///
+  /// This is a library embedded in someone else's app, so the periodic check
+  /// must not outlive the wallet UI: it opens a TCP socket every 10 s, and
+  /// before refcounting nothing ever stopped it — a host that navigated away
+  /// from the wallet kept paying for it until the process died.
+  int _consumers = 0;
+
+  /// Registers a consumer and starts monitoring if this is the first one.
+  /// Every [acquire] must be matched by exactly one [release].
+  Future<void> acquire() async {
+    _consumers++;
+    await initialize();
+  }
+
+  /// Drops a consumer; stops monitoring once the last one is gone.
+  void release() {
+    if (_consumers == 0) return;
+    _consumers--;
+    if (_consumers == 0) _shutdown();
+  }
+
+  void _shutdown() {
+    _periodicTimer?.cancel();
+    _periodicTimer = null;
+    unawaited(_subscription?.cancel());
+    _subscription = null;
+    // Allow a later acquire() to start monitoring again.
+    _initialized = false;
+  }
+
+  /// Test seam. Widget tests that mount wallet screens would otherwise open a
+  /// real socket to 8.8.8.8 with a 5 s timeout, whose pending timer outlives
+  /// the test and fails it with "A Timer is still pending".
+  @visibleForTesting
+  static bool disabledForTesting = false;
+
   Future<void> initialize() async {
+    if (disabledForTesting) return;
     if (_initialized) return;
     _initialized = true;
 
@@ -40,6 +78,9 @@ class ConnectivityService {
   }
 
   void _scheduleNextCheck() {
+    // An in-flight _checkAndUpdate can land after _shutdown(); without this
+    // guard it would silently restart the timer the last release() stopped.
+    if (!_initialized) return;
     _periodicTimer?.cancel();
     final interval = isOnline.value ? _onlineInterval : _offlineInterval;
     _periodicTimer = Timer(interval, () async {

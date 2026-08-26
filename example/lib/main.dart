@@ -11,17 +11,46 @@ import 'package:trydos_wallet/src/constent/constant_design.dart';
 // ignore: implementation_imports
 import 'package:trydos_wallet/src/constent/theme/app_theme.dart';
 
+/// Credentials come from the build environment, never from source.
+///
+/// Run the example with:
+///
+/// ```
+/// flutter run \
+///   --dart-define=WALLET_TOKEN=<jwt> \
+///   --dart-define=WALLET_REFRESH_TOKEN=<jwt> \
+///   --dart-define=WALLET_BASE_URL=https://... \
+///   --dart-define=WALLET_KYC_BASE_URL=https://...
+/// ```
+///
+/// Or keep them out of your shell history in `example/.env.json` (gitignored)
+/// and pass `--dart-define-from-file=.env.json`.
+const String _kToken = String.fromEnvironment('WALLET_TOKEN');
+const String _kRefreshToken = String.fromEnvironment('WALLET_REFRESH_TOKEN');
+const String _kBaseUrl = String.fromEnvironment(
+  'WALLET_BASE_URL',
+  defaultValue: 'https://trydos_wallet_develop.ramaaz.dev/',
+);
+const String _kKycBaseUrl = String.fromEnvironment(
+  'WALLET_KYC_BASE_URL',
+  defaultValue: 'https://api.ramaaz-digital-bank.online/',
+);
+
 void main() {
+  if (_kToken.isEmpty) {
+    debugPrint(
+      '[example] No WALLET_TOKEN provided — the app will start signed out. '
+      'Pass --dart-define=WALLET_TOKEN=<jwt> to authenticate.',
+    );
+  }
+
   // Library init - required before any API call
   TrydosWallet.init(
     TrydosWalletConfig(
-      baseUrl: 'https://trydos_wallet_develop.ramaaz.dev/',
-      kycBaseUrl: "https://api.ramaaz-digital-bank.online/",
-      //   "https://kyc-verification-ramaaz-digital-banking.yazan-adnof.workers.dev/",
-      token:
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDRlNTBmZDIyYTY1YmNiZjYwMGNlZiIsImVtYWlsIjoicGhvbmVfNjMyNTU1NTU5NTlAcmRiLmxvY2FsIiwidHlwZSI6InVzZXIiLCJsYW5nIjoiZW4iLCJreWNTdGF0dXMiOiJub3Rfc3VibWl0dGVkIiwidXNlclR5cGUiOiJyZWdpc3RlcmVkIiwic2Vzc2lvbklkIjoiNmE0NGU1MTBkMjJhNjViY2JmNjAwY2ZkIiwiaWF0IjoxNzgyOTAxNjcxLCJleHAiOjE3ODI5MDE5NzEsImF1ZCI6InRyeWRvcy11c2VyIiwiaXNzIjoidHJ5ZG9zLXdhbGxldCIsImp0aSI6ImEyZDczZjRjLWM5MTAtNDJlZC04Zjk5LWRlYzljOWJiOTA2NyJ9.iYGRv1UGVIn5DNM61COItvLmiPXni6TO-WmRBCI7_Ts",
-      refreshToken:
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZDEyMDNiOTQxMjM4NWRmMWU5ZmIwYiIsInR5cGUiOiJyZWZyZXNoIiwic2Vzc2lvbklkIjoiNmEyYWZhYjZkN2I0NGUxODU5N2UzNWFlIiwiaWF0IjoxNzgxMzUxMDI2LCJleHAiOjE3ODM5NDMwMjYsImF1ZCI6InRyeWRvcy11c2VyIiwiaXNzIjoidHJ5ZG9zLXdhbGxldCIsImp0aSI6ImJjMjM0ZmI4LWYwMGMtNGY3My04OWIxLWFmMWY1NzNmZjFlOSJ9.SWVsfUxBpmquTgIL-l0nuaBZvmkSGq99d5XCO0ISHzs",
+      baseUrl: _kBaseUrl,
+      kycBaseUrl: _kKycBaseUrl,
+      token: _kToken.isEmpty ? null : _kToken,
+      refreshToken: _kRefreshToken.isEmpty ? null : _kRefreshToken,
       languageCode: 'en',
       isKurdish: false,
       applicationVersion: '1.0.0',
@@ -36,6 +65,13 @@ void main() {
       isAccountActive: true,
       isTwoFactorEnabled: false,
       memberSince: DateTime(2026, 1, 27),
+      // DNS name. `trydos_wallet_develop.ramaaz.dev` has underscores, which
+      // RFC 1123 disallows in hostnames, so BoringSSL (Dart/Flutter's TLS
+      // stack) refuses to match it against the `*.ramaaz.dev` wildcard and
+      // fails with CERTIFICATE_VERIFY_FAILED: Hostname mismatch. curl and
+      // browsers are more lenient, which is why it only breaks in the app.
+      // Once `trydos-wallet-develop.ramaaz.dev` (hyphens) exists, switch the
+      // baseUrl over and drop this flag entirely.
       allowBadCertificate: true,
     ),
   );

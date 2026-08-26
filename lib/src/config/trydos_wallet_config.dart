@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
@@ -364,10 +365,19 @@ class TrydosWallet {
     final normalized = token?.trim();
     _fcmToken = (normalized == null || normalized.isEmpty) ? null : normalized;
 
-    final prefs = await SharedPreferences.getInstance();
+    // The in-memory value above is already updated; persistence is best-effort.
+    final prefs = await _prefs();
+    if (prefs == null) return;
+
     if (_fcmToken == null) {
       await prefs.remove(_fcmTokenPrefKey);
     } else {
+      // An FCM registration token is a push *delivery address*, not a
+      // credential: it grants nothing without the project's server key, and
+      // Firebase rotates it on reinstall. Plaintext prefs are the standard
+      // place for it — secure storage would add a native dependency for no
+      // security gain. Auth tokens are never persisted here.
+      // nosemgrep: trydos-secret-in-shared-preferences
       await prefs.setString(_fcmTokenPrefKey, _fcmToken!);
     }
   }
@@ -375,14 +385,35 @@ class TrydosWallet {
   /// Reads the persisted FCM token from SharedPreferences into the in-memory
   /// cache and returns it (null if none stored).
   static Future<String?> loadFcmToken() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs();
+    if (prefs == null) return _fcmToken;
+
     final stored = prefs.getString(_fcmTokenPrefKey)?.trim();
     _fcmToken = (stored == null || stored.isEmpty) ? null : stored;
     return _fcmToken;
   }
 
+  /// SharedPreferences handle, or null when the platform store is unavailable.
+  ///
+  /// Every caller here is a best-effort cache read/write reached through
+  /// `unawaited(...)`, so a throw would surface as an *unhandled* async error
+  /// in the host app's zone — reported as a crash by Crashlytics/Sentry even
+  /// though nothing the user cares about failed. Degrade quietly instead.
+  static Future<SharedPreferences?> _prefs() async {
+    try {
+      return await SharedPreferences.getInstance();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[TrydosWallet] SharedPreferences unavailable: $e');
+      }
+      return null;
+    }
+  }
+
   static Future<void> _persistProfileImageUrl(String? profileImageUrl) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs();
+    if (prefs == null) return;
+
     final normalizedValue = profileImageUrl?.trim();
     if (normalizedValue == null || normalizedValue.isEmpty) {
       await prefs.remove(_profileImageUrlPrefKey);
@@ -395,7 +426,8 @@ class TrydosWallet {
   static Future<void> _restorePersistedProfileImageUrl() async {
     if (_config == null) return;
 
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs();
+    if (prefs == null) return;
     if (!prefs.containsKey(_profileImageUrlPrefKey)) return;
 
     final persistedValue = prefs.getString(_profileImageUrlPrefKey);

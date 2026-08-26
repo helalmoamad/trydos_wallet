@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:trydos_wallet/src/api/api_redaction.dart';
 
 /// Max characters stored for a single request/response body. KYC requests send
 /// multi-MB base64 images, so we truncate to keep the in-memory buffer small.
@@ -59,7 +60,26 @@ class ApiLogStore {
 
   ValueListenable<List<ApiLogEntry>> get listenable => _entries;
 
+  /// Whether the inspector is available at all.
+  ///
+  /// DELIBERATELY `true`, including in release builds: QA relies on the
+  /// long-press-Settings inspector on release APKs, and the team chose to keep
+  /// that until it is no longer needed.
+  ///
+  /// ACCEPTED RISK: the buffer holds full response bodies — balances,
+  /// transaction history, transfer details, KYC and personal data — and the
+  /// page offers a copy button, so anyone holding an end user's phone can read
+  /// and exfiltrate them. Auth headers are redacted (see api_redaction.dart),
+  /// bodies are not.
+  ///
+  /// Set this to `kDebugMode` to close it; every call site already checks it,
+  /// so that one word is the whole fix. The Semgrep rule
+  /// `trydos-api-inspector-must-stay-debug-only` reports this on every scan so
+  /// it stays visible rather than forgotten.
+  static const bool isAvailable = true;
+
   void add(ApiLogEntry entry) {
+    if (!isAvailable) return;
     // Newest first; cap the buffer to avoid unbounded growth.
     final next = <ApiLogEntry>[entry, ..._entries.value];
     if (next.length > _maxEntries) {
@@ -78,12 +98,20 @@ const String _kLogStartKey = '__api_log_start';
 class ApiLogInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    if (!ApiLogStore.isAvailable) {
+      handler.next(options);
+      return;
+    }
     options.extra[_kLogStartKey] = DateTime.now().millisecondsSinceEpoch;
     handler.next(options);
   }
 
   @override
   void onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) {
+    if (!ApiLogStore.isAvailable) {
+      handler.next(response);
+      return;
+    }
     _record(
       options: response.requestOptions,
       statusCode: response.statusCode,
@@ -96,6 +124,10 @@ class ApiLogInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (!ApiLogStore.isAvailable) {
+      handler.next(err);
+      return;
+    }
     _record(
       options: err.requestOptions,
       statusCode: err.response?.statusCode,
@@ -123,14 +155,20 @@ class ApiLogInterceptor extends Interceptor {
           method: options.method,
           url: options.uri.toString(),
           path: options.path,
-          requestHeaders: Map<String, dynamic>.from(options.headers),
-          queryParameters: Map<String, dynamic>.from(options.queryParameters),
-          requestBody: _stringify(options.data),
-          statusCode: statusCode,
-          responseHeaders: responseHeaders.map(
-            (key, value) => MapEntry(key, value.join(', ')),
+          // Redact before storing: the inspector's buffer is readable from
+          // inside the app and its entries get shared/exported by testers.
+          requestHeaders: redactHeaders(
+            Map<String, dynamic>.from(options.headers),
           ),
-          responseBody: _stringify(responseBody),
+          queryParameters: redactData(
+            Map<String, dynamic>.from(options.queryParameters),
+          ) as Map<String, dynamic>,
+          requestBody: _stringify(redactData(options.data)),
+          statusCode: statusCode,
+          responseHeaders: redactHeaders(
+            responseHeaders.map((key, value) => MapEntry(key, value.join(', '))),
+          ).map((key, value) => MapEntry(key, value.toString())),
+          responseBody: _stringify(redactData(responseBody)),
           errorMessage: errorMessage,
           timestamp: DateTime.now(),
           durationMs: durationMs,
