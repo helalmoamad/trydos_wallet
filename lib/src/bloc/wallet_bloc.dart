@@ -215,7 +215,6 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     return WalletWebSocketService(
       baseUrl: TrydosWallet.config.baseUrl,
       token: token,
-      allowBadCertificate: TrydosWallet.config.allowBadCertificate,
       onLog: (message) {
         debugPrint('[WalletWS] $message');
       },

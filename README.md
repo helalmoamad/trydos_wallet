@@ -48,7 +48,6 @@ void main() {
     isKurdish: false,
     applicationVersion: '1.0.0',
     debug: kDebugMode,
-    allowBadCertificate: false,         // true للتطوير فقط عند خطأ SSL
   ));
   runApp(const MyApp());
 }
@@ -62,7 +61,7 @@ void main() {
 | `isKurdish` | `bool` | هل اللغة كردية عند ar |
 | `applicationVersion` | `String` | إصدار التطبيق |
 | `debug` | `bool` | طباعة الطلبات والردود |
-| `allowBadCertificate` | `bool` | تجاوز التحقق من SSL (تطوير فقط) |
+| ~~`allowBadCertificate`~~ | `bool` | **مهمَل ومتجاهَل** — التحقق من الشهادات مفروض دائماً |
 
 #### إعداد الشبكة على Android (HTTP + الشهادات)
 
@@ -100,8 +99,11 @@ Android 9 (API 28) فما فوق يحجب الاتصالات النصية `http:
 الـ release معتمداً على شهادات النظام فقط. راجع
 [`example/android/app/src/`](example/android/app/src/) للنموذج الكامل.
 
-> ⚠️ `allowBadCertificate: true` يعطّل التحقق من الشهادات لكل طلبات المكتبة
-> ولاتصال الـ WebSocket. اجعله `false` في بناء الإنتاج.
+> 🔒 **التحقق من الشهادات مفروض دائماً ولا يمكن تعطيله.** أُزيل
+> `badCertificateCallback` و`HttpOverrides` من المكتبة نهائياً، فأي شهادة
+> مزيّفة أو منتهية أو غير مطابقة لاسم المضيف تُسقِط الاتصال بـ
+> `HandshakeException`. البارامتر `allowBadCertificate` بقي مهمَلاً
+> ومتجاهَلاً لئلا ينكسر بناء التطبيقات المضيفة.
 
 #### النسخ الاحتياطي لبيانات المحفظة (اختياري — غير مفعّل في المثال)
 

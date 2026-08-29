@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as sio;
 
@@ -19,7 +17,6 @@ class WalletWebSocketService {
     required this.token,
     required this.onLog,
     required this.onTrackedEvent,
-    this.allowBadCertificate = false,
   });
 
   static const String _walletNamespace = '/wallet';
@@ -61,7 +58,6 @@ class WalletWebSocketService {
   final String token;
   final WalletSocketLog onLog;
   final WalletSocketEvent onTrackedEvent;
-  final bool allowBadCertificate;
 
   /// One socket per namespace, keyed by namespace path.
   final Map<String, sio.Socket> _sockets = <String, sio.Socket>{};
@@ -78,10 +74,6 @@ class WalletWebSocketService {
     // Re-arm after a previous disconnect so reconnection on the same instance
     // (e.g. WalletReconnectWebSocketRequested) delivers events again.
     _disposed = false;
-
-    if (allowBadCertificate) {
-      _applyBadCertificateOverride();
-    }
 
     final base = _normalizeBase(baseUrl);
 
@@ -185,7 +177,6 @@ class WalletWebSocketService {
       socket.dispose();
     }
     _sockets.clear();
-    _releaseBadCertificateOverride();
     onLog('Disconnected.');
   }
 
@@ -193,62 +184,4 @@ class WalletWebSocketService {
     final t = value.trim();
     return t.endsWith('/') ? t.substring(0, t.length - 1) : t;
   }
-
-  // `HttpOverrides.global` is process-wide: it also governs the *host* app's
-  // networking, not just this socket. So it is installed on top of whatever the
-  // host had (never replacing it), reference-counted across service instances,
-  // and removed again once the last insecure socket disconnects.
-  static int _insecureRefCount = 0;
-  static _WalletSocketHttpOverrides? _installedOverrides;
-
-  /// Whether *this* instance currently holds a reference on the override, so
-  /// connect/disconnect cycles can't unbalance the count.
-  bool _holdsInsecureOverride = false;
-
-  void _applyBadCertificateOverride() {
-    if (_holdsInsecureOverride) return;
-    _holdsInsecureOverride = true;
-    if (_insecureRefCount++ > 0) return;
-
-    // Chain to the host app's overrides instead of discarding them, so proxy
-    // resolution and any custom HttpClient setup keep working.
-    _installedOverrides = _WalletSocketHttpOverrides(HttpOverrides.current);
-    HttpOverrides.global = _installedOverrides;
-    onLog('Applied insecure TLS override (development only).');
-  }
-
-  void _releaseBadCertificateOverride() {
-    if (!_holdsInsecureOverride) return;
-    _holdsInsecureOverride = false;
-    if (--_insecureRefCount > 0) return;
-
-    // Only unwind if nobody swapped the global out from under us in the
-    // meantime; otherwise restoring would clobber their overrides.
-    if (identical(HttpOverrides.current, _installedOverrides)) {
-      HttpOverrides.global = _installedOverrides?.previous;
-      onLog('Removed insecure TLS override.');
-    }
-    _installedOverrides = null;
-  }
-}
-
-class _WalletSocketHttpOverrides extends HttpOverrides {
-  _WalletSocketHttpOverrides(this.previous);
-
-  /// The overrides that were active before this one was installed.
-  final HttpOverrides? previous;
-
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    final client =
-        previous?.createHttpClient(context) ?? super.createHttpClient(context);
-    client.badCertificateCallback =
-        (X509Certificate cert, String host, int port) => true;
-    return client;
-  }
-
-  @override
-  String findProxyFromEnvironment(Uri url, Map<String, String>? environment) =>
-      previous?.findProxyFromEnvironment(url, environment) ??
-      super.findProxyFromEnvironment(url, environment);
 }

@@ -2,9 +2,6 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:trydos_wallet/src/api/api_client_io.dart'
-    if (dart.library.html) 'package:trydos_wallet/src/api/api_client_stub.dart'
-    as api_io;
 import 'package:trydos_wallet/src/api/api_headers.dart';
 import 'package:trydos_wallet/src/api/api_interceptors.dart';
 import 'package:trydos_wallet/src/api/api_log.dart';
@@ -38,7 +35,6 @@ class ApiClient {
     required String baseUrl,
     ApiHeadersConfig? headersConfig,
     bool debug = false,
-    bool allowBadCertificate = false,
     Duration? connectTimeout,
     Duration? receiveTimeout,
     // KYC client passes false: its 401s stay inside the library (see
@@ -59,10 +55,10 @@ class ApiClient {
     if (headersConfig != null) {
       ApiHeaders.apply(_dio, headersConfig);
     }
-    _allowBadCertificate = allowBadCertificate;
-    if (allowBadCertificate) {
-      api_io.configureAllowBadCertificate(_dio, allow: true);
-    }
+    // No badCertificateCallback, no custom adapter: Dio keeps its default
+    // client, which performs full chain + hostname validation against the
+    // platform trust store. A forged or mismatched certificate fails the
+    // handshake.
     // _dio.interceptors.add(ApiErrorInterceptor()); // Removed in favor of direct handling
     _dio.interceptors.add(ApiDebugInterceptor(enabled: debug));
     _dio.interceptors.add(
@@ -77,15 +73,7 @@ class ApiClient {
 
   final Dio _dio;
 
-  /// Mirrors the adapter's current TLS mode so [updateAllowBadCertificate] can
-  /// skip rebuilding the adapter (and dropping its connection pool) on every
-  /// config refresh — `_applyConfig` runs on each token/profile update.
-  bool _allowBadCertificate = false;
-
   Dio get dio => _dio;
-
-  /// Whether SSL certificate validation is currently bypassed.
-  bool get allowBadCertificate => _allowBadCertificate;
 
   void updateBaseUrl(String baseUrl) {
     _dio.options.baseUrl = baseUrl;
@@ -94,17 +82,6 @@ class ApiClient {
   /// تحديث هيدر الـ client (مثلاً بعد تغيير التوكن).
   void updateHeaders(ApiHeadersConfig config) {
     ApiHeaders.apply(_dio, config);
-  }
-
-  /// Turns the SSL-validation bypass on *or off* at runtime.
-  ///
-  /// Passing `false` genuinely restores certificate validation; previously the
-  /// flag was one-way, so a client that had ever been created insecurely stayed
-  /// insecure for the rest of the process.
-  void updateAllowBadCertificate(bool allowBadCertificate) {
-    if (allowBadCertificate == _allowBadCertificate) return;
-    _allowBadCertificate = allowBadCertificate;
-    api_io.configureAllowBadCertificate(_dio, allow: allowBadCertificate);
   }
 
   String? _extractErrorMessage(DioException e) {

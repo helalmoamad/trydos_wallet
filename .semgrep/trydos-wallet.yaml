@@ -24,6 +24,24 @@ rules:
           - pattern: $CLIENT.badCertificateCallback = (...) => true;
           - pattern: $CLIENT.badCertificateCallback = (...) { return true; };
 
+  - id: trydos-tls-no-insecure-adapter
+    languages: [dart]
+    severity: ERROR
+    message: >-
+      Do not hand Dio a custom HttpClient or IOHttpClientAdapter here. TLS
+      validation is enforced library-wide; the badCertificateCallback bypass was
+      removed deliberately after the dev host moved to a valid DNS name. A
+      custom adapter is how that bypass would come back.
+    metadata:
+      category: security
+      cwe: "CWE-295: Improper Certificate Validation"
+      confidence: MEDIUM
+    paths:
+      include: ["**/lib/src/api/**"]
+    pattern-either:
+      - pattern: $DIO.httpClientAdapter = $X;
+      - pattern: IOHttpClientAdapter(...)
+
   - id: trydos-tls-http-overrides-global
     languages: [dart]
     severity: WARNING

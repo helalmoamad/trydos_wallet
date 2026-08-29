@@ -32,7 +32,6 @@ class TrydosWalletConfig {
     this.isAccountActive = true,
     this.isTwoFactorEnabled = false,
     this.memberSince,
-    this.allowBadCertificate = false,
     this.skipSplash = false,
     this.disableWalletOverscrollIndicator = true,
   });
@@ -59,7 +58,6 @@ class TrydosWalletConfig {
   final bool isAccountActive;
   final bool isTwoFactorEnabled;
   final DateTime? memberSince;
-  final bool allowBadCertificate;
   final bool skipSplash;
   final bool disableWalletOverscrollIndicator;
 
@@ -77,14 +75,12 @@ class TrydosWalletConfig {
     baseUrl: baseUrl,
     headersConfig: headersConfig,
     debug: debug,
-    allowBadCertificate: allowBadCertificate,
   );
 
   ApiClient createKycApiClient() => ApiClient(
     baseUrl: kycBaseUrl ?? baseUrl,
     headersConfig: headersConfig,
     debug: debug,
-    allowBadCertificate: allowBadCertificate,
     // A 401 during KYC must not reach the host (no token refresh expected);
     // the KYC flow shows a message and exits its pages instead.
     emitAuthEvents: false,
@@ -194,8 +190,7 @@ class TrydosWallet {
     } else {
       _apiClient!
         ..updateBaseUrl(config.baseUrl)
-        ..updateHeaders(config.headersConfig)
-        ..updateAllowBadCertificate(config.allowBadCertificate);
+        ..updateHeaders(config.headersConfig);
     }
 
     if (_kycApiClient == null) {
@@ -203,8 +198,7 @@ class TrydosWallet {
     } else {
       _kycApiClient!
         ..updateBaseUrl(config.kycBaseUrl ?? config.baseUrl)
-        ..updateHeaders(config.headersConfig)
-        ..updateAllowBadCertificate(config.allowBadCertificate);
+        ..updateHeaders(config.headersConfig);
     }
 
     if (emitLanguageChanged) {
@@ -258,7 +252,6 @@ class TrydosWallet {
         isAccountActive: _config!.isAccountActive,
         isTwoFactorEnabled: _config!.isTwoFactorEnabled,
         memberSince: _config!.memberSince,
-        allowBadCertificate: _config!.allowBadCertificate,
         skipSplash: _config!.skipSplash,
         disableWalletOverscrollIndicator:
             _config!.disableWalletOverscrollIndicator,
@@ -292,7 +285,6 @@ class TrydosWallet {
         isAccountActive: _config!.isAccountActive,
         isTwoFactorEnabled: _config!.isTwoFactorEnabled,
         memberSince: _config!.memberSince,
-        allowBadCertificate: _config!.allowBadCertificate,
         skipSplash: _config!.skipSplash,
         disableWalletOverscrollIndicator:
             _config!.disableWalletOverscrollIndicator,
@@ -343,7 +335,6 @@ class TrydosWallet {
         isAccountActive: isAccountActive ?? _config!.isAccountActive,
         isTwoFactorEnabled: isTwoFactorEnabled ?? _config!.isTwoFactorEnabled,
         memberSince: memberSince ?? _config!.memberSince,
-        allowBadCertificate: _config!.allowBadCertificate,
         skipSplash: _config!.skipSplash,
         disableWalletOverscrollIndicator:
             _config!.disableWalletOverscrollIndicator,
@@ -460,7 +451,6 @@ class TrydosWallet {
         isAccountActive: _config!.isAccountActive,
         isTwoFactorEnabled: _config!.isTwoFactorEnabled,
         memberSince: _config!.memberSince,
-        allowBadCertificate: _config!.allowBadCertificate,
         skipSplash: _config!.skipSplash,
         disableWalletOverscrollIndicator:
             _config!.disableWalletOverscrollIndicator,

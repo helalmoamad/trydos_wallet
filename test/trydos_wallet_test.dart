@@ -35,7 +35,6 @@ void main() {
       firstName: firstName,
       lastName: 'User',
       applicationVersion: '1.0.0',
-      allowBadCertificate: true,
     );
   }
 

@@ -29,7 +29,7 @@ const String _kToken = String.fromEnvironment('WALLET_TOKEN');
 const String _kRefreshToken = String.fromEnvironment('WALLET_REFRESH_TOKEN');
 const String _kBaseUrl = String.fromEnvironment(
   'WALLET_BASE_URL',
-  defaultValue: 'https://trydos_wallet_develop.ramaaz.dev/',
+  defaultValue: 'https://rdb-develop.ramaaz.dev/',
 );
 const String _kKycBaseUrl = String.fromEnvironment(
   'WALLET_KYC_BASE_URL',
@@ -65,14 +65,6 @@ void main() {
       isAccountActive: true,
       isTwoFactorEnabled: false,
       memberSince: DateTime(2026, 1, 27),
-      // DNS name. `trydos_wallet_develop.ramaaz.dev` has underscores, which
-      // RFC 1123 disallows in hostnames, so BoringSSL (Dart/Flutter's TLS
-      // stack) refuses to match it against the `*.ramaaz.dev` wildcard and
-      // fails with CERTIFICATE_VERIFY_FAILED: Hostname mismatch. curl and
-      // browsers are more lenient, which is why it only breaks in the app.
-      // Once `trydos-wallet-develop.ramaaz.dev` (hyphens) exists, switch the
-      // baseUrl over and drop this flag entirely.
-      allowBadCertificate: true,
     ),
   );
   runApp(const TrydosWalletExampleApp());
