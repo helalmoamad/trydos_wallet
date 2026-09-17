@@ -12,7 +12,12 @@ import '../api/api_interceptors.dart';
 import '../bloc/bloc.dart';
 import '../localization/app_strings.dart';
 import '../constent/styles.dart';
+import '../config/trydos_wallet_config.dart';
 import '../services/connectivity_service.dart';
+import '../services/merchant_payment_controller.dart';
+import '../utils/payment_code.dart';
+import '../utils/ui_utils.dart';
+import 'widgets/home_page_widgets/payment_code_launcher.dart';
 import 'no_internet_screen.dart';
 import 'tabs/tabs.dart';
 import 'package:trydos_wallet/src/api/api_log.dart';
@@ -60,8 +65,18 @@ class _TrydosWalletHomePageContentState
     extends State<_TrydosWalletHomePageContent> {
   int _selectedIndex = 0;
   StreamSubscription<LogoutEvent>? _logoutSubscription;
+  StreamSubscription<String>? _paymentCodeSubscription;
   bool _isOffline = false;
   bool _connectivityAcquired = false;
+
+  /// A payment code from a link that is waiting for the wallet to be ready.
+  ///
+  /// The confirmation screen shows which wallet pays and whether its balance
+  /// covers the amount, so opening it before balances have loaded would tell the
+  /// customer they have no wallet for the asset. The code waits here until the
+  /// balances request has resolved either way.
+  String? _pendingPaymentCode;
+  bool _isHandlingPaymentCode = false;
 
   @override
   void initState() {
@@ -85,12 +100,94 @@ class _TrydosWalletHomePageContentState
         });
       });
       ConnectivityService.instance.isOnline.addListener(_onConnectivityChanged);
+      unawaited(_reconcilePendingMerchantPayment());
+
+      // Links that arrive while the wallet is running.
+      _paymentCodeSubscription = TrydosWallet.paymentCodes.listen(
+        _onPaymentCode,
+      );
+      // A link tapped from a closed app, buffered by TrydosWallet until now.
+      _onPaymentCode(TrydosWallet.consumePendingPaymentCode());
     });
+  }
+
+  /// Queues a payment code from a link and opens it as soon as the wallet is
+  /// ready to show a truthful confirmation screen.
+  void _onPaymentCode(String? code) {
+    final normalized = PaymentCode.normalize(code);
+    if (!PaymentCode.isResolvable(normalized)) return;
+    if (!mounted) return;
+
+    setState(() => _pendingPaymentCode = normalized);
+    _tryOpenPendingPaymentCode();
+  }
+
+  /// Opens the queued code once balances have resolved.
+  ///
+  /// Called from both the link handler and the balances listener, so whichever
+  /// of the two arrives last is the one that opens the sheet.
+  Future<void> _tryOpenPendingPaymentCode() async {
+    if (!mounted || _isHandlingPaymentCode) return;
+
+    final code = _pendingPaymentCode;
+    if (code == null) return;
+
+    final balancesStatus = context.read<WalletBloc>().state.balancesStatus;
+    final walletReady =
+        balancesStatus == WalletStatus.success ||
+        // A failed load still gets the sheet: the confirmation screen says "you
+        // have no wallet for this asset", which beats swallowing the link.
+        balancesStatus == WalletStatus.failure;
+    if (!walletReady) return;
+
+    _isHandlingPaymentCode = true;
+    _pendingPaymentCode = null;
+
+    try {
+      await PaymentCodeLauncher.openCode(context, code);
+    } finally {
+      _isHandlingPaymentCode = false;
+      // A second link may have arrived while the sheet was open.
+      if (mounted && _pendingPaymentCode != null) {
+        unawaited(_tryOpenPendingPaymentCode());
+      }
+    }
+  }
+
+  /// Resolves a merchant payment that was interrupted — by a kill, a crash, or
+  /// a lost connection — before any screen can tell the customer it failed.
+  ///
+  /// The attempt is retried with its stored idempotency key, so a payment that
+  /// did go through comes back as the same receipt rather than as a second
+  /// debit. Nothing is said unless there is something to say: silence here
+  /// means the next launch will try again.
+  Future<void> _reconcilePendingMerchantPayment() async {
+    if (!mounted) return;
+    final bloc = context.read<WalletBloc>();
+    final languageCode = bloc.state.languageCode;
+
+    final outcome = await MerchantPaymentController.reconcilePendingAttempt(
+      languageCode: languageCode,
+    );
+    if (!mounted || outcome == null) return;
+
+    final settled =
+        outcome is MerchantPaymentPaid ||
+        outcome is MerchantPaymentPaidWithoutReceipt;
+    if (!settled) return;
+
+    bloc.add(const WalletRefreshAllRequested());
+    showMessage(
+      AppStrings.get(languageCode, 'merchant_paid_without_receipt'),
+      context: context,
+      type: MessageType.success,
+    );
   }
 
   @override
   void dispose() {
     _logoutSubscription?.cancel();
+    _paymentCodeSubscription?.cancel();
     ConnectivityService.instance.isOnline.removeListener(
       _onConnectivityChanged,
     );
@@ -110,79 +207,87 @@ class _TrydosWalletHomePageContentState
     // the push approval prompt using the library's own context — no host wiring
     // of navigatorKey/ApiErrorListener required.
     return BlocListener<WalletBloc, WalletState>(
-      listenWhen: (prev, curr) =>
-          (prev.sessionApprovalRequest != curr.sessionApprovalRequest &&
-              curr.sessionApprovalRequest != null) ||
-          (prev.sessionApprovalSuccessMessage !=
-                  curr.sessionApprovalSuccessMessage &&
-              curr.sessionApprovalSuccessMessage != null) ||
-          (prev.sessionApprovalStatus != curr.sessionApprovalStatus &&
-              curr.sessionApprovalStatus == WalletStatus.failure),
-      listener: (context, state) {
-        // A web/session login wants this device to confirm → prompt the user.
-        if (state.sessionApprovalRequest != null) {
-          showSessionApprovalDialog(context, context.read<WalletBloc>());
-          return;
-        }
+      // A link can land before the wallet has any balances to show. When they
+      // arrive, the queued code opens.
+      listenWhen: (prev, curr) => prev.balancesStatus != curr.balancesStatus,
+      listener: (context, state) => unawaited(_tryOpenPendingPaymentCode()),
+      child: BlocListener<WalletBloc, WalletState>(
+        listenWhen: (prev, curr) =>
+            (prev.sessionApprovalRequest != curr.sessionApprovalRequest &&
+                curr.sessionApprovalRequest != null) ||
+            (prev.sessionApprovalSuccessMessage !=
+                    curr.sessionApprovalSuccessMessage &&
+                curr.sessionApprovalSuccessMessage != null) ||
+            (prev.sessionApprovalStatus != curr.sessionApprovalStatus &&
+                curr.sessionApprovalStatus == WalletStatus.failure),
+        listener: (context, state) {
+          // A web/session login wants this device to confirm → prompt the user.
+          if (state.sessionApprovalRequest != null) {
+            showSessionApprovalDialog(context, context.read<WalletBloc>());
+            return;
+          }
 
-        // Responded successfully (dialog closes itself) → notify.
-        final successMessage = state.sessionApprovalSuccessMessage;
-        if (successMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(successMessage),
-              backgroundColor: const Color(0xFF1D1D1D),
-            ),
-          );
-          context.read<WalletBloc>().add(
-            const WalletSessionApprovalResetRequested(),
-          );
-          return;
-        }
-
-        // Respond failed → notify; keep the dialog open so the user can retry.
-        if (state.sessionApprovalStatus == WalletStatus.failure) {
-          final message = state.sessionApprovalErrorMessage;
-          if (message != null && message.isNotEmpty) {
+          // Responded successfully (dialog closes itself) → notify.
+          final successMessage = state.sessionApprovalSuccessMessage;
+          if (successMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(message),
+                content: Text(successMessage),
                 backgroundColor: const Color(0xFF1D1D1D),
               ),
             );
+            context.read<WalletBloc>().add(
+              const WalletSessionApprovalResetRequested(),
+            );
+            return;
           }
-        }
-      },
-      child: BlocBuilder<WalletBloc, WalletState>(
-        buildWhen: (prev, curr) => prev.languageCode != curr.languageCode,
-        builder: (context, state) {
-          return Directionality(
-            textDirection: state.isRtl ? TextDirection.rtl : TextDirection.ltr,
-            child: Stack(
-              children: [
-                Scaffold(
-                  backgroundColor: Colors.white,
-                  body: SafeArea(
-                    child: IndexedStack(
-                      index: _selectedIndex,
-                      children: const [
-                        HomeTab(),
-                        WalletTab(),
-                        AddressesTab(),
-                        SettingsTab(),
-                      ],
-                    ),
-                  ),
-                  bottomNavigationBar: _buildBottomNav(context, state),
+
+          // Respond failed → notify; keep the dialog open so the user can retry.
+          if (state.sessionApprovalStatus == WalletStatus.failure) {
+            final message = state.sessionApprovalErrorMessage;
+            if (message != null && message.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(message),
+                  backgroundColor: const Color(0xFF1D1D1D),
                 ),
-                if (_isOffline)
-                  Positioned.fill(
-                    child: NoInternetScreen(languageCode: state.languageCode),
-                  ),
-              ],
-            ),
-          );
+              );
+            }
+          }
         },
+        child: BlocBuilder<WalletBloc, WalletState>(
+          buildWhen: (prev, curr) => prev.languageCode != curr.languageCode,
+          builder: (context, state) {
+            return Directionality(
+              textDirection: state.isRtl
+                  ? TextDirection.rtl
+                  : TextDirection.ltr,
+              child: Stack(
+                children: [
+                  Scaffold(
+                    backgroundColor: Colors.white,
+                    body: SafeArea(
+                      child: IndexedStack(
+                        index: _selectedIndex,
+                        children: const [
+                          HomeTab(),
+                          WalletTab(),
+                          AddressesTab(),
+                          SettingsTab(),
+                        ],
+                      ),
+                    ),
+                    bottomNavigationBar: _buildBottomNav(context, state),
+                  ),
+                  if (_isOffline)
+                    Positioned.fill(
+                      child: NoInternetScreen(languageCode: state.languageCode),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -292,9 +397,9 @@ class _TrydosWalletHomePageContentState
         // and exfiltrate them. ApiLogStore.isAvailable is const false in
         // release, so this branch is tree-shaken away entirely.
         onLongPress: index == 3 && ApiLogStore.isAvailable
-            ? () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ApiLogsPage()),
-              )
+            ? () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ApiLogsPage()))
             : null,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -337,6 +442,9 @@ class _TrydosWalletHomePageContentState
       bloc.add(const WalletReconnectWebSocketRequested());
       bloc.add(const WalletRefreshAllRequested());
       bloc.add(const WalletTransferPurposesLoadRequested());
+      // A payment that timed out while offline is the case that matters most:
+      // settle it the moment the connection is back.
+      unawaited(_reconcilePendingMerchantPayment());
     }
   }
 }

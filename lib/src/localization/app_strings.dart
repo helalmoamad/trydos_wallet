@@ -415,6 +415,72 @@ class AppStrings {
       'no_internet_title': 'No Internet Connection',
       'no_internet_subtitle':
           'Please check your internet connection and make sure you are connected to Wi-Fi or mobile data.',
+
+      // Merchant payments — paying a shop from the wallet
+      'merchant_pay_title': 'Pay a Merchant',
+      'merchant_pay_to': 'Pay to',
+      'merchant_pay_subtitle': 'Pay a shop with a payment code',
+      'merchant_payment': 'Merchant Payment',
+      'merchant_enter_code': 'Enter the payment code',
+      'merchant_code_hint': '10-digit code',
+      'merchant_confirm_title': 'Confirm Payment',
+      'merchant_you_are_paying': 'You are paying',
+      'merchant_order_ref': 'Order Reference',
+      'merchant_description': 'Description',
+      'merchant_fee': 'Fee',
+      'merchant_total': 'Total',
+      'merchant_expires_in': 'Valid for {time}',
+      'merchant_expired_now': 'This code has expired',
+      'merchant_paying_from': 'Paying from your wallet',
+      'merchant_wallet_balance': 'Available Balance',
+      'merchant_insufficient_balance_hint':
+          'Your balance is not enough for this payment.',
+      'merchant_no_wallet_for_asset': 'You have no {symbol} wallet.',
+      'merchant_top_up': 'Top Up',
+      'merchant_pay_button': 'Pay',
+      'merchant_ask_new_code': 'Ask the shop for a new code',
+      'merchant_verify_identity_cta': 'Verify Identity',
+      'merchant_return_to_shop': 'Return to the Shop',
+      'merchant_receipt_number': 'Receipt Number',
+      'merchant_checking_payment': 'Checking your payment…',
+      'merchant_payment_not_completed':
+          'The payment did not go through. You can try again.',
+      'merchant_paid_without_receipt':
+          'Your payment went through. You will find the receipt in your merchant payments.',
+      'merchant_payments_title': 'Merchant Payments',
+      'merchant_payments_empty': 'No merchant payments yet',
+      'merchant_payments_load_failed': 'Failed to load merchant payments',
+      'merchant_paid_amount': 'Paid',
+      'merchant_refunded_amount': 'Refunded',
+
+      // Merchant payment statuses
+      'merchant_status_pending': 'Awaiting payment',
+      'merchant_status_paid': 'Paid',
+      'merchant_status_expired': 'Expired',
+      'merchant_status_cancelled': 'Cancelled by the shop',
+      'merchant_status_partially_refunded': 'Partially refunded',
+      'merchant_status_refunded': 'Refunded',
+      'merchant_status_failed': 'Not completed',
+      'merchant_status_processing': 'Processing',
+
+      // Merchant payment errors
+      'merchant_error_invalid_code':
+          'This code is not valid. Check it with the shop.',
+      'merchant_error_too_many_attempts':
+          'Too many attempts. Try again in a few minutes.',
+      'merchant_error_not_payable':
+          'This request is already paid, expired or cancelled.',
+      'merchant_error_kyc_required': 'Verify your identity to pay merchants.',
+      'merchant_error_payer_not_allowed':
+          'This request can only be paid by the customer it was issued for.',
+      'merchant_error_insufficient_balance':
+          'Your balance is not enough. Top up and try again.',
+      'merchant_error_already_paid':
+          'This request was already paid or is no longer valid.',
+      'merchant_error_unsupported_code':
+          'This code is not supported by this version of the app.',
+      'qr_not_recognized':
+          'This QR code is not recognised. Scan a payment code or an account QR.',
     },
     'ar': {
       // Session approval (push)
@@ -821,6 +887,67 @@ class AppStrings {
       'no_internet_title': 'لا يوجد اتصال بالإنترنت',
       'no_internet_subtitle':
           'يرجى التحقق من اتصالك بالإنترنت والتأكد من اتصالك بشبكة Wi-Fi أو بيانات الجوال.',
+
+      // مدفوعات التجار — الدفع لمتجر من المحفظة
+      'merchant_pay_title': 'الدفع لتاجر',
+      'merchant_pay_to': 'الدفع إلى',
+      'merchant_pay_subtitle': 'ادفع لمتجر برمز الدفع',
+      'merchant_payment': 'دفعة لتاجر',
+      'merchant_enter_code': 'أدخل رمز الدفع',
+      'merchant_code_hint': 'رمز من 10 أرقام',
+      'merchant_confirm_title': 'تأكيد الدفع',
+      'merchant_you_are_paying': 'أنت تدفع إلى',
+      'merchant_order_ref': 'مرجع الطلب',
+      'merchant_description': 'الوصف',
+      'merchant_fee': 'الرسوم',
+      'merchant_total': 'الإجمالي',
+      'merchant_expires_in': 'صالح لمدة {time}',
+      'merchant_expired_now': 'انتهت صلاحية هذا الرمز',
+      'merchant_paying_from': 'الدفع من محفظتك',
+      'merchant_wallet_balance': 'الرصيد المتاح',
+      'merchant_insufficient_balance_hint': 'رصيدك لا يكفي لهذه الدفعة.',
+      'merchant_no_wallet_for_asset': 'لا توجد لديك محفظة بعملة {symbol}.',
+      'merchant_top_up': 'اشحن المحفظة',
+      'merchant_pay_button': 'ادفع',
+      'merchant_ask_new_code': 'اطلب من المتجر رمزًا جديدًا',
+      'merchant_verify_identity_cta': 'وثّق هويتك',
+      'merchant_return_to_shop': 'العودة إلى المتجر',
+      'merchant_receipt_number': 'رقم الإيصال',
+      'merchant_checking_payment': 'جارٍ التحقّق من دفعتك…',
+      'merchant_payment_not_completed':
+          'لم تتم الدفعة. يمكنك إعادة المحاولة.',
+      'merchant_paid_without_receipt':
+          'تمت دفعتك بنجاح. ستجد الإيصال في مدفوعات التجار.',
+      'merchant_payments_title': 'مدفوعات التجار',
+      'merchant_payments_empty': 'لا توجد مدفوعات تجار بعد',
+      'merchant_payments_load_failed': 'تعذّر تحميل مدفوعات التجار',
+      'merchant_paid_amount': 'المدفوع',
+      'merchant_refunded_amount': 'المُعاد',
+
+      // حالات دفعات التجار
+      'merchant_status_pending': 'بانتظار الدفع',
+      'merchant_status_paid': 'مدفوع',
+      'merchant_status_expired': 'منتهي الصلاحية',
+      'merchant_status_cancelled': 'ألغاه المتجر',
+      'merchant_status_partially_refunded': 'مُعاد جزئيًا',
+      'merchant_status_refunded': 'مُعاد',
+      'merchant_status_failed': 'لم يكتمل',
+      'merchant_status_processing': 'قيد المعالجة',
+
+      // أخطاء دفعات التجار
+      'merchant_error_invalid_code': 'هذا الرمز غير صالح. تحقّق منه مع المتجر.',
+      'merchant_error_too_many_attempts': 'محاولات كثيرة. حاول بعد بضع دقائق.',
+      'merchant_error_not_payable': 'هذا الطلب مدفوع أو منتهٍ أو ملغيّ.',
+      'merchant_error_kyc_required': 'وثّق هويتك لتتمكّن من الدفع للتجار.',
+      'merchant_error_payer_not_allowed':
+          'هذا الطلب لا يدفعه إلا العميل الصادر له.',
+      'merchant_error_insufficient_balance':
+          'رصيدك غير كافٍ. اشحن محفظتك ثم أعد المحاولة.',
+      'merchant_error_already_paid':
+          'هذا الطلب دُفع بالفعل أو لم يعد صالحًا.',
+      'merchant_error_unsupported_code':
+          'هذا الرمز غير مدعوم في هذه النسخة من التطبيق.',
+      'qr_not_recognized': 'رمز QR غير معروف. امسح رمز دفع أو رمز حساب.',
     },
     'ku': {
       // Session approval (push)
@@ -1241,6 +1368,73 @@ class AppStrings {
       'no_internet_title': 'هیچ پەیوەندییەکی ئینتەرنێت نییە',
       'no_internet_subtitle':
           'تکایە پەیوەندی ئینتەرنێتەکەت بپشکنە و دڵنیابە کە بە Wi-Fi یان داتای مۆبایل پەیوەندیت هەیە.',
+
+      // پارەدانی بازرگان
+      'merchant_pay_title': 'پارەدان بە بازرگان',
+      'merchant_pay_to': 'پارەدان بۆ',
+      'merchant_pay_subtitle': 'بە کۆدی پارەدان پارە بدە بە فرۆشگا',
+      'merchant_payment': 'پارەدانی بازرگان',
+      'merchant_enter_code': 'کۆدی پارەدان بنووسە',
+      'merchant_code_hint': 'کۆدی ١٠ ژمارەیی',
+      'merchant_confirm_title': 'پشتڕاستکردنەوەی پارەدان',
+      'merchant_you_are_paying': 'تۆ پارە دەدەیت بە',
+      'merchant_order_ref': 'ژمارەی داواکاری',
+      'merchant_description': 'وەسف',
+      'merchant_fee': 'کرێ',
+      'merchant_total': 'کۆی گشتی',
+      'merchant_expires_in': 'دروستە بۆ {time}',
+      'merchant_expired_now': 'ئەم کۆدە بەسەرچووە',
+      'merchant_paying_from': 'پارەدان لە جزدانەکەت',
+      'merchant_wallet_balance': 'باڵانسی بەردەست',
+      'merchant_insufficient_balance_hint':
+          'باڵانسەکەت بۆ ئەم پارەدانە بەس نییە.',
+      'merchant_no_wallet_for_asset': 'جزدانی {symbol}ت نییە.',
+      'merchant_top_up': 'باڵانس زیادبکە',
+      'merchant_pay_button': 'پارە بدە',
+      'merchant_ask_new_code': 'داوای کۆدێکی نوێ لە فرۆشگا بکە',
+      'merchant_verify_identity_cta': 'ناسنامەت پشتڕاست بکەوە',
+      'merchant_return_to_shop': 'گەڕانەوە بۆ فرۆشگا',
+      'merchant_receipt_number': 'ژمارەی پسووڵە',
+      'merchant_checking_payment': 'پارەدانەکەت دەپشکنرێت…',
+      'merchant_payment_not_completed':
+          'پارەدانەکە سەرنەکەوت. دەتوانیت دووبارە هەوڵ بدەیتەوە.',
+      'merchant_paid_without_receipt':
+          'پارەدانەکەت سەرکەوتوو بوو. پسووڵەکە لە پارەدانەکانی بازرگاندا دەدۆزیتەوە.',
+      'merchant_payments_title': 'پارەدانەکانی بازرگان',
+      'merchant_payments_empty': 'هێشتا هیچ پارەدانێکی بازرگان نییە',
+      'merchant_payments_load_failed': 'بارکردنی پارەدانەکانی بازرگان سەرنەکەوت',
+      'merchant_paid_amount': 'دراوە',
+      'merchant_refunded_amount': 'گەڕێنراوەتەوە',
+
+      // دۆخەکانی پارەدانی بازرگان
+      'merchant_status_pending': 'چاوەڕێی پارەدان',
+      'merchant_status_paid': 'دراوە',
+      'merchant_status_expired': 'بەسەرچووە',
+      'merchant_status_cancelled': 'لەلایەن فرۆشگاوە هەڵوەشێنراوەتەوە',
+      'merchant_status_partially_refunded': 'بەشێکی گەڕێنراوەتەوە',
+      'merchant_status_refunded': 'گەڕێنراوەتەوە',
+      'merchant_status_failed': 'تەواو نەبوو',
+      'merchant_status_processing': 'لە پرۆسەدایە',
+
+      // هەڵەکانی پارەدانی بازرگان
+      'merchant_error_invalid_code':
+          'ئەم کۆدە دروست نییە. لەگەڵ فرۆشگا بیپشکنە.',
+      'merchant_error_too_many_attempts':
+          'هەوڵی زۆر. دوای چەند خولەکێک هەوڵ بدەرەوە.',
+      'merchant_error_not_payable':
+          'ئەم داواکارییە پێشتر دراوە یان بەسەرچووە یان هەڵوەشێنراوەتەوە.',
+      'merchant_error_kyc_required':
+          'بۆ پارەدان بە بازرگانان ناسنامەت پشتڕاست بکەوە.',
+      'merchant_error_payer_not_allowed':
+          'تەنها ئەو کڕیارەی بۆی دەرچووە دەتوانێت ئەم داواکارییە بدات.',
+      'merchant_error_insufficient_balance':
+          'باڵانسەکەت بەس نییە. باڵانس زیادبکە و دووبارە هەوڵ بدەرەوە.',
+      'merchant_error_already_paid':
+          'ئەم داواکارییە پێشتر دراوە یان چیتر دروست نییە.',
+      'merchant_error_unsupported_code':
+          'ئەم کۆدە لەم وەشانەی ئەپەکەدا پشتگیری ناکرێت.',
+      'qr_not_recognized':
+          'ئەم کۆدی QR ناسراو نییە. کۆدی پارەدان یان کۆدی هەژمار بخوێنە.',
     },
     'tr': {
       // Session approval (push)
@@ -1657,6 +1851,73 @@ class AppStrings {
       'no_internet_title': 'İnternet Bağlantısı Yok',
       'no_internet_subtitle':
           'Lütfen internet bağlantınızı kontrol edin ve Wi-Fi veya mobil veriye bağlı olduğunuzdan emin olun.',
+
+      // Satıcı ödemeleri
+      'merchant_pay_title': 'Satıcıya Öde',
+      'merchant_pay_to': 'Şuraya öde',
+      'merchant_pay_subtitle': 'Ödeme koduyla bir satıcıya ödeyin',
+      'merchant_payment': 'Satıcı Ödemesi',
+      'merchant_enter_code': 'Ödeme kodunu girin',
+      'merchant_code_hint': '10 haneli kod',
+      'merchant_confirm_title': 'Ödemeyi Onayla',
+      'merchant_you_are_paying': 'Ödeme yaptığınız yer',
+      'merchant_order_ref': 'Sipariş Referansı',
+      'merchant_description': 'Açıklama',
+      'merchant_fee': 'Ücret',
+      'merchant_total': 'Toplam',
+      'merchant_expires_in': '{time} boyunca geçerli',
+      'merchant_expired_now': 'Bu kodun süresi doldu',
+      'merchant_paying_from': 'Cüzdanınızdan ödeniyor',
+      'merchant_wallet_balance': 'Kullanılabilir Bakiye',
+      'merchant_insufficient_balance_hint':
+          'Bakiyeniz bu ödeme için yeterli değil.',
+      'merchant_no_wallet_for_asset': '{symbol} cüzdanınız yok.',
+      'merchant_top_up': 'Bakiye Yükle',
+      'merchant_pay_button': 'Öde',
+      'merchant_ask_new_code': 'Satıcıdan yeni bir kod isteyin',
+      'merchant_verify_identity_cta': 'Kimliği Doğrula',
+      'merchant_return_to_shop': 'Mağazaya Dön',
+      'merchant_receipt_number': 'Makbuz Numarası',
+      'merchant_checking_payment': 'Ödemeniz kontrol ediliyor…',
+      'merchant_payment_not_completed':
+          'Ödeme gerçekleşmedi. Tekrar deneyebilirsiniz.',
+      'merchant_paid_without_receipt':
+          'Ödemeniz gerçekleşti. Makbuzu satıcı ödemelerinizde bulacaksınız.',
+      'merchant_payments_title': 'Satıcı Ödemeleri',
+      'merchant_payments_empty': 'Henüz satıcı ödemesi yok',
+      'merchant_payments_load_failed': 'Satıcı ödemeleri yüklenemedi',
+      'merchant_paid_amount': 'Ödenen',
+      'merchant_refunded_amount': 'İade edilen',
+
+      // Satıcı ödeme durumları
+      'merchant_status_pending': 'Ödeme bekleniyor',
+      'merchant_status_paid': 'Ödendi',
+      'merchant_status_expired': 'Süresi doldu',
+      'merchant_status_cancelled': 'Satıcı tarafından iptal edildi',
+      'merchant_status_partially_refunded': 'Kısmen iade edildi',
+      'merchant_status_refunded': 'İade edildi',
+      'merchant_status_failed': 'Tamamlanmadı',
+      'merchant_status_processing': 'İşleniyor',
+
+      // Satıcı ödeme hataları
+      'merchant_error_invalid_code':
+          'Bu kod geçerli değil. Satıcıyla birlikte kontrol edin.',
+      'merchant_error_too_many_attempts':
+          'Çok fazla deneme. Birkaç dakika sonra tekrar deneyin.',
+      'merchant_error_not_payable':
+          'Bu istek zaten ödendi, süresi doldu veya iptal edildi.',
+      'merchant_error_kyc_required':
+          'Satıcılara ödeme yapmak için kimliğinizi doğrulayın.',
+      'merchant_error_payer_not_allowed':
+          'Bu istek yalnızca düzenlendiği müşteri tarafından ödenebilir.',
+      'merchant_error_insufficient_balance':
+          'Bakiyeniz yeterli değil. Bakiye yükleyip tekrar deneyin.',
+      'merchant_error_already_paid':
+          'Bu istek zaten ödendi veya artık geçerli değil.',
+      'merchant_error_unsupported_code':
+          'Bu kod uygulamanın bu sürümünde desteklenmiyor.',
+      'qr_not_recognized':
+          'Bu QR kodu tanınmıyor. Bir ödeme kodu veya hesap QR kodu okutun.',
     },
   };
 

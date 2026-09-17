@@ -139,6 +139,74 @@ class TrydosWallet {
     return pending;
   }
 
+  /// Payment codes delivered out-of-band by the HOST app — a universal link, an
+  /// Android app link, a custom-scheme URL, or a notification tap. The wallet UI
+  /// listens and opens the payment flow.
+  static final StreamController<String> _paymentCodeController =
+      StreamController<String>.broadcast();
+
+  /// Buffers a code that arrives before the wallet UI is listening — a cold
+  /// start from a link tap, or a link opened while the user is still on the
+  /// host's login screen. Drained once via [consumePendingPaymentCode].
+  static String? _pendingPaymentCode;
+
+  static Stream<String> get paymentCodes => _paymentCodeController.stream;
+
+  /// HOST entry point: call with every incoming link the OS hands your app.
+  ///
+  /// Accepts a payment link (`<base>/r/v1/<requestCode>`), the custom-scheme
+  /// fallback, a `?code=` query link, or a bare code. The code is validated
+  /// against the known namespaces before anything happens, so passing unrelated
+  /// links — the rest of your app's deep links included — is safe and cheap:
+  /// they are ignored and [handleIncomingLink] returns false.
+  ///
+  /// Returns true when the link carried a payment code this library took
+  /// responsibility for. When the wallet UI is not up yet (cold start, or the
+  /// user has not signed in), the code is buffered and replayed as soon as the
+  /// wallet mounts — so a link tapped from a closed app still lands on the
+  /// payment screen after login.
+  ///
+  /// ```dart
+  /// // app_links / uni_links, both the initial link and the stream
+  /// final initial = await appLinks.getInitialLink();
+  /// TrydosWallet.handleIncomingLink(initial);
+  /// appLinks.uriLinkStream.listen(TrydosWallet.handleIncomingLink);
+  /// ```
+  static bool handleIncomingLink(Uri? uri) {
+    if (uri == null) return false;
+    return handlePaymentCode(PaymentLink.extractCode(uri));
+  }
+
+  /// [handleIncomingLink] for a link that arrives as a string.
+  static bool handleIncomingLinkString(String? link) {
+    return handlePaymentCode(PaymentLink.extractCodeFromString(link));
+  }
+
+  /// HOST entry point for a bare payment code — for example one carried in a
+  /// push notification payload rather than in a URL.
+  ///
+  /// Returns false, and does nothing, when [code] is not in a known namespace.
+  static bool handlePaymentCode(String? code) {
+    final normalized = PaymentCode.normalize(code);
+    if (!PaymentCode.isResolvable(normalized)) return false;
+
+    if (_paymentCodeController.hasListener) {
+      _paymentCodeController.add(normalized);
+    } else {
+      // Last one wins: if two links arrive before the wallet is up, the most
+      // recent is the one the customer is actually looking at.
+      _pendingPaymentCode = normalized;
+    }
+    return true;
+  }
+
+  /// Returns and clears any buffered cold-start payment code.
+  static String? consumePendingPaymentCode() {
+    final pending = _pendingPaymentCode;
+    _pendingPaymentCode = null;
+    return pending;
+  }
+
   static TrydosWalletConfig get config {
     if (_config == null) {
       throw StateError(

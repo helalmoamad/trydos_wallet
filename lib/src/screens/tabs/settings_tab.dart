@@ -400,6 +400,31 @@ class SettingsTab extends StatelessWidget {
                           SizedBox(height: 5.h, width: 1.sw),
                           const _LoginHistoryButton(),
                           SizedBox(height: 5.h, width: 1.sw),
+                          // Merchant payments get their own section: receipts
+                          // and refunds are what customers come looking for,
+                          // and they are not the same question as the ledger.
+                          InkWell(
+                            onTap: () {
+                              final bloc = context.read<WalletBloc>();
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => BlocProvider.value(
+                                    value: bloc,
+                                    child: const MerchantPaymentsPage(),
+                                  ),
+                                ),
+                              );
+                            },
+                            child: _actionWidget(
+                              TrydosWalletAssets.orderInvoice,
+                              AppStrings.get(
+                                state.languageCode,
+                                'merchant_payments_title',
+                              ),
+                              context,
+                            ),
+                          ),
+                          SizedBox(height: 5.h, width: 1.sw),
                           BlocListener<WalletBloc, WalletState>(
                             listenWhen: (previous, current) =>
                                 previous.logoutStatus != current.logoutStatus,

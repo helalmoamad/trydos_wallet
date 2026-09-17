@@ -8,14 +8,19 @@ import 'package:trydos_wallet/src/api/api_log.dart';
 
 /// نتيجة موحدة لطلبات API.
 class ApiResult<T> {
-  ApiResult.success(this.data)
+  ApiResult.success(this.data, {this.statusCode})
     : error = null,
       errorMessage = null,
+      errorCode = null,
       _manualFailure = false;
-  ApiResult.failure(this.error, {this.errorMessage})
-    : data = null,
-      _manualFailure = false;
-  ApiResult.manualFailure({this.errorMessage})
+  ApiResult.failure(
+    this.error, {
+    this.errorMessage,
+    this.statusCode,
+    this.errorCode,
+  }) : data = null,
+       _manualFailure = false;
+  ApiResult.manualFailure({this.errorMessage, this.statusCode, this.errorCode})
     : data = null,
       error = null,
       _manualFailure = true;
@@ -25,8 +30,41 @@ class ApiResult<T> {
   final String? errorMessage;
   final bool _manualFailure;
 
+  /// HTTP status of the response, when one came back.
+  ///
+  /// Callers that must branch on the outcome (404 vs 409 vs 429) read this
+  /// instead of pattern-matching [errorMessage], which is localized prose.
+  final int? statusCode;
+
+  /// Machine-readable `code` from a `{ statusCode, code, message }` error body.
+  ///
+  /// This is the field to branch on. [errorMessage] is only ever a fallback to
+  /// show the user, because the backend localizes it per `Accept-Language`.
+  final String? errorCode;
+
   bool get isSuccess => error == null && !_manualFailure;
   bool get isFailure => error != null || _manualFailure;
+
+  /// True when the request never produced a response: timeout or a dropped
+  /// connection. The caller does not know whether the server acted, so a
+  /// payment must be retried with the same idempotency key rather than
+  /// reported as a failure.
+  bool get isTimeoutOrConnectionLoss {
+    final e = error;
+    if (e == null) return false;
+    if (e.response != null) return false;
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.connectionError:
+        return true;
+      case DioExceptionType.unknown:
+        return true;
+      default:
+        return false;
+    }
+  }
 }
 
 /// عميل DIO جاهز لطلبات GET, POST, PUT, DELETE مع Interceptor و Headers.
@@ -126,6 +164,19 @@ class ApiClient {
     return map['message']?.toString() ?? map['error']?.toString();
   }
 
+  /// Pull the machine-readable `code` out of a `{ statusCode, code, message }`
+  /// error body. Returns null when the backend sent no code.
+  String? _extractErrorCodeFromData(dynamic data) {
+    if (data is! Map) return null;
+    final code = data['code'] ?? data['errorCode'];
+    if (code == null) return null;
+    final text = code.toString().trim();
+    return text.isEmpty ? null : text;
+  }
+
+  String? _extractErrorCode(DioException e) =>
+      _extractErrorCodeFromData(e.response?.data);
+
   void _handle400(dynamic data) {
     final msg = _extractErrorMessageFromData(data);
     if (msg != null) {
@@ -155,17 +206,24 @@ class ApiClient {
         _handle400(res.data);
         return ApiResult<T>.manualFailure(
           errorMessage: _extractErrorMessageFromData(res.data),
+          statusCode: 400,
+          errorCode: _extractErrorCodeFromData(res.data),
         );
       }
       final data = fromJson != null && res.data != null
           ? fromJson(res.data)
           : res.data as T?;
-      return ApiResult.success(data);
+      return ApiResult.success(data, statusCode: res.statusCode);
     } on DioException catch (e) {
       if (e.response?.statusCode == 400) {
         _handle400(e.response?.data);
       }
-      return ApiResult<T>.failure(e, errorMessage: _extractErrorMessage(e));
+      return ApiResult<T>.failure(
+        e,
+        errorMessage: _extractErrorMessage(e),
+        statusCode: e.response?.statusCode,
+        errorCode: _extractErrorCode(e),
+      );
     }
   }
 
@@ -190,17 +248,24 @@ class ApiClient {
         _handle400(res.data);
         return ApiResult<T>.manualFailure(
           errorMessage: _extractErrorMessageFromData(res.data),
+          statusCode: 400,
+          errorCode: _extractErrorCodeFromData(res.data),
         );
       }
       final result = fromJson != null && res.data != null
           ? fromJson(res.data)
           : res.data as T?;
-      return ApiResult.success(result);
+      return ApiResult.success(result, statusCode: res.statusCode);
     } on DioException catch (e) {
       if (e.response?.statusCode == 400) {
         _handle400(e.response?.data);
       }
-      return ApiResult<T>.failure(e, errorMessage: _extractErrorMessage(e));
+      return ApiResult<T>.failure(
+        e,
+        errorMessage: _extractErrorMessage(e),
+        statusCode: e.response?.statusCode,
+        errorCode: _extractErrorCode(e),
+      );
     }
   }
 
@@ -225,17 +290,24 @@ class ApiClient {
         _handle400(res.data);
         return ApiResult<T>.manualFailure(
           errorMessage: _extractErrorMessageFromData(res.data),
+          statusCode: 400,
+          errorCode: _extractErrorCodeFromData(res.data),
         );
       }
       final result = fromJson != null && res.data != null
           ? fromJson(res.data)
           : res.data as T?;
-      return ApiResult.success(result);
+      return ApiResult.success(result, statusCode: res.statusCode);
     } on DioException catch (e) {
       if (e.response?.statusCode == 400) {
         _handle400(e.response?.data);
       }
-      return ApiResult<T>.failure(e, errorMessage: _extractErrorMessage(e));
+      return ApiResult<T>.failure(
+        e,
+        errorMessage: _extractErrorMessage(e),
+        statusCode: e.response?.statusCode,
+        errorCode: _extractErrorCode(e),
+      );
     }
   }
 
@@ -260,17 +332,24 @@ class ApiClient {
         _handle400(res.data);
         return ApiResult<T>.manualFailure(
           errorMessage: _extractErrorMessageFromData(res.data),
+          statusCode: 400,
+          errorCode: _extractErrorCodeFromData(res.data),
         );
       }
       final result = fromJson != null && res.data != null
           ? fromJson(res.data)
           : res.data as T?;
-      return ApiResult.success(result);
+      return ApiResult.success(result, statusCode: res.statusCode);
     } on DioException catch (e) {
       if (e.response?.statusCode == 400) {
         _handle400(e.response?.data);
       }
-      return ApiResult<T>.failure(e, errorMessage: _extractErrorMessage(e));
+      return ApiResult<T>.failure(
+        e,
+        errorMessage: _extractErrorMessage(e),
+        statusCode: e.response?.statusCode,
+        errorCode: _extractErrorCode(e),
+      );
     }
   }
 
@@ -295,17 +374,24 @@ class ApiClient {
         _handle400(res.data);
         return ApiResult<T>.manualFailure(
           errorMessage: _extractErrorMessageFromData(res.data),
+          statusCode: 400,
+          errorCode: _extractErrorCodeFromData(res.data),
         );
       }
       final result = fromJson != null && res.data != null
           ? fromJson(res.data)
           : res.data as T?;
-      return ApiResult.success(result);
+      return ApiResult.success(result, statusCode: res.statusCode);
     } on DioException catch (e) {
       if (e.response?.statusCode == 400) {
         _handle400(e.response?.data);
       }
-      return ApiResult<T>.failure(e, errorMessage: _extractErrorMessage(e));
+      return ApiResult<T>.failure(
+        e,
+        errorMessage: _extractErrorMessage(e),
+        statusCode: e.response?.statusCode,
+        errorCode: _extractErrorCode(e),
+      );
     }
   }
 }

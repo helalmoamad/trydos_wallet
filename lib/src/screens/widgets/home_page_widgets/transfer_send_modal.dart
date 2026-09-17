@@ -43,6 +43,16 @@ class _TransferSendModalState extends State<TransferSendModal>
   final TransfersApiService _transfersApi = TransfersApiService();
   final PaymentRequestsApiService _paymentRequestsApi =
       PaymentRequestsApiService();
+  final MerchantPaymentsApiService _merchantPaymentsApi =
+      MerchantPaymentsApiService();
+
+  /// Set once a scanned or typed code resolves to a merchant request. The whole
+  /// sheet switches to the merchant confirmation screen while it is non-null.
+  MerchantPaymentLookup? _merchantLookup;
+
+  /// The scanned code behind [_merchantLookup], shown on the payment screen so
+  /// the customer sees what the scanner read.
+  String? _merchantCode;
   final ScrollController _formScrollController = ScrollController();
   final GlobalKey _noteRowKey = GlobalKey();
   String? selectedPurpose;
@@ -372,6 +382,17 @@ class _TransferSendModalState extends State<TransferSendModal>
     context.read<WalletBloc>().add(WalletBalanceLoadRequested(matchedAssetId));
   }
 
+  /// Whether scanned text could be an account number rather than a foreign QR.
+  ///
+  /// Deliberately permissive — digits, spaces and dashes only. That is enough to
+  /// tell an account apart from a Wi-Fi QR, a vCard or someone else's link,
+  /// which is all this check is for: a scan that is not ours should say so
+  /// plainly instead of landing in the recipient field and failing an account
+  /// lookup the customer never asked for.
+  bool _looksLikeAccountNumber(String raw) {
+    return RegExp(r'^[\d\s-]+$').hasMatch(raw.trim());
+  }
+
   Future<void> _applyScannedRaw(String raw) async {
     // ── الطريقة 1: PAYREQ (طلب إيداع مشفر) ──────────────────────────────
     // الشكل: PAYREQ:{base64}|{accountNumber}
@@ -388,12 +409,20 @@ class _TransferSendModalState extends State<TransferSendModal>
         );
         return;
       }
-      // decrypted = كود طلب الإيداع → نرسله مباشرة لـ lookup
-      await _lookupRequestCode(decrypted);
+      // decrypted = كود الطلب → يذهب للـ resolve الموحّد
+      await _resolveScannedCode(decrypted);
       return;
     }
 
-    // ── الطريقة 2: صيغة QrTransferPayloadCodec القديمة (query-string) ────
+    // ── الطريقة 2: كود يحمل مساحة أسماء معروفة (pr. / mp. / 10 أرقام) ────
+    // ماسح واحد يحلّ الجميع: نرسل النص كما هو ونتفرّع على kind الذي يعيده
+    // الخادم. لا نقرّر من شكل الكود أيّ نقطة نهاية نستدعي.
+    if (PaymentCode.isResolvable(raw)) {
+      await _resolveScannedCode(PaymentCode.normalize(raw));
+      return;
+    }
+
+    // ── الطريقة 3: صيغة QrTransferPayloadCodec القديمة (query-string) ────
     // تحتوي على anu= وغيرها — قد تكون receive أو request قديم
     final payload = QrTransferPayloadCodec.tryParse(raw);
     if (payload != null) {
@@ -401,10 +430,32 @@ class _TransferSendModalState extends State<TransferSendModal>
       return;
     }
 
-    // ── الطريقة 3: رقم الحساب العادي ─────────────────────────────────────
-    // أي نص لا ينتمي للصيغتين أعلاه يُعامل كرقم حساب مباشر
+    // ── الطريقة 4: رابط دفع ──────────────────────────────────────────────
+    // لا يُصدر الخادم روابط اليوم ولا يجوز للتجار طباعتها، لكن قبولها هنا
+    // يعني أن مسح رابط لاحقًا لن يُعامَل خطأً كرقم حساب.
+    final linkCode = PaymentLink.extractCodeFromString(raw);
+    if (linkCode != null) {
+      await _resolveScannedCode(linkCode);
+      return;
+    }
+
+    // ── الطريقة 5: رقم الحساب العادي ─────────────────────────────────────
     final accountNumber = raw.trim();
     if (accountNumber.isEmpty) return;
+
+    // أي شيء آخر ليس لنا: رسالة واضحة بدل حشو نص غريب في حقل المستلم ثم
+    // إظهار فشل بحث عن حساب لا معنى له للمستخدم.
+    if (!_looksLikeAccountNumber(accountNumber)) {
+      showMessage(
+        AppStrings.get(
+          context.read<WalletBloc>().state.languageCode,
+          'qr_not_recognized',
+        ),
+        context: context,
+        type: MessageType.error,
+      );
+      return;
+    }
 
     setState(() {
       isFromQr = true;
@@ -429,59 +480,63 @@ class _TransferSendModalState extends State<TransferSendModal>
     await _verifyRecipient();
   }
 
-  /// يرسل [requestCode] لـ API lookup ويملأ حقول صفحة الإرسال بنتيجة طلب الإيداع.
-  Future<void> _lookupRequestCode(String requestCode) async {
+  /// يحلّ [code] عبر نقطة النهاية الموحّدة ويتفرّع على `kind`.
+  ///
+  /// الكود يحمل مساحة اسمه، فالخادم هو من يقرّر أهو طلب من مستخدم آخر أم طلب
+  /// تاجر، ونحن نقرأ القرار فقط. أي نص خارج المساحات المعروفة يُرفض محليًا قبل
+  /// الاستدعاء: المحاولات الفاشلة محدودة بعشر محاولات كل ربع ساعة، ولا يصحّ أن
+  /// يستهلك مسحٌ عابر إحداها.
+  Future<void> _resolveScannedCode(String code) async {
     final state = context.read<WalletBloc>().state;
+    final lang = state.languageCode;
+
+    if (!PaymentCode.isResolvable(code)) {
+      showMessage(
+        AppStrings.get(lang, 'merchant_error_invalid_code'),
+        context: context,
+        type: MessageType.error,
+      );
+      return;
+    }
+
     setState(() {
       isRequestLookupLoading = true;
     });
 
-    final result = await _paymentRequestsApi.lookupPaymentRequest(
-      requestCode: requestCode,
-      languageCode: state.languageCode,
+    final result = await _merchantPaymentsApi.resolveCode(
+      code: code,
+      languageCode: lang,
     );
 
     if (!mounted) return;
 
     if (result.isSuccess && result.data != null) {
-      final data = result.data!;
-      final purposeValue = data.purpose?.id ?? data.purpose?.name ?? '';
-      final referenceValue = (data.reference ?? '').trim().isNotEmpty
-          ? data.reference!
-          : data.requestCode;
+      final resolution = result.data!;
 
-      _syncSelectedAssetWithRequest(
-        assetType: data.assetType,
-        assetSymbol: data.assetSymbol,
-      );
+      if (resolution.isMerchant) {
+        setState(() {
+          isRequestLookupLoading = false;
+          _merchantLookup = resolution.merchant;
+          _merchantCode = code;
+        });
+        return;
+      }
 
+      if (resolution.isUser) {
+        _applyPeerRequest(resolution.peer!, state);
+        return;
+      }
+
+      // A `kind` this build does not know: say so plainly instead of guessing
+      // at a flow.
       setState(() {
         isRequestLookupLoading = false;
-        isFromQr = true;
-        isRequestFlow = true;
-        currentInputType = RecipientInputType.account;
-
-        recipientController.text = data.requesterAccountNumber;
-        recipientAccountName = data.requesterAccountName;
-        maskedAccountName = data.requesterAccountName;
-
-        amountController.text = _formatAmountFromLookup(data.amount);
-        paymentRequestId = data.id;
-        referenceId = referenceValue;
-        qrPurpose = purposeValue;
-        requestType = AppStrings.get(state.languageCode, 'deposit_request');
-        requestStatus = data.status;
-        isPermanentRequest = data.isPermanent;
-        expiryTime = data.isPermanent ? null : data.expiresAt;
-
-        isRecipientVerified = true;
-        isEditingRecipient = false;
-        recipientErrorMessage = null;
-        isAmountVerified = true;
-        isEditingAmount = false;
-        amountErrorMessage = null;
       });
-      _restartExpiryWatcher();
+      showMessage(
+        AppStrings.get(lang, 'merchant_error_unsupported_code'),
+        context: context,
+        type: MessageType.error,
+      );
       return;
     }
 
@@ -489,12 +544,60 @@ class _TransferSendModalState extends State<TransferSendModal>
       isRequestLookupLoading = false;
     });
 
+    final failure = MerchantPaymentErrors.classifyLookup(result);
+    final key = MerchantPaymentErrors.messageKey(failure);
     showMessage(
-      result.errorMessage ??
-          AppStrings.get(state.languageCode, 'account_lookup_failed_msg'),
+      key != null
+          ? AppStrings.get(lang, key)
+          : (result.errorMessage ??
+                AppStrings.get(lang, 'account_lookup_failed_msg')),
       context: context,
       type: MessageType.error,
     );
+  }
+
+  /// يملأ حقول صفحة الإرسال بنتيجة طلب إيداع من مستخدم آخر.
+  void _applyPeerRequest(
+    PaymentRequestLookupResponse data,
+    WalletState state,
+  ) {
+    final purposeValue = data.purpose?.id ?? data.purpose?.name ?? '';
+    final referenceValue = (data.reference ?? '').trim().isNotEmpty
+        ? data.reference!
+        : data.requestCode;
+
+    _syncSelectedAssetWithRequest(
+      assetType: data.assetType,
+      assetSymbol: data.assetSymbol,
+    );
+
+    setState(() {
+      isRequestLookupLoading = false;
+      isFromQr = true;
+      isRequestFlow = true;
+      currentInputType = RecipientInputType.account;
+
+      recipientController.text = data.requesterAccountNumber;
+      recipientAccountName = data.requesterAccountName;
+      maskedAccountName = data.requesterAccountName;
+
+      amountController.text = _formatAmountFromLookup(data.amount);
+      paymentRequestId = data.id;
+      referenceId = referenceValue;
+      qrPurpose = purposeValue;
+      requestType = AppStrings.get(state.languageCode, 'deposit_request');
+      requestStatus = data.status;
+      isPermanentRequest = data.isPermanent;
+      expiryTime = data.isPermanent ? null : data.expiresAt;
+
+      isRecipientVerified = true;
+      isEditingRecipient = false;
+      recipientErrorMessage = null;
+      isAmountVerified = true;
+      isEditingAmount = false;
+      amountErrorMessage = null;
+    });
+    _restartExpiryWatcher();
   }
 
   @override
@@ -1284,6 +1387,22 @@ class _TransferSendModalState extends State<TransferSendModal>
   Widget build(BuildContext context) {
     _syncSuccessStateToParent();
     _syncModalBackgroundColor();
+
+    // A resolved merchant code takes over the sheet. The send screen stays
+    // mounted underneath, so backing out lands the customer on the same code
+    // rather than on an empty scanner.
+    final merchantLookup = _merchantLookup;
+    if (merchantLookup != null) {
+      return MerchantPayModal(
+        lookup: merchantLookup,
+        code: _merchantCode,
+        onBack: () => setState(() {
+          _merchantLookup = null;
+          _merchantCode = null;
+        }),
+        onSuccessStateChanged: widget.onSuccessStateChanged,
+      );
+    }
 
     if (currentTransferState == TransferState.success) {
       _syncSuccessBackButton(context);

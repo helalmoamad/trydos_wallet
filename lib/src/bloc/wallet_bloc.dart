@@ -15,6 +15,7 @@ import 'package:trydos_wallet/src/services/media_api_service.dart';
 import 'package:trydos_wallet/src/services/kyc_api_service.dart';
 import 'package:trydos_wallet/src/services/kyc_liveness_api_service.dart';
 import 'package:trydos_wallet/src/services/kyc_compare_face_api_service.dart';
+import 'package:trydos_wallet/src/services/merchant_payments_api_service.dart';
 import 'package:trydos_wallet/src/services/payment_requests_api_service.dart';
 import 'package:trydos_wallet/src/services/transfer_purposes_api_service.dart';
 import 'package:trydos_wallet/src/services/transactions_api_service.dart';
@@ -42,6 +43,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     KycCompareFaceApiService? kycCompareFaceApi,
     TransferPurposesApiService? transferPurposesApi,
     PaymentRequestsApiService? paymentRequestsApi,
+    MerchantPaymentsApiService? merchantPaymentsApi,
     UsersApiService? usersApi,
     QrLoginApiService? qrLoginApiService,
     SessionsApiService? sessionsApi,
@@ -71,6 +73,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
        _transferPurposesApi =
            transferPurposesApi ?? TransferPurposesApiService(),
        _paymentRequestsApi = paymentRequestsApi ?? PaymentRequestsApiService(),
+       _merchantPaymentsApi =
+           merchantPaymentsApi ?? MerchantPaymentsApiService(),
        _usersApi = usersApi ?? UsersApiService(),
        _qrLoginApi = qrLoginApiService ?? QrLoginApiService(),
        _sessionsApi = sessionsApi ?? SessionsApiService(),
@@ -138,6 +142,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletDepositRequestsRequested>(_onDepositRequestsRequested);
     on<WalletTransferPurposesLoadRequested>(_onTransferPurposesLoadRequested);
     on<WalletPaymentRequestCreated>(_onPaymentRequestCreated);
+    on<WalletMerchantPaymentsRequested>(_onMerchantPaymentsRequested);
     on<WalletRealtimeBalanceUpdated>(_onRealtimeBalanceUpdated);
     on<WalletRealtimeTransactionReceived>(_onRealtimeTransactionReceived);
     on<WalletConfigUpdated>(_onConfigUpdated);
@@ -188,6 +193,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   final KycCompareFaceApiService _kycCompareFaceApi;
   final TransferPurposesApiService _transferPurposesApi;
   final PaymentRequestsApiService _paymentRequestsApi;
+  final MerchantPaymentsApiService _merchantPaymentsApi;
   final UsersApiService _usersApi;
   final QrLoginApiService _qrLoginApi;
   final SessionsApiService _sessionsApi;
@@ -2363,5 +2369,47 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         ),
       );
     }
+  }
+
+  /// Merchant payments history.
+  Future<void> _onMerchantPaymentsRequested(
+    WalletMerchantPaymentsRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    emit(state.copyWith(merchantPaymentsStatus: WalletStatus.loading));
+
+    final result = await _merchantPaymentsApi.fetchMyMerchantPayments(
+      page: event.page,
+      languageCode: state.languageCode,
+    );
+
+    if (result.isSuccess && result.data != null) {
+      final page = result.data!;
+      // A refresh replaces the list rather than merging into it: a refund
+      // arrives as a changed row, and merging would leave the old figures
+      // sitting next to the new ones.
+      final items = event.append
+          ? [...state.merchantPayments, ...page.items]
+          : page.items;
+
+      emit(
+        state.copyWith(
+          merchantPayments: items,
+          merchantPaymentsStatus: WalletStatus.success,
+          merchantPaymentsPage: page.page,
+          merchantPaymentsTotal: page.total,
+          merchantPaymentsHasMore: page.hasMore,
+          merchantPaymentsErrorMessage: null,
+        ),
+      );
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        merchantPaymentsStatus: WalletStatus.failure,
+        merchantPaymentsErrorMessage: result.errorMessage,
+      ),
+    );
   }
 }

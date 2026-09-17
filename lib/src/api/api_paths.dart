@@ -143,6 +143,11 @@ abstract class ApiPaths {
   static const String paymentRequests = '/payment-requests';
 
   /// Lookup payment request by request code.
+  ///
+  /// This is **the scanner endpoint**: it resolves a peer code (`pr.…`) or a
+  /// merchant code (`mp.…` / a 10-digit counter code) and reports which kind
+  /// came back in `kind`. One scanner resolves everything — never branch on the
+  /// code shape client-side to decide which endpoint to call.
   static String lookupPaymentRequest(String code) =>
       '/payment-requests/lookup/${Uri.encodeComponent(code)}';
 
@@ -150,4 +155,25 @@ abstract class ApiPaths {
   /// Body: accountNumber, idempotencyKey, note?
   static String fulfillPaymentRequest(String id) =>
       '/payment-requests/${Uri.encodeComponent(id)}/fulfill';
+
+  // ─── Merchant payments (customer side) ───
+  //
+  // These three are the ONLY merchant endpoints this client may call. Every
+  // other route under /merchant/… (create, cancel, refund) belongs to the
+  // shop's own server and is authenticated with a signature — the wallet never
+  // calls them and never signs anything.
+
+  /// Merchant-only resolver for `mp.…` or a 10-digit counter code (GET).
+  /// [lookupPaymentRequest] delegates to it, so prefer that one for scanning.
+  static String lookupMerchantPayment(String code) =>
+      '/merchant/payments/lookup/${Uri.encodeComponent(code)}';
+
+  /// Pay a merchant payment request (POST). Requires verified KYC.
+  /// Body: { idempotencyKey, accountNumber? }
+  static String payMerchantPayment(String id) =>
+      '/merchant/payments/${Uri.encodeComponent(id)}/pay';
+
+  /// The user's merchant payment history, with receipts and refunds (GET).
+  /// Query: page (0-indexed), limit (1–100)
+  static const String myMerchantPayments = '/merchant/payments/my';
 }

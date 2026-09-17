@@ -99,6 +99,13 @@ class WalletState {
     this.paymentRequestResponse,
     this.paymentRequestStatus = WalletStatus.initial,
     this.paymentRequestErrorMessage,
+    // Merchant payments
+    this.merchantPayments = const [],
+    this.merchantPaymentsStatus = WalletStatus.initial,
+    this.merchantPaymentsPage = 0,
+    this.merchantPaymentsTotal = 0,
+    this.merchantPaymentsHasMore = false,
+    this.merchantPaymentsErrorMessage,
     this.firstName = 'M*****',
     this.lastName = 'A*****',
     this.email,
@@ -273,6 +280,18 @@ class WalletState {
   final WalletStatus paymentRequestStatus;
   final String? paymentRequestErrorMessage;
 
+  // Merchant payments — its own history, kept apart from the ledger because a
+  // customer looking for "what did I pay that shop" is asking a different
+  // question than "what moved in my wallet".
+  final List<MerchantPaymentHistoryItem> merchantPayments;
+  final WalletStatus merchantPaymentsStatus;
+
+  /// 0-indexed page currently loaded.
+  final int merchantPaymentsPage;
+  final int merchantPaymentsTotal;
+  final bool merchantPaymentsHasMore;
+  final String? merchantPaymentsErrorMessage;
+
   // QR login
   final WalletStatus qrScanStatus;
   final WalletStatus qrActionStatus;
@@ -415,6 +434,13 @@ class WalletState {
     PaymentRequestResponse? paymentRequestResponse,
     WalletStatus? paymentRequestStatus,
     String? paymentRequestErrorMessage,
+    // Merchant payments
+    List<MerchantPaymentHistoryItem>? merchantPayments,
+    WalletStatus? merchantPaymentsStatus,
+    int? merchantPaymentsPage,
+    int? merchantPaymentsTotal,
+    bool? merchantPaymentsHasMore,
+    Object? merchantPaymentsErrorMessage = _unset,
     WalletStatus? qrScanStatus,
     WalletStatus? qrActionStatus,
     Object? qrLoginRequest = _unset,
@@ -593,6 +619,19 @@ class WalletState {
       paymentRequestStatus: paymentRequestStatus ?? this.paymentRequestStatus,
       paymentRequestErrorMessage:
           paymentRequestErrorMessage ?? this.paymentRequestErrorMessage,
+      merchantPayments: merchantPayments ?? this.merchantPayments,
+      merchantPaymentsStatus:
+          merchantPaymentsStatus ?? this.merchantPaymentsStatus,
+      merchantPaymentsPage: merchantPaymentsPage ?? this.merchantPaymentsPage,
+      merchantPaymentsTotal:
+          merchantPaymentsTotal ?? this.merchantPaymentsTotal,
+      merchantPaymentsHasMore:
+          merchantPaymentsHasMore ?? this.merchantPaymentsHasMore,
+      // Sentinel rather than `??` so a successful reload can actually clear a
+      // previous error instead of carrying it forward forever.
+      merchantPaymentsErrorMessage: merchantPaymentsErrorMessage == _unset
+          ? this.merchantPaymentsErrorMessage
+          : merchantPaymentsErrorMessage as String?,
       qrScanStatus: qrScanStatus ?? this.qrScanStatus,
       qrActionStatus: qrActionStatus ?? this.qrActionStatus,
       qrLoginRequest: qrLoginRequest == _unset

@@ -326,6 +326,18 @@ class WalletTransferPurposesLoadRequested extends WalletEvent {
 }
 
 /// Payment Requests
+/// Loads a page of merchant payment history.
+///
+/// [append] distinguishes "show me more" from a refresh: a refresh replaces the
+/// list, so a refund that changed a row is reflected rather than duplicated.
+class WalletMerchantPaymentsRequested extends WalletEvent {
+  const WalletMerchantPaymentsRequested({this.page = 0, this.append = false});
+
+  /// 0-indexed, as the API numbers pages.
+  final int page;
+  final bool append;
+}
+
 class WalletPaymentRequestCreated extends WalletEvent {
   const WalletPaymentRequestCreated({
     required this.accountNumber,

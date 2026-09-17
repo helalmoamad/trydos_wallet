@@ -15,7 +15,7 @@ import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/send_modal.d
 import 'package:trydos_wallet/src/screens/widgets/widgets.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
-enum QRScannerContentView { scanner, send, receive }
+enum QRScannerContentView { scanner, send, receive, merchantPay }
 
 class QRScannerPage extends StatefulWidget {
   final bool fromQR;
@@ -169,6 +169,12 @@ class _QRScannerPageState extends State<QRScannerPage>
       return ReceiveModal(onBack: _showScannerRoot);
     }
 
+    // Typing a code by hand. Scanning one does not come through here: the
+    // scanner above reads it and the send sheet routes it on what it read.
+    if (_contentView == QRScannerContentView.merchantPay) {
+      return MerchantPayModal(onBack: _showScannerRoot);
+    }
+
     // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: _handleWillPop,
@@ -264,7 +270,8 @@ class _QRScannerPageState extends State<QRScannerPage>
                       const Spacer(),
                       if (!widget.fromQR)
                         SizedBox(
-                          height: 224.h,
+                          // Three options now: send, receive, pay a merchant.
+                          height: 302.h,
                           child: SingleChildScrollView(
                             child: Column(
                               children: [
@@ -324,6 +331,25 @@ class _QRScannerPageState extends State<QRScannerPage>
                                     setState(() {
                                       _contentView =
                                           QRScannerContentView.receive;
+                                    });
+                                  },
+                                ),
+                                SizedBox(height: 5.h),
+                                _buildOption(
+                                  icon: TrydosWalletAssets.orderInvoice,
+                                  title: AppStrings.get(
+                                    state.languageCode,
+                                    'merchant_pay_title',
+                                  ),
+                                  subtitle: AppStrings.get(
+                                    state.languageCode,
+                                    'merchant_pay_subtitle',
+                                  ),
+                                  onTap: () {
+                                    _stopScanner();
+                                    setState(() {
+                                      _contentView =
+                                          QRScannerContentView.merchantPay;
                                     });
                                   },
                                 ),

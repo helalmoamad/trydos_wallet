@@ -41,6 +41,14 @@ class SuccessfulPage extends StatefulWidget {
   final String? recipientName;
   final String? recipientId;
 
+  /// Rendered just above the done/download/share row.
+  ///
+  /// Used by the merchant receipt for "return to the shop" and for the note
+  /// shown when a payment settled but its receipt never reached us. It is not
+  /// part of the captured image — the receipt a customer saves or shares stays
+  /// the receipt.
+  final Widget? footer;
+
   const SuccessfulPage({
     super.key,
     required this.senderAccount,
@@ -59,6 +67,7 @@ class SuccessfulPage extends StatefulWidget {
     this.recipientPhoneNumber,
     this.recipientName,
     this.recipientId,
+    this.footer,
   });
 
   @override
@@ -480,6 +489,11 @@ class _SuccessfulPageState extends State<SuccessfulPage> {
                         ),
                       ),
                     ),
+
+                    if (widget.footer != null) ...[
+                      widget.footer!,
+                      SizedBox(height: 15.h),
+                    ],
 
                     SafeArea(
                       top: false,
