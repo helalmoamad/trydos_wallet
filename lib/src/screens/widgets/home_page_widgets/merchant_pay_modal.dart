@@ -134,16 +134,17 @@ class _MerchantPayModalState extends State<MerchantPayModal> {
 
   // ─────────────────────────── code entry ───────────────────────────
 
-  /// Resolves as soon as the code is complete — once, not on every keystroke.
+  /// Resolves once the code is complete — at the tenth digit, not on every
+  /// keystroke.
   void _onCodeChanged() {
     if (_isResolved || _isResolving) return;
 
-    final digits = PaymentCode.normalize(_codeController.text);
-    if (digits.length < PaymentCode.counterCodeLength) {
+    final code = PaymentCode.normalize(_codeController.text);
+    if (code.length < PaymentCode.counterCodeLength) {
       if (_codeError != null) setState(() => _codeError = null);
       return;
     }
-    unawaited(_resolveCode(digits));
+    unawaited(_resolveCode(code));
   }
 
   Future<void> _resolveCode(String code) async {
@@ -651,20 +652,34 @@ class _MerchantPayModalState extends State<MerchantPayModal> {
     );
   }
 
+  /// Which asset the card shows.
+  ///
+  /// Normally whatever the customer has selected, exactly as the transfer
+  /// screen does. When nothing is selected — this sheet can be opened straight
+  /// from the scanner without ever touching a balance card — it falls back to
+  /// the first wallet there is, so the card shows a real currency instead of an
+  /// empty frame.
+  String _displayedAssetId(WalletState state) {
+    final selected = state.selectedAssetId ?? '';
+    if (selected.isNotEmpty && state.balances.containsKey(selected)) {
+      return selected;
+    }
+    if (state.balances.isNotEmpty) return state.balances.keys.first;
+    return selected;
+  }
+
   /// The dark card from the transfer screen: balance, the wallet that pays, and
   /// the asset — switched to the request's asset the moment a code resolves.
   ///
-  /// Until a code resolves there is nothing truthful to put here. Which wallet
-  /// pays depends on the asset the shop asked for, and that is not known yet, so
-  /// showing whatever asset happened to be selected would state a balance that
-  /// may have nothing to do with this payment. The values shimmer in place
-  /// instead, at the exact sizes they will occupy, so nothing shifts when they
-  /// arrive.
+  /// Before a code is entered the card behaves exactly like the transfer
+  /// screen's: it shows the wallet the customer already has selected. Only once
+  /// a code is being resolved — and while its asset's balance loads — do the
+  /// values shimmer, at the exact sizes they will occupy, so nothing shifts
+  /// when the real ones arrive.
   Widget _buildWalletCard(WalletState state) {
-    final balance = state.balances[state.selectedAssetId ?? ''];
-    final isLoading =
-        !_isResolved ||
-        state.loadingBalanceIds.contains(state.selectedAssetId ?? '');
+    final assetId = _displayedAssetId(state);
+    final balance = state.balances[assetId];
+    final isLoading = _isResolving || state.loadingBalanceIds.contains(assetId);
 
     final amountStr = balance != null
         ? balance.available.toStringAsFixed(
@@ -674,7 +689,7 @@ class _MerchantPayModalState extends State<MerchantPayModal> {
 
     Currency? currency;
     for (final c in state.currencies) {
-      if (c.id == (state.selectedAssetId ?? '')) {
+      if (c.id == assetId) {
         currency = c;
         break;
       }
@@ -793,7 +808,7 @@ class _MerchantPayModalState extends State<MerchantPayModal> {
 
   String _senderAccountDisplay(WalletState state) {
     final wallet =
-        _payingWallet(state) ?? state.balances[state.selectedAssetId ?? ''];
+        _payingWallet(state) ?? state.balances[_displayedAssetId(state)];
     final accountNumber = (wallet?.accountNumber ?? '').trim().isNotEmpty
         ? wallet!.accountNumber
         : (Balance.lastMyAccountsPrimaryWallet?.accountNumber ?? '----');
@@ -817,6 +832,9 @@ class _MerchantPayModalState extends State<MerchantPayModal> {
       focusNode: _codeFocus,
       isVerified: _isResolved,
       errorMessage: _codeError,
+      // Typed entry is the 10-digit counter code and nothing else. The long
+      // `mp.…` code only ever arrives by scan, which does not come through
+      // this field.
       keyboardType: TextInputType.number,
       forceLtrValue: true,
       labelColor: _isResolved ? _muted : _ink,
@@ -843,16 +861,10 @@ class _MerchantPayModalState extends State<MerchantPayModal> {
     final lang = state.languageCode;
     final description = lookup.description.resolve(lang);
 
+    // The same fields, in the same order, as the transfer screen shows for a
+    // request: who is being paid (carried on the code field above, with the
+    // shop name beside it), then amount, reference, purpose, type, expiry.
     return [
-      _buildField(
-        state: state,
-        label: AppStrings.get(lang, 'merchant_you_are_paying'),
-        controller: TextEditingController(text: lookup.merchantName),
-        focusNode: FocusNode(),
-        isVerified: true,
-        enabled: false,
-      ),
-      SizedBox(height: 5.h),
       _buildField(
         state: state,
         label: AppStrings.get(lang, 'amount_to_be_sent'),
@@ -916,11 +928,23 @@ class _MerchantPayModalState extends State<MerchantPayModal> {
       SizedBox(height: 5.h),
       _buildField(
         state: state,
+        label: AppStrings.get(lang, 'type'),
+        controller: TextEditingController(
+          text: AppStrings.get(lang, 'merchant_payment'),
+        ),
+        focusNode: FocusNode(),
+        isVerified: true,
+        enabled: false,
+      ),
+      SizedBox(height: 5.h),
+      _buildField(
+        state: state,
         label: AppStrings.get(lang, 'valid_until'),
         controller: TextEditingController(),
         focusNode: FocusNode(),
         isVerified: true,
         enabled: false,
+        showTimeNote: lookup.expiresAt != null && !lookup.isExpiredNow,
         customValueWidget: Text(
           _validUntilText(state),
           style: context.textTheme.bodyMedium?.mq.copyWith(
@@ -1087,6 +1111,7 @@ class _MerchantPayModalState extends State<MerchantPayModal> {
     String? errorMessage,
     VoidCallback? onEdit,
     Color? labelColor,
+    bool showTimeNote = false,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
   }) {
@@ -1209,6 +1234,18 @@ class _MerchantPayModalState extends State<MerchantPayModal> {
                 ),
               ),
             ),
+          if (showTimeNote) ...[
+            SizedBox(height: 5.h),
+            Center(
+              child: Text(
+                AppStrings.get(state.languageCode, 'cannot_use_after_expiry'),
+                style: context.textTheme.bodyMedium?.rq.copyWith(
+                  color: _ink,
+                  fontSize: 11.sp,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

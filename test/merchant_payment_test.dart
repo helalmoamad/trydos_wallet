@@ -135,10 +135,14 @@ void main() {
   });
 
   group('Trydos store QR payload', () {
-    // The Trydos payment screen encodes the bare short code — ten ASCII digits,
-    // no scheme, no prefix, no whitespace — and the scanner must treat it as the
-    // code the customer would otherwise have typed. An external team depends on
-    // this exact contract, so it is pinned here rather than left implied.
+    // Two shapes have to work, because the store's guide and the store's actual
+    // build disagree:
+    //
+    //   * the guide describes a bare 10-digit `short_code`;
+    //   * the shipped payment screen encodes `MERPAY:` + `request_code`.
+    //
+    // An external team depends on both being read, so both are pinned here
+    // rather than left implied.
     const payload = '4817302956';
 
     test('the documented payload resolves as a merchant counter code', () {
@@ -158,6 +162,50 @@ void main() {
         );
         expect(PaymentCode.normalize(noisy), payload);
       }
+    });
+
+    test('the MERPAY envelope is peeled off to the request_code', () {
+      // What the Trydos payment screen actually encodes: the marker plus the
+      // `request_code` field, verbatim.
+      const scanned = 'MERPAY:mp.cwewkCUKhUSP-MjXRCTJxg';
+
+      expect(PaymentCode.normalize(scanned), 'mp.cwewkCUKhUSP-MjXRCTJxg');
+      expect(PaymentCode.kindOf(scanned), PaymentCodeKind.merchant);
+      expect(PaymentCode.isResolvable(scanned), isTrue);
+    });
+
+    test('the envelope is recognised whatever its case', () {
+      for (final scanned in [
+        'MERPAY:mp.abc',
+        'merpay:mp.abc',
+        'MerPay:mp.abc',
+        '  MERPAY:mp.abc  ',
+      ]) {
+        expect(
+          PaymentCode.normalize(scanned),
+          'mp.abc',
+          reason: 'payload "$scanned"',
+        );
+      }
+    });
+
+    test('a bare code without the envelope still resolves', () {
+      expect(PaymentCode.normalize('mp.abc'), 'mp.abc');
+      expect(PaymentCode.kindOf('mp.abc'), PaymentCodeKind.merchant);
+    });
+
+    test('the envelope alone carries nothing resolvable', () {
+      expect(PaymentCode.isResolvable('MERPAY:'), isFalse);
+      expect(PaymentCode.isResolvable('MERPAY:not-a-code'), isFalse);
+    });
+
+    test('only a digits-only payload counts as numeric', () {
+      expect(PaymentCode.isNumeric('4817302956'), isTrue);
+      expect(PaymentCode.isNumeric('481 730 2956'), isTrue);
+      // The code field leans on this to leave `mp.…` ungrouped.
+      expect(PaymentCode.isNumeric('mp.cwewkCUKhUSP-MjXRCTJxg'), isFalse);
+      expect(PaymentCode.isNumeric('MERPAY:mp.abc'), isFalse);
+      expect(PaymentCode.isNumeric(''), isFalse);
     });
 
     test('a near-miss length is not mistaken for a code', () {

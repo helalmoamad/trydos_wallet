@@ -41,18 +41,39 @@ abstract class PaymentCode {
   static const String peerPrefix = 'pr.';
   static const String merchantPrefix = 'mp.';
 
+  /// Envelope the Trydos payment screen wraps a merchant code in when it
+  /// renders the QR: `MERPAY:mp.cwewkCUKhUSP-MjXRCTJxg`.
+  ///
+  /// It is a marker, not a scheme — there is no host, no path, nothing to
+  /// fetch. [normalize] peels it off so what reaches the lookup is the bare
+  /// code, exactly as it would be if the customer had typed it.
+  static const String merchantQrPrefix = 'MERPAY:';
+
   /// Length of a merchant counter code.
   static const int counterCodeLength = 10;
 
   static final RegExp _whitespace = RegExp(r'\s+');
   static final RegExp _counterCode = RegExp(r'^\d{10}$');
+  static final RegExp _digitsOnly = RegExp(r'^\d+$');
 
-  /// Strips every space the user or the QR added.
+  /// Strips the QR envelope and every space the user or the scanner added.
   ///
   /// Inner whitespace goes too: `481 730 2956` is how we ask people to read a
   /// counter code aloud, and it is how they will type it back.
-  static String normalize(String? raw) =>
-      (raw ?? '').replaceAll(_whitespace, '').trim();
+  static String normalize(String? raw) {
+    final code = (raw ?? '').replaceAll(_whitespace, '').trim();
+    if (code.toUpperCase().startsWith(merchantQrPrefix)) {
+      return code.substring(merchantQrPrefix.length);
+    }
+    return code;
+  }
+
+  /// Whether [raw] is made only of digits — the shape a counter code takes, and
+  /// the only shape worth grouping as one.
+  static bool isNumeric(String? raw) {
+    final code = normalize(raw);
+    return code.isNotEmpty && _digitsOnly.hasMatch(code);
+  }
 
   /// Classifies an already-[normalize]d string.
   static PaymentCodeKind kindOf(String? raw) {

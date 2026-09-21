@@ -41,7 +41,7 @@ flutter analyze lib test          # expect: no issues
 flutter test test/merchant_payment_test.dart
 ```
 
-52 tests covering the rules rather than the plumbing: exact decimal arithmetic,
+57 tests covering the rules rather than the plumbing: exact decimal arithmetic,
 code classification and trimming, link extraction, unknown statuses staying
 neutral, `kind` routing, refund reporting, and the error mapping — including
 that two different 403s are told apart by `code` and that a timeout is not a
@@ -94,7 +94,7 @@ The core of the feature. Run these against a sandbox shop.
 
 | # | Step | Expected |
 |---|---|---|
-| 2.0 | **Scan the QR on the Trydos payment screen** from a second phone | Goes straight to the payment screen with every field filled, the code shown in the code field, and the wallet card switched to the request's asset |
+| 2.0 | **Scan the QR on the Trydos payment screen** from a second phone | Goes straight to the payment screen with every field filled, the code shown in the code field, and the wallet card switched to the request's asset. The QR carries `MERPAY:` + `request_code` — e.g. `MERPAY:mp.cwewkCUKhUSP-MjXRCTJxg` — and the envelope is stripped before the lookup |
 | 2.1 | Scanner sheet → **Pay a merchant** → type the `short_code` | Same screen, same filled fields — typing and scanning differ only in how the code arrived |
 | 2.2 | Check the figures | Amount shown exactly as the API sent it (`100.00`, not `100`); order reference; description in the user's language |
 | 2.3 | Check the wallet row | Names the MAIN wallet **for the request's currency**, with its balance |
@@ -243,11 +243,21 @@ The client half of all three is implemented and unit-tested, so when the page
 ships the work is registration and verification, not development.
 
 **Today the customer either scans the Trydos payment screen's QR or types the
-10 digits.** Since 2026-09-17 the Trydos app renders the `short_code` as a QR
-carrying the bare digits — no scheme, no prefix, no URL. That needs nothing from
-this wallet: a 10-digit scan already routes exactly like a typed one. The
-`payment_url`, `qr_payload` and `deep_link` fields remain `null`, which is why
-the code itself is what gets encoded.
+10-digit code.** The `payment_url`, `qr_payload` and `deep_link` fields remain
+`null`, which is why a code — not a link — is what gets encoded.
+
+Note the QR payload is **not** what the store's integration guide describes.
+The guide specifies a bare 10-digit `short_code`; the shipped payment screen
+encodes an envelope plus the long code:
+
+```
+MERPAY:mp.cwewkCUKhUSP-MjXRCTJxg
+        └── the request_code field, verbatim
+```
+
+`PaymentCode.normalize` peels `MERPAY:` off — case-insensitively — so what
+reaches the lookup is the bare `mp.…` code. Both shapes are covered and
+unit-tested; whichever the store settles on works.
 
 ---
 
