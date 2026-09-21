@@ -265,6 +265,59 @@ void main() {
       );
     });
 
+    test('reads the Trydos "open the wallet app" link verbatim', () {
+      // The exact link the Trydos payment screen opens: the same MERPAY payload
+      // the QR carries, URL-encoded into a `code` parameter.
+      const link =
+          'https://rdb-ms.yazan-adnof.workers.dev/'
+          '?code=MERPAY%3Amp.cwewkCUKhUSP-MjXRCTJxg';
+
+      expect(
+        PaymentLink.extractCodeFromString(link),
+        'mp.cwewkCUKhUSP-MjXRCTJxg',
+      );
+    });
+
+    test('accepts the alternative link shapes the store offered', () {
+      // Path style.
+      expect(
+        PaymentLink.extractCodeFromString(
+          'https://rdb-ms.yazan-adnof.workers.dev/pay/mp.cwewkCUKhUSP-MjXRCTJxg',
+        ),
+        'mp.cwewkCUKhUSP-MjXRCTJxg',
+      );
+      // Custom scheme.
+      expect(
+        PaymentLink.extractCodeFromString(
+          'rdb://pay?code=MERPAY%3Amp.cwewkCUKhUSP-MjXRCTJxg',
+        ),
+        'mp.cwewkCUKhUSP-MjXRCTJxg',
+      );
+      // Bare code, no envelope — the "be tolerant" case.
+      expect(
+        PaymentLink.extractCodeFromString(
+          'https://rdb-ms.yazan-adnof.workers.dev/?code=mp.cwewkCUKhUSP-MjXRCTJxg',
+        ),
+        'mp.cwewkCUKhUSP-MjXRCTJxg',
+      );
+    });
+
+    test('a link with no usable code is ignored, not an error', () {
+      // "open the app normally, no error screen"
+      expect(
+        PaymentLink.extractCodeFromString(
+          'https://rdb-ms.yazan-adnof.workers.dev/',
+        ),
+        isNull,
+      );
+      expect(
+        PaymentLink.extractCodeFromString(
+          'https://rdb-ms.yazan-adnof.workers.dev/?code=MERPAY%3A',
+        ),
+        isNull,
+      );
+    });
+
     test('rejects a link that carries nothing resolvable', () {
       expect(
         PaymentLink.extractCodeFromString('https://example.com/r/v1/not-a-code'),

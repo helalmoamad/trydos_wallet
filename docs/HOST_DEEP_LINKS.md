@@ -2,21 +2,58 @@
 
 For the team that owns the app embedding `trydos_wallet`.
 
-A customer receives a payment link from a shop, taps it, and lands directly on
-the wallet's payment confirmation screen — shop name, amount, order reference —
-without typing a code.
+A customer on the Trydos store taps **"Open the wallet app"**, this app opens,
+and the payment confirmation screen is already filled in — shop name, amount,
+order reference. No code typed, no QR scanned.
 
-The library owns everything after the link arrives: parsing, routing, the
-confirmation screen, the payment, the receipt. **The host owns exactly two
-things**: letting the OS hand the link to the app, and passing that link to the
-library. This document covers those two.
+The library owns everything from the moment the link reaches it: parsing,
+routing, the confirmation screen, the payment, the receipt. **The host owns
+exactly two things**: letting the OS hand the link to the app, and passing that
+link to the library. This document covers those two.
 
 ---
 
-## 1. Dart wiring
+## 1. The link, exactly as Trydos sends it
 
-One dependency of your choosing for receiving links — [`app_links`][app_links]
-is the usual pick — and two calls.
+```
+https://rdb-ms.yazan-adnof.workers.dev/?code=MERPAY%3Amp.cwewkCUKhUSP-MjXRCTJxg
+```
+
+| Part | Value |
+|---|---|
+| host | `rdb-ms.yazan-adnof.workers.dev` |
+| path | `/` |
+| parameter | `code` |
+| value, decoded | `MERPAY:<request_code>` |
+
+`<request_code>` is the payment request's `request_code` — case-sensitive, no
+fixed length, and it may contain `-`, `_` and `.`.
+
+The value is **byte-for-byte the same payload the QR carries**. One payload,
+two transports — which is why the library runs both through the same parser.
+
+### Already handled, and pinned by tests
+
+No library work is outstanding. All of these resolve to
+`mp.cwewkCUKhUSP-MjXRCTJxg` today:
+
+| Shape | Status |
+|---|---|
+| `…workers.dev/?code=MERPAY%3Amp.…` — **the live one** | ✅ |
+| `…workers.dev/?code=mp.…` — no envelope, the "be tolerant" case | ✅ |
+| `…workers.dev/pay/mp.…` — path style | ✅ |
+| `rdb://pay?code=MERPAY%3Amp.…` — custom scheme | ✅ |
+| `…workers.dev/` — no code at all | ✅ ignored, app opens normally |
+| `…workers.dev/?code=MERPAY%3A` — envelope, no code | ✅ ignored |
+
+So if Trydos changes the link shape (their §5), nothing here needs to change.
+
+---
+
+## 2. Dart wiring — the whole integration
+
+One dependency for receiving links — [`app_links`][app_links] is the usual pick
+— and two calls.
 
 ```yaml
 # pubspec.yaml (host app)
@@ -57,21 +94,17 @@ class _MyAppState extends State<MyApp> {
 }
 ```
 
-That is the whole integration. Put it wherever your other library stream
-subscriptions live — next to `logoutEvents`, `languageChangeEvents` and the
-rest.
+Put it wherever your other library stream subscriptions live — next to
+`logoutEvents`, `languageChangeEvents` and the rest.
 
 ### Pass every link, unfiltered
 
-`handleIncomingLink` inspects the link and returns:
+`handleIncomingLink` returns:
 
-* **`true`** — it carried a payment code; the library has taken responsibility
-  for it.
+* **`true`** — it carried a payment code; the library has taken it from here.
 * **`false`** — not a payment link; nothing happened, nothing was consumed.
 
-So route **all** of your app's incoming links through it, including your own
-unrelated deep links. Do not try to match paths yourself — you would duplicate
-logic the library already owns, and get it wrong when the format changes.
+So route **all** incoming links through it, your own deep links included:
 
 ```dart
 _appLinks.uriLinkStream.listen((uri) {
@@ -80,52 +113,64 @@ _appLinks.uriLinkStream.listen((uri) {
 });
 ```
 
-Filtering also matters for a reason that is not obvious: failed code lookups are
-rate-limited server-side (10 per 15 minutes). The library validates the code
-shape locally *before* any network call, so a stray link costs nothing. Doing
-your own guesswork and passing junk would burn those attempts.
+Do not pre-filter by host or path. You would duplicate logic the library owns
+and get it wrong the next time Trydos changes the shape — and the library
+validates the code locally *before* any network call, so a stray link costs
+nothing. Failed lookups are throttled at ten per fifteen minutes; guesswork on
+your side would spend those.
 
-### Accepted link shapes
-
-| Shape | Example |
-|---|---|
-| Universal / app link | `https://pay.example.com/r/v1/mp.7Kd2q` |
-| Custom scheme | `rdb://r/v1/mp.7Kd2q` |
-| Query parameter | `rdb://pay?code=4817302956` |
-| Bare code (not a URL) | `TrydosWallet.handlePaymentCode('4817302956')` |
-
-Codes come in three namespaces: `mp.…` (merchant request), `pr.…` (request from
-another wallet user), and a 10-digit counter code. The library resolves all
-three through one endpoint and opens the right screen — you never need to tell
-them apart.
-
-`handleIncomingLinkString(String)` exists for links that reach you as text
-rather than a `Uri`.
-
-### Push notifications
-
-The backend sends the payer a localized "Payment sent … Receipt RDB-R-…"
-notification. Deep-link it to the customer's receipts:
-
-```dart
-// inside your notification tap handler, with a wallet BuildContext
-PaymentCodeLauncher.openMerchantPayments(context);
-```
-
-If a notification payload instead carries a payment *code*, hand it over with
-`TrydosWallet.handlePaymentCode(code)` — same routing as a link.
-
-Do not rebuild the notification text. It arrives ready in English and Arabic.
+`handleIncomingLinkString(String)` exists for links that reach you as text, and
+`handlePaymentCode(String)` for a bare code — from a push payload, say.
 
 ---
 
-## 2. Android
+## 3. What happens after the app opens
 
-Two intent filters in `android/app/src/main/AndroidManifest.xml`, inside the
-`<activity android:name=".MainActivity">` block. Note `android:launchMode` must
-be `singleTop` (Flutter's default template already sets this) so a link arriving
-while the app is running reaches `uriLinkStream` instead of starting a second
-activity.
+```
+link tapped in Trydos
+        │
+TrydosWallet.handleIncomingLink(uri)
+        │
+   code extracted, MERPAY: stripped, namespace checked
+        │
+        ├── not ours ──────▶ false; your router handles it
+        │
+        ├── wallet UI up ──▶ delivered at once
+        │
+        └── wallet UI not up yet ──▶ buffered
+             (cold start, or the customer is still on your login screen)
+                  │
+                  ▼
+            replayed the moment the wallet mounts
+                  │
+                  ▼
+            waits for balances to load, then opens the payment screen:
+            lookup → confirm → pay → receipt
+```
+
+| Situation | Behaviour |
+|---|---|
+| App closed, link tapped | Buffered, opened once the wallet is up and balances have loaded |
+| App open, wallet showing | Opens at once |
+| **Not signed in** | Buffered; opens after login — the code survives the round trip |
+| Payment sheet already open | A second link is queued, not stacked |
+| Two links before the wallet mounts | The most recent opens — it is the one the customer is looking at |
+| Code missing or unreadable | Ignored; the app opens normally, no error screen |
+| Already paid / expired / cancelled | The payment screen says which, and offers "ask the shop for a new code" |
+| Payer is not the buyer | Works. Paying someone else's code is supported, by design |
+
+The wait on balances is deliberate: the confirmation screen names the wallet
+that pays and whether its balance covers the amount. Opening it mid-load would
+tell a customer who owns a USD wallet that they have none.
+
+---
+
+## 4. Android
+
+In `android/app/src/main/AndroidManifest.xml`, inside
+`<activity android:name=".MainActivity">`. `android:launchMode` must be
+`singleTop` — Flutter's template already sets it — so a link arriving while the
+app runs reaches `uriLinkStream` instead of starting a second activity.
 
 ```xml
 <activity
@@ -135,104 +180,100 @@ activity.
 
     <!-- existing MAIN/LAUNCHER filter stays as it is -->
 
-    <!-- Verified App Link: opens the app with no chooser dialog. -->
     <intent-filter android:autoVerify="true">
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
         <data
             android:scheme="https"
-            android:host="pay.example.com"
-            android:pathPrefix="/r/v1" />
-    </intent-filter>
-
-    <!-- Custom-scheme fallback: works with no server setup at all. -->
-    <intent-filter>
-        <action android:name="android.intent.action.VIEW" />
-        <category android:name="android.intent.category.DEFAULT" />
-        <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="rdb" />
+            android:host="rdb-ms.yazan-adnof.workers.dev" />
     </intent-filter>
 </activity>
 ```
 
-`android:autoVerify="true"` requires a `assetlinks.json` file served at
-`https://pay.example.com/.well-known/assetlinks.json`:
+No `pathPrefix`: the live link's path is just `/`, and Trydos may move to
+`/pay/<code>` later. Claiming the host covers both.
+
+`autoVerify` needs `assetlinks.json` served at
+`https://rdb-ms.yazan-adnof.workers.dev/.well-known/assetlinks.json`:
 
 ```json
 [{
   "relation": ["delegate_permission/common.handle_all_urls"],
   "target": {
     "namespace": "android_app",
-    "package_name": "com.example.yourapp",
-    "sha256_cert_fingerprints": ["<your release signing SHA-256>"]
+    "package_name": "com.rdb.www",
+    "sha256_cert_fingerprints": ["<release signing SHA-256>"]
   }
 }]
 ```
-
-Get the fingerprint with:
 
 ```bash
 keytool -list -v -keystore <your.keystore> -alias <your-alias>
 ```
 
-Include the **Play App Signing** fingerprint too, not just your upload key —
-otherwise verification works in debug and silently fails in production.
+Include the **Play App Signing** fingerprint as well as the upload key.
+Omitting it makes verification pass in debug and fail silently in production.
+
+> The host is a Cloudflare Worker owned by the RDB side, so serving that file is
+> a backend task, not an app one. Until it is served, the link still opens the
+> app — Android just shows a chooser first.
 
 ### Testing
 
 ```bash
-# custom scheme — needs no server
-adb shell am start -a android.intent.action.VIEW -d "rdb://r/v1/mp.test123"
+adb shell am start -a android.intent.action.VIEW \
+  -d "https://rdb-ms.yazan-adnof.workers.dev/?code=MERPAY%3Amp.cwewkCUKhUSP-MjXRCTJxg"
 
-# app link
-adb shell am start -a android.intent.action.VIEW -d "https://pay.example.com/r/v1/mp.test123"
-
-# check that verification actually succeeded
-adb shell pm get-app-links com.example.yourapp
+# did verification actually take?
+adb shell pm get-app-links com.rdb.www
 ```
 
 ---
 
-## 3. iOS
+## 5. iOS
 
 ### Universal links
 
-Add the domain in Xcode → *Signing & Capabilities* → *Associated Domains*, or
-directly in `ios/Runner/Runner.entitlements`:
+Xcode → *Signing & Capabilities* → *Associated Domains*, or
+`ios/Runner/Runner.entitlements`:
 
 ```xml
 <key>com.apple.developer.associated-domains</key>
 <array>
-    <string>applinks:pay.example.com</string>
+    <string>applinks:rdb-ms.yazan-adnof.workers.dev</string>
 </array>
 ```
 
-And serve `https://pay.example.com/.well-known/apple-app-site-association` —
-as JSON, with `Content-Type: application/json`, no redirects, no `.json`
-extension:
+And serve
+`https://rdb-ms.yazan-adnof.workers.dev/.well-known/apple-app-site-association`
+as JSON, `Content-Type: application/json`, no redirect, no `.json` extension:
 
 ```json
 {
   "applinks": {
     "details": [{
-      "appIDs": ["TEAMID.com.example.yourapp"],
-      "components": [{ "/": "/r/v1/*" }]
+      "appIDs": ["TEAMID.com.rdb.www"],
+      "components": [{ "/": "*" }]
     }]
   }
 }
 ```
 
-### Custom scheme
+### Custom scheme — Trydos is waiting on this
 
-In `ios/Runner/Info.plist`:
+Trydos cannot ask iOS whether a Universal Link has a handler; the only check
+Apple allows is `canOpenURL` on a **custom scheme**. Until we give them one,
+**the button stays hidden on iPhone** — so this is the item blocking iOS.
+
+Register one in `ios/Runner/Info.plist`:
 
 ```xml
 <key>CFBundleURLTypes</key>
 <array>
     <dict>
         <key>CFBundleURLName</key>
-        <string>com.example.yourapp</string>
+        <string>com.rdb.www</string>
         <key>CFBundleURLSchemes</key>
         <array>
             <string>rdb</string>
@@ -241,89 +282,51 @@ In `ios/Runner/Info.plist`:
 </array>
 ```
 
+The library already parses `rdb://pay?code=MERPAY%3A…`, so nothing more is
+needed once the scheme is registered.
+
 ### Testing
 
 ```bash
-xcrun simctl openurl booted "rdb://r/v1/mp.test123"
-xcrun simctl openurl booted "https://pay.example.com/r/v1/mp.test123"
+xcrun simctl openurl booted "rdb://pay?code=MERPAY%3Amp.cwewkCUKhUSP-MjXRCTJxg"
+xcrun simctl openurl booted "https://rdb-ms.yazan-adnof.workers.dev/?code=MERPAY%3Amp.cwewkCUKhUSP-MjXRCTJxg"
 ```
 
 Universal links do not open from Safari's address bar — tap them from Notes or
-Messages instead, or the test will look like a failure when it isn't.
+Messages, or a working setup will look broken.
 
 ---
 
-## 4. What the customer sees
+## 6. What to send back to the Trydos team
 
-```
-link tapped
-    │
-TrydosWallet.handleIncomingLink(uri)
-    │
-    ├── not a payment link ──▶ returns false, your router handles it
-    │
-    ├── wallet UI running ──▶ delivered immediately
-    │
-    └── wallet UI not up yet ──▶ buffered
-         (cold start, or the customer is still on your login screen)
-              │
-              ▼
-        replayed the moment the wallet mounts
-              │
-              ▼
-        waits for balances to load, then opens:
-        resolve → confirmation → pay → receipt
-```
+Their §4.1 asks us two questions, and their §5 offers to change the link.
 
-| Situation | Behaviour |
-|---|---|
-| App closed, link tapped | Buffered, then opened once the wallet is up and its balances have loaded |
-| App running, wallet open | Opens immediately |
-| Customer not signed in | Buffered; opens after login, so the link is not lost |
-| Payment sheet already open | Second link is queued, not stacked on top |
-| Two links before the wallet mounts | The most recent one opens — it is the one the customer is looking at |
-| Link is not a payment link | Ignored; `false` returned, no lookup spent |
-| Code invalid or expired | The confirmation screen says so and offers "ask the shop for a new code" |
+> **Link shape** — no change needed. The form in your §2 works as sent, and so
+> do all three alternatives in your §5. Keep what you have.
+>
+> **Custom URL scheme** — `rdb://`, once registered (see §5 above). It carries
+> the same `code` value, identically encoded: `rdb://pay?code=MERPAY%3A<request_code>`.
+> A bare code with no `MERPAY:` prefix is also accepted.
+>
+> **App Store id** — *(fill in before sending)*.
+>
+> **Android package** — `com.rdb.www`, as you assumed.
 
-The wait on balances is deliberate, not a delay to optimise away: the
-confirmation screen names the wallet that pays and whether its balance covers
-the amount. Opening it mid-load would tell a customer who owns a USD wallet that
-they have none.
+Both answers are the host app team's to confirm; the library side of each is
+already implemented and tested.
 
 ---
 
-## 5. Do not
+## 7. Do not
 
 * **Do not parse the code yourself** and call an API with it. Pass the whole
-  `Uri` and let the library route it — it enforces the rate-limit protection,
-  namespace validation and the one-endpoint rule that keep this flow safe.
+  `Uri`. The library enforces the throttle protection, the namespace check and
+  the one-endpoint rule that keep this flow safe.
 * **Do not treat opening a link as proof of payment.** A link is a request to
-  pay. Only the payment response says money moved.
-* **Do not print QR codes containing a payment link — yet.** See below.
-* **Do not build your own payment screen** from anything in the link. The link
-  carries a code and nothing else; the amount and the shop name come from the
-  server, never from the URL.
-
----
-
-## 6. Status: links are not live yet
-
-The client side is complete and tested. What does not exist yet is the **web page
-that serves `https://<host>/r/v1/<requestCode>`** — so today the backend issues
-no links, and shops show the 10-digit code instead. Who builds that page, and on
-which domain, is still an open product decision.
-
-What this means practically:
-
-* **You can wire and register the custom scheme now** (`rdb://…`) and test the
-  whole flow end to end by hand. Nothing is blocked.
-* **The `https` app-link half needs the domain settled first**, since
-  `assetlinks.json` and `apple-app-site-association` must be served from it.
-* **Shops must not print link QR codes until that page is live.** A customer who
-  scans one with the phone's own camera, rather than with this app, would land on
-  a page that does not exist. The only safe QR content today is the code itself —
-  and the wallet's own scanner already reads that, plus account QRs and the
-  existing encrypted request QRs, with no host setup at all.
+  pay; only the payment response says money moved.
+* **Do not build a payment screen from anything in the link.** It carries a code
+  and nothing else — the amount and the shop name come from the server, never
+  from the URL.
 
 ---
 
@@ -333,14 +336,17 @@ What this means practically:
 - [ ] `getInitialLink()` passed to `TrydosWallet.handleIncomingLink`
 - [ ] `uriLinkStream` piped to `TrydosWallet.handleIncomingLink`
 - [ ] Unrelated links still reach your own router when it returns `false`
-- [ ] Custom scheme registered on Android and iOS, tested with `adb` / `simctl`
-- [ ] "Payment sent" notification deep-linked to `openMerchantPayments`
-- [ ] Domain chosen, and `assetlinks.json` + `apple-app-site-association` served *(blocked on the link page)*
-- [ ] `android:autoVerify` confirmed with `adb shell pm get-app-links` *(blocked on the above)*
+- [ ] Android intent-filter for `rdb-ms.yazan-adnof.workers.dev`, tested with `adb`
+- [ ] iOS custom scheme `rdb://` registered — **blocks the iPhone button**
+- [ ] App Store id sent to the Trydos team — **blocks the iPhone button**
+- [ ] `assetlinks.json` served from the Worker *(backend)*
+- [ ] `apple-app-site-association` served from the Worker *(backend)*
+- [ ] `adb shell pm get-app-links com.rdb.www` reports verified
 
 [app_links]: https://pub.dev/packages/app_links
 
 ---
 
-For how the payment flow itself works, and how each rule of the internal guide
-maps to the code, see [MERCHANT_PAYMENTS.md](MERCHANT_PAYMENTS.md).
+For how the payment flow itself works, see
+[MERCHANT_PAYMENTS.md](MERCHANT_PAYMENTS.md); for what to test, see
+[MERCHANT_PAYMENTS_QA.md](MERCHANT_PAYMENTS_QA.md).
