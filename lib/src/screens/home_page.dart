@@ -269,11 +269,13 @@ class _TrydosWalletHomePageContentState
                     body: SafeArea(
                       child: IndexedStack(
                         index: _selectedIndex,
-                        children: const [
-                          HomeTab(),
-                          WalletTab(),
-                          AddressesTab(),
-                          SettingsTab(),
+                        children: [
+                          const HomeTab(),
+                          // Its transactions list loads on first open, so the
+                          // tab has to know when it is the one on screen.
+                          WalletTab(isActive: _selectedIndex == 1),
+                          const AddressesTab(),
+                          const SettingsTab(),
                         ],
                       ),
                     ),

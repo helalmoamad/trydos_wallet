@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
+import 'package:trydos_wallet/src/utils/amount_input_formatter.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 import 'package:uuid/uuid.dart';
 
@@ -466,6 +467,9 @@ class _DepositModalState extends State<DepositModal> {
                                         const TextInputType.numberWithOptions(
                                           decimal: true,
                                         ),
+                                    inputFormatters: const [
+                                      AmountInputFormatter(),
+                                    ],
                                     decoration: InputDecoration(
                                       hintText: '0.00',
                                       hintStyle: TrydosWalletStyles.bodyMedium

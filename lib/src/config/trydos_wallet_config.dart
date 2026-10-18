@@ -61,6 +61,20 @@ class TrydosWalletConfig {
   final bool skipSplash;
   final bool disableWalletOverscrollIndicator;
 
+  /// The language the UI should render in.
+  ///
+  /// Kurdish reaches the library under two encodings: the wallet's own picker
+  /// sets `languageCode: 'ku'`, while the documented host contract passes
+  /// `languageCode: 'ar'` with [isKurdish] true. Only the headers used to
+  /// resolve that pair, so a host following the contract got Kurdish API
+  /// responses behind an Arabic UI. Both encodings resolve here.
+  String get effectiveLanguageCode {
+    if (isKurdish && (languageCode.isEmpty || languageCode == 'ar')) {
+      return 'ku';
+    }
+    return languageCode;
+  }
+
   ApiHeadersConfig get headersConfig => ApiHeadersConfig(
     languageCode: languageCode,
     clientIp: clientIp ?? '',
@@ -237,10 +251,12 @@ class TrydosWallet {
   /// Initialize the library - call in main() or at app startup.
   static void init(TrydosWalletConfig config) {
     final previousConfig = _config;
+    // Compared on the resolved language, so a host re-initializing Kurdish as
+    // ('ar', isKurdish: true) while the wallet holds 'ku' is not mistaken for a
+    // switch to Arabic — which would echo an 'ar' event back at the host.
     final languageChanged =
         previousConfig != null &&
-        (previousConfig.languageCode != config.languageCode ||
-            previousConfig.isKurdish != config.isKurdish);
+        previousConfig.effectiveLanguageCode != config.effectiveLanguageCode;
 
     _applyConfig(config, emitLanguageChanged: languageChanged);
     unawaited(_restorePersistedProfileImageUrl());
@@ -270,17 +286,20 @@ class TrydosWallet {
     }
 
     if (emitLanguageChanged) {
+      // Always the resolved code, so Kurdish reaches the host as 'ku' however
+      // it was supplied.
+      final language = config.effectiveLanguageCode;
       emitLanguageChangeEvent(
         LanguageChangeEvent(
-          config.languageCode,
+          language,
           languageName:
               const {
                 'en': 'English',
                 'ar': 'Arabic',
                 'ku': 'Kurdish',
                 'tr': 'Turkish',
-              }[config.languageCode] ??
-              config.languageCode,
+              }[language] ??
+              language,
         ),
       );
     }

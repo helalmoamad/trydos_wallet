@@ -13,6 +13,7 @@ import 'package:trydos_wallet/src/services/payment_requests_api_service.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/successful_page.dart';
 import 'package:trydos_wallet/src/screens/widgets/home_page_widgets/qr_scanner_page.dart';
+import 'package:trydos_wallet/src/utils/amount_input_formatter.dart';
 import 'package:trydos_wallet/src/utils/payment_request_crypto.dart';
 import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 
@@ -394,10 +395,11 @@ class _TransferSendModalState extends State<TransferSendModal>
   }
 
   Future<void> _applyScannedRaw(String raw) async {
-    // ── الطريقة 1: PAYREQ (طلب إيداع مشفر) ──────────────────────────────
-    // الشكل: PAYREQ:{base64}|{accountNumber}
+    // ── الطريقة 1: PAYREQ (طلب دفع) ─────────────────────────────────────
+    // الشكل: PAYREQ:{requestCode}|{accountNumber}
+    // readCode يقبل أيضاً الجسم المشفّر الذي كانت تكتبه الإصدارات الأقدم.
     if (PaymentRequestCrypto.isPayreqFormat(raw)) {
-      final decrypted = PaymentRequestCrypto.decrypt(raw);
+      final decrypted = PaymentRequestCrypto.readCode(raw);
       if (decrypted == null || decrypted.isEmpty) {
         showMessage(
           AppStrings.get(
@@ -557,10 +559,7 @@ class _TransferSendModalState extends State<TransferSendModal>
   }
 
   /// يملأ حقول صفحة الإرسال بنتيجة طلب إيداع من مستخدم آخر.
-  void _applyPeerRequest(
-    PaymentRequestLookupResponse data,
-    WalletState state,
-  ) {
+  void _applyPeerRequest(PaymentRequestLookupResponse data, WalletState state) {
     final purposeValue = data.purpose?.id ?? data.purpose?.name ?? '';
     final referenceValue = (data.reference ?? '').trim().isNotEmpty
         ? data.reference!
@@ -1500,7 +1499,9 @@ class _TransferSendModalState extends State<TransferSendModal>
           currencySymbol: currencySymbol,
           reference: reference,
           dateAndTimeString: dateAndTimeString,
-          type: AppStrings.get(state.languageCode, 'send_deposits'),
+          // The payer's receipt names the same thing the requester's card
+          // does, so both sides of one payment request read alike.
+          type: AppStrings.get(state.languageCode, 'deposit_request'),
           purpose: purpose,
           isSuccess: isCompleted,
           onDone: () => Navigator.pop(context),
@@ -1727,7 +1728,11 @@ class _TransferSendModalState extends State<TransferSendModal>
                                 isVerified: isAmountVerified,
                                 isFromQr: false,
                                 errorMessage: amountErrorMessage,
-                                keyboardType: TextInputType.number,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                inputFormatters: const [AmountInputFormatter()],
                                 enabled: isRequestFlow
                                     ? false
                                     : (currentInputType ==

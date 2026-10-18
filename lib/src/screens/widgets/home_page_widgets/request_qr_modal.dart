@@ -17,6 +17,8 @@ import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
+import 'package:trydos_wallet/src/services/payment_requests_api_service.dart';
+import 'package:trydos_wallet/src/utils/amount_input_formatter.dart';
 import 'package:trydos_wallet/src/utils/payment_request_crypto.dart';
 import 'package:trydos_wallet/src/utils/qr_transfer_payload.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
@@ -63,9 +65,12 @@ class _RequestQRModalState extends State<RequestQRModal> {
 
   bool _isDownloading = false;
   bool _isSharing = false;
+  bool _isClosingAfterPayment = false;
+  final PaymentRequestsApiService _paymentRequestsApi =
+      PaymentRequestsApiService();
   Timer? _expiryTicker;
   DateTime? _responseExpiryTime;
-  String? _encryptedRequestQrPayload;
+  String? _requestCodeQrPayload;
   ValueNotifier<Color>? _modalBackgroundNotifier;
 
   final String _maskedName = '*******';
@@ -510,7 +515,17 @@ class _RequestQRModalState extends State<RequestQRModal> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<WalletBloc, WalletState>(
+      listenWhen: (previous, current) =>
+          previous.paymentRequestStatus != current.paymentRequestStatus ||
+          previous.paymentRequestResponse != current.paymentRequestResponse ||
+          previous.lastRealtimeTransaction != current.lastRealtimeTransaction,
       listener: (context, state) {
+        // A ledger event landed while the code is on screen: it may be the
+        // payer settling this very request.
+        if (state.lastRealtimeTransaction != null) {
+          unawaited(_closeIfRequestPaid(state));
+        }
+
         // Handle payment request response
         if (state.paymentRequestStatus == WalletStatus.success &&
             state.paymentRequestResponse != null) {
@@ -521,7 +536,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
               _responseExpiryTime = _parseResponseExpiry(
                 state.paymentRequestResponse!.expiresAt,
               );
-              _encryptedRequestQrPayload = PaymentRequestCrypto.encrypt(
+              _requestCodeQrPayload = PaymentRequestCrypto.build(
                 state.paymentRequestResponse!.qrData.code,
                 _accountNumber,
               );
@@ -541,7 +556,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
             setState(() {
               _state = RequestQRState.filling;
               _responseExpiryTime = null;
-              _encryptedRequestQrPayload = null;
+              _requestCodeQrPayload = null;
             });
             _notifyFinalStateChanged();
           }
@@ -554,8 +569,8 @@ class _RequestQRModalState extends State<RequestQRModal> {
           final effectiveQrPayload =
               (_state == RequestQRState.finalQR &&
                   state.paymentRequestResponse != null)
-              ? (_encryptedRequestQrPayload ??
-                    PaymentRequestCrypto.encrypt(
+              ? (_requestCodeQrPayload ??
+                    PaymentRequestCrypto.build(
                       state.paymentRequestResponse!.qrData.code,
                       _accountNumber,
                     ))
@@ -696,7 +711,10 @@ class _RequestQRModalState extends State<RequestQRModal> {
                           controller: _amountController,
                           suffixText: _currencySymbol(state),
                           focusNode: _amountFocusNode,
-                          keyboardType: TextInputType.number,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: const [AmountInputFormatter()],
                         ),
                       ),
                       const SizedBox(width: 5),
@@ -786,8 +804,8 @@ class _RequestQRModalState extends State<RequestQRModal> {
                   dimension: 250.h,
                   child: PrettyQrView.data(
                     data:
-                        _encryptedRequestQrPayload ??
-                        PaymentRequestCrypto.encrypt(
+                        _requestCodeQrPayload ??
+                        PaymentRequestCrypto.build(
                           response.qrData.code,
                           _accountNumber,
                         ),
@@ -870,7 +888,12 @@ class _RequestQRModalState extends State<RequestQRModal> {
                       Expanded(
                         child: _buildSummaryBox(
                           AppStrings.get(state.languageCode, 'type'),
-                          response.assetType,
+                          // What kind of request this is — not response
+                          // .assetType, which is the asset's own CURRENCY /
+                          // METAL classification and was never meant to be
+                          // read by a user. The shared card below has always
+                          // shown this same localized label.
+                          AppStrings.get(state.languageCode, 'deposit_request'),
                           backgroundColor: fieldBackground,
                         ),
                       ),
@@ -1008,6 +1031,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
     String? suffixText,
     TextInputType? keyboardType,
     IconData? prefixIcon,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Container(
       key: fieldKey,
@@ -1040,6 +1064,7 @@ class _RequestQRModalState extends State<RequestQRModal> {
                   controller: controller,
                   focusNode: focusNode,
                   keyboardType: keyboardType,
+                  inputFormatters: inputFormatters,
                   style: context.textTheme.bodyMedium?.rq.copyWith(
                     color: const Color(0xff1D1D1D),
                     fontSize: 13.sp,
@@ -1406,6 +1431,51 @@ class _RequestQRModalState extends State<RequestQRModal> {
         ],
       ),
     );
+  }
+
+  /// Closes the whole sheet once the payer has settled the request on screen,
+  /// so the requester lands back on the wallet with the payment already in
+  /// their transactions rather than staring at a code nobody can use again.
+  ///
+  /// The socket only says "a ledger row appeared"; it carries no request id.
+  /// So the request is looked up and the event is tied to it by operation id.
+  /// A lookup that fails, or a request still `ACTIVE`, leaves the code up.
+  Future<void> _closeIfRequestPaid(WalletState state) async {
+    if (_isClosingAfterPayment || _state != RequestQRState.finalQR) return;
+
+    final response = state.paymentRequestResponse;
+    final transaction = state.lastRealtimeTransaction;
+    if (response == null || transaction == null) return;
+
+    // Only money coming in can settle a request of ours.
+    if (!transaction.isDeposit) return;
+
+    final requestCode = response.requestCode.trim().isNotEmpty
+        ? response.requestCode
+        : response.qrData.code;
+    if (requestCode.isEmpty) return;
+
+    _isClosingAfterPayment = true;
+    try {
+      final lookup = await _paymentRequestsApi.lookupPaymentRequest(
+        requestCode: requestCode,
+        languageCode: state.languageCode,
+      );
+      final request = lookup.data;
+      if (!lookup.isSuccess || request == null) return;
+
+      // A server that does not report the operation ids still tells us the
+      // request is no longer usable, which is reason enough to stop showing
+      // its code.
+      if (!request.isSettledBy(transaction) && request.isActive) return;
+
+      if (!mounted) return;
+      _expiryTicker?.cancel();
+      _resetModalBackground();
+      Navigator.of(context).pop();
+    } finally {
+      _isClosingAfterPayment = false;
+    }
   }
 
   Widget _buildCancelButton(WalletState state) {

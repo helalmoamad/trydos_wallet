@@ -82,7 +82,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
        _walletWebSocketService = walletWebSocketService,
        super(
          WalletState(
-           languageCode: initialLanguage ?? TrydosWallet.config.languageCode,
+           languageCode:
+               initialLanguage ?? TrydosWallet.config.effectiveLanguageCode,
            firstName: firstName ?? TrydosWallet.config.firstName,
            lastName: lastName ?? TrydosWallet.config.lastName,
            email: email ?? TrydosWallet.config.email,
@@ -113,6 +114,13 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletTransactionsLoadMoreRequested>(_onTransactionsLoadMoreRequested);
     on<WalletTransactionsRefreshRequested>(_onTransactionsRefreshRequested);
     on<WalletTransactionsAssetFilterChanged>(_onTransactionsAssetFilterChanged);
+    on<WalletAllTransactionsLoadRequested>(_onAllTransactionsLoadRequested);
+    on<WalletAllTransactionsLoadMoreRequested>(
+      _onAllTransactionsLoadMoreRequested,
+    );
+    on<WalletAllTransactionsRefreshRequested>(
+      _onAllTransactionsRefreshRequested,
+    );
     on<WalletBanksLoadRequested>(_onBanksLoadRequested);
     on<WalletBanksLoadMoreRequested>(_onBanksLoadMoreRequested);
     on<WalletDepositSubmitted>(_onDepositSubmitted);
@@ -210,6 +218,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   int _currenciesPage = 0;
   int _banksPage = 0;
   int? _inFlightTransactionsPage;
+  int? _inFlightAllTransactionsPage;
   final int _pageSize = 10;
 
   WalletWebSocketService? _createDefaultWalletWebSocketService() {
@@ -369,11 +378,12 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
 
   void _onConfigUpdated(WalletConfigUpdated event, Emitter<WalletState> emit) {
     final config = event.config;
-    final languageChanged = state.languageCode != config.languageCode;
+    final configLanguage = config.effectiveLanguageCode;
+    final languageChanged = state.languageCode != configLanguage;
 
     emit(
       state.copyWith(
-        languageCode: config.languageCode,
+        languageCode: configLanguage,
         firstName: config.firstName,
         lastName: config.lastName,
         email: config.email,
@@ -591,6 +601,14 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     add(const WalletKycStatusRequested());
     _currenciesPage = 0;
     _inFlightTransactionsPage = null;
+    // The Transactions tab loads lazily on first open, so a global refresh only
+    // refetches its list once it has one — no extra request for a tab the user
+    // has not visited.
+    final refreshAllTransactions =
+        state.allTransactionsStatus != WalletStatus.initial;
+    if (refreshAllTransactions) {
+      _inFlightAllTransactionsPage = null;
+    }
     emit(
       state.copyWith(
         currenciesStatus: WalletStatus.loading,
@@ -601,9 +619,22 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         transactionsNextCursor: null,
       ),
     );
+    if (refreshAllTransactions) {
+      emit(
+        state.copyWith(
+          allTransactionsStatus: WalletStatus.loading,
+          allTransactions: const [],
+          allTransactionsHasNext: false,
+          allTransactionsNextCursor: null,
+        ),
+      );
+    }
     await _fetchCurrencies(emit, page: 0, append: false);
     await _fetchAllBalances(emit);
     await _fetchTransactions(emit, page: 0, append: false);
+    if (refreshAllTransactions) {
+      await _fetchAllTransactions(emit, page: 0, append: false);
+    }
   }
 
   Future<void> _onCurrenciesLoadRequested(
@@ -870,56 +901,41 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     final existingIndex = state.transactions.indexWhere(
       (tx) => tx.id.trim() == incomingId,
     );
+    // The Transactions tab keeps its own unfiltered list, so every realtime
+    // change has to land in both or the two tabs disagree about a payment.
+    final existingAllIndex = state.allTransactions.indexWhere(
+      (tx) => tx.id.trim() == incomingId,
+    );
     final eventName = event.eventName.trim().toLowerCase();
 
     if (eventName == 'ledger:completed' ||
         eventName == 'ledger:failed' ||
         eventName == 'ledger:cancelled') {
-      if (existingIndex < 0) {
+      if (existingIndex < 0 && existingAllIndex < 0) {
         return;
       }
 
-      final current = state.transactions[existingIndex];
-      final updated = Transaction(
-        id: current.id,
-        userId: current.userId,
-        accountId: current.accountId,
-        ledgerType: current.ledgerType,
-        status: transaction.status,
-        direction: current.direction,
-        assetType: current.assetType,
-        assetId: current.assetId,
-        description: current.description,
-        balanceId: current.balanceId,
-        assetSymbol: current.assetSymbol,
-        type: current.type,
-        amount: current.amount,
-        feeAmount: current.feeAmount,
-        taxAmount: current.taxAmount,
-        balanceBefore: current.balanceBefore,
-        balanceAfter: current.balanceAfter,
-        balanceField: current.balanceField,
-        title: current.title,
-        journalEntryId: current.journalEntryId,
-        senderUserId: current.senderUserId,
-        senderAccount: current.senderAccount,
-        receiverUserId: current.receiverUserId,
-        receiverAccount: current.receiverAccount,
-        referenceId: current.referenceId,
-        errorMessage: current.errorMessage,
-        note: current.note,
-        metadata: current.metadata,
-        createdAt: current.createdAt,
-        updatedAt: current.updatedAt,
-      );
-
-      final updatedList = List<Transaction>.from(state.transactions);
-      updatedList[existingIndex] = updated;
-
       emit(
         state.copyWith(
-          transactions: updatedList,
-          transactionsStatus: WalletStatus.success,
+          transactions: existingIndex < 0
+              ? null
+              : _withStatusApplied(
+                  state.transactions,
+                  existingIndex,
+                  transaction.status,
+                ),
+          transactionsStatus: existingIndex < 0 ? null : WalletStatus.success,
+          allTransactions: existingAllIndex < 0
+              ? null
+              : _withStatusApplied(
+                  state.allTransactions,
+                  existingAllIndex,
+                  transaction.status,
+                ),
+          allTransactionsStatus: existingAllIndex < 0
+              ? null
+              : WalletStatus.success,
+          lastRealtimeTransaction: transaction,
         ),
       );
       return;
@@ -929,23 +945,78 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       return;
     }
 
-    if (existingIndex >= 0) {
-      return;
-    }
-
     final activeFilter = state.transactionsAssetSymbolFilter?.trim();
-    if (activeFilter != null &&
-        activeFilter.isNotEmpty &&
-        transaction.assetSymbol.toUpperCase() != activeFilter.toUpperCase()) {
-      return;
-    }
+    final matchesFilter =
+        activeFilter == null ||
+        activeFilter.isEmpty ||
+        transaction.assetSymbol.toUpperCase() == activeFilter.toUpperCase();
+    final addToFiltered = existingIndex < 0 && matchesFilter;
+    // The unfiltered list only skips a transaction it already holds.
+    final addToAll = existingAllIndex < 0;
 
+    // The marker is emitted even when neither list needs the transaction — a
+    // screen waiting on the event (the open payment request) still has to hear
+    // about it.
     emit(
       state.copyWith(
-        transactions: _upsertTransactionAtTop(state.transactions, transaction),
-        transactionsStatus: WalletStatus.success,
+        transactions: addToFiltered
+            ? _upsertTransactionAtTop(state.transactions, transaction)
+            : null,
+        transactionsStatus: addToFiltered ? WalletStatus.success : null,
+        allTransactions: addToAll
+            ? _upsertTransactionAtTop(state.allTransactions, transaction)
+            : null,
+        allTransactionsStatus: addToAll ? WalletStatus.success : null,
+        lastRealtimeTransaction: transaction,
       ),
     );
+  }
+
+  /// Returns [list] with the entry at [index] carrying [status]; every other
+  /// field of that transaction is left as it was, because the realtime status
+  /// payload does not repeat them.
+  List<Transaction> _withStatusApplied(
+    List<Transaction> list,
+    int index,
+    String status,
+  ) {
+    final current = list[index];
+    final updated = Transaction(
+      id: current.id,
+      userId: current.userId,
+      accountId: current.accountId,
+      ledgerType: current.ledgerType,
+      status: status,
+      direction: current.direction,
+      assetType: current.assetType,
+      assetId: current.assetId,
+      description: current.description,
+      balanceId: current.balanceId,
+      assetSymbol: current.assetSymbol,
+      type: current.type,
+      amount: current.amount,
+      feeAmount: current.feeAmount,
+      taxAmount: current.taxAmount,
+      balanceBefore: current.balanceBefore,
+      balanceAfter: current.balanceAfter,
+      balanceField: current.balanceField,
+      title: current.title,
+      journalEntryId: current.journalEntryId,
+      senderUserId: current.senderUserId,
+      senderAccount: current.senderAccount,
+      receiverUserId: current.receiverUserId,
+      receiverAccount: current.receiverAccount,
+      referenceId: current.referenceId,
+      errorMessage: current.errorMessage,
+      note: current.note,
+      metadata: current.metadata,
+      createdAt: current.createdAt,
+      updatedAt: current.updatedAt,
+    );
+
+    final updatedList = List<Transaction>.from(list);
+    updatedList[index] = updated;
+    return updatedList;
   }
 
   Future<void> _onTransactionsAssetFilterChanged(
@@ -1075,6 +1146,120 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
               ? WalletStatus.success
               : WalletStatus.failure,
           transactionsErrorMessage: result.errorMessage,
+        ),
+      );
+    }
+  }
+
+  /// All Transactions (Transactions tab — no asset filter, ever)
+  Future<void> _onAllTransactionsLoadRequested(
+    WalletAllTransactionsLoadRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    _inFlightAllTransactionsPage = null;
+    emit(
+      state.copyWith(
+        allTransactionsStatus: WalletStatus.loading,
+        allTransactions: const [],
+        allTransactionsHasNext: false,
+        allTransactionsNextCursor: null,
+      ),
+    );
+    await _fetchAllTransactions(emit, page: 0, append: false);
+  }
+
+  Future<void> _onAllTransactionsRefreshRequested(
+    WalletAllTransactionsRefreshRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    _inFlightAllTransactionsPage = null;
+    emit(
+      state.copyWith(
+        allTransactionsStatus: WalletStatus.loading,
+        allTransactions: const [],
+        allTransactionsHasNext: false,
+        allTransactionsNextCursor: null,
+      ),
+    );
+    await _fetchAllTransactions(emit, page: 0, append: false);
+  }
+
+  Future<void> _onAllTransactionsLoadMoreRequested(
+    WalletAllTransactionsLoadMoreRequested event,
+    Emitter<WalletState> emit,
+  ) async {
+    if (state.allTransactionsStatus == WalletStatus.loading ||
+        !state.allTransactionsHasNext) {
+      return;
+    }
+
+    final nextPage = int.tryParse(state.allTransactionsNextCursor ?? '');
+    if (nextPage == null) {
+      return;
+    }
+
+    if (_inFlightAllTransactionsPage == nextPage) {
+      return;
+    }
+
+    _inFlightAllTransactionsPage = nextPage;
+    try {
+      emit(state.copyWith(allTransactionsStatus: WalletStatus.loading));
+      await _fetchAllTransactions(emit, page: nextPage, append: true);
+    } finally {
+      _inFlightAllTransactionsPage = null;
+    }
+  }
+
+  Future<void> _fetchAllTransactions(
+    Emitter<WalletState> emit, {
+    required int page,
+    required bool append,
+  }) async {
+    final result = await _transactionsApi.getTransactions(
+      page: page,
+      limit: _pageSize,
+    );
+    if (result.isSuccess && result.data != null) {
+      final response = result.data!;
+      if (append && response.items.isEmpty) {
+        emit(
+          state.copyWith(
+            allTransactionsStatus: WalletStatus.success,
+            allTransactionsHasNext: false,
+            allTransactionsNextCursor: null,
+          ),
+        );
+        return;
+      }
+
+      final responsePage = response.page ?? page;
+      final computedHasNext = response.totalPages != null
+          ? responsePage + 1 < response.totalPages!
+          : response.hasNextPage;
+      final nextPage = computedHasNext ? responsePage + 1 : null;
+
+      emit(
+        state.copyWith(
+          allTransactions: append
+              ? _mergeTransactionsById(state.allTransactions, response.items)
+              : response.items,
+          allTransactionsStatus: WalletStatus.success,
+          allTransactionsHasNext: computedHasNext,
+          allTransactionsNextCursor: nextPage?.toString(),
+        ),
+      );
+    } else {
+      emit(
+        state.copyWith(
+          allTransactionsNextCursor: append
+              ? state.allTransactionsNextCursor
+              : null,
+          allTransactionsHasNext: append ? state.allTransactionsHasNext : false,
+          allTransactionsStatus: append
+              ? WalletStatus.success
+              : WalletStatus.failure,
+          allTransactionsErrorMessage: result.errorMessage,
         ),
       );
     }
@@ -2145,8 +2330,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         // the image is already small enough.
         final frontPayload = await compressKycImageDataUrl(frontImg);
         final selfiePayload = await compressKycImageDataUrl(selfieImg);
-        final backPayload =
-            (backImageData != null && backImageData.isNotEmpty)
+        final backPayload = (backImageData != null && backImageData.isNotEmpty)
             ? await compressKycImageDataUrl(backImageData)
             : null;
 

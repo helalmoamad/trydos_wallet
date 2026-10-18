@@ -198,6 +198,19 @@ class WalletTransactionsRefreshRequested extends WalletEvent {
   const WalletTransactionsRefreshRequested();
 }
 
+/// All Transactions (the Transactions tab — never filtered by asset)
+class WalletAllTransactionsLoadRequested extends WalletEvent {
+  const WalletAllTransactionsLoadRequested();
+}
+
+class WalletAllTransactionsLoadMoreRequested extends WalletEvent {
+  const WalletAllTransactionsLoadMoreRequested();
+}
+
+class WalletAllTransactionsRefreshRequested extends WalletEvent {
+  const WalletAllTransactionsRefreshRequested();
+}
+
 /// Banks
 class WalletBanksLoadRequested extends WalletEvent {
   const WalletBanksLoadRequested();

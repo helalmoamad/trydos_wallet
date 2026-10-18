@@ -25,6 +25,13 @@ class WalletState {
     this.transactionsNextCursor,
     this.transactionsErrorMessage,
     this.transactionsAssetSymbolFilter,
+    // All Transactions (unfiltered, Transactions tab)
+    this.allTransactions = const [],
+    this.allTransactionsStatus = WalletStatus.initial,
+    this.allTransactionsHasNext = false,
+    this.allTransactionsNextCursor,
+    this.allTransactionsErrorMessage,
+    this.lastRealtimeTransaction,
     // Transfer Purposes
     this.transferPurposes = const [],
     this.transferPurposesStatus = WalletStatus.initial,
@@ -190,6 +197,24 @@ class WalletState {
   final String? transactionsErrorMessage;
   final String? transactionsAssetSymbolFilter;
 
+  // All Transactions (Cursor Paginated)
+  //
+  // The Transactions tab always shows every transaction, while [transactions]
+  // follows the currency card selected on the home tab. They are kept apart so
+  // selecting a currency on one tab does not filter the other.
+  final List<Transaction> allTransactions;
+  final WalletStatus allTransactionsStatus;
+  final bool allTransactionsHasNext;
+  final String? allTransactionsNextCursor;
+  final String? allTransactionsErrorMessage;
+
+  /// The most recent transaction delivered over the socket.
+  ///
+  /// A fresh instance per event, so a screen can listen for "a ledger event
+  /// just landed" by watching this field change identity — the open payment
+  /// request uses it to notice it was paid.
+  final Transaction? lastRealtimeTransaction;
+
   // Transfer Purposes
   final List<TransferPurpose> transferPurposes;
   final WalletStatus transferPurposesStatus;
@@ -213,7 +238,8 @@ class WalletState {
 
   // KYC Status (backend verification decision)
   final WalletStatus kycStatusRequestStatus;
-  final String? kycVerificationStatus; // verified|pending|rejected|not_submitted
+  final String?
+  kycVerificationStatus; // verified|pending|rejected|not_submitted
   final String? kycStatusLabel;
   final String? kycRejectionReason;
 
@@ -363,6 +389,12 @@ class WalletState {
     Object? transactionsNextCursor = _unset,
     String? transactionsErrorMessage,
     Object? transactionsAssetSymbolFilter = _unset,
+    List<Transaction>? allTransactions,
+    WalletStatus? allTransactionsStatus,
+    bool? allTransactionsHasNext,
+    Object? allTransactionsNextCursor = _unset,
+    String? allTransactionsErrorMessage,
+    Transaction? lastRealtimeTransaction,
     List<TransferPurpose>? transferPurposes,
     WalletStatus? transferPurposesStatus,
     String? transferPurposesErrorMessage,
@@ -492,6 +524,18 @@ class WalletState {
       transactionsAssetSymbolFilter: transactionsAssetSymbolFilter == _unset
           ? this.transactionsAssetSymbolFilter
           : transactionsAssetSymbolFilter as String?,
+      allTransactions: allTransactions ?? this.allTransactions,
+      allTransactionsStatus:
+          allTransactionsStatus ?? this.allTransactionsStatus,
+      allTransactionsHasNext:
+          allTransactionsHasNext ?? this.allTransactionsHasNext,
+      allTransactionsNextCursor: allTransactionsNextCursor == _unset
+          ? this.allTransactionsNextCursor
+          : allTransactionsNextCursor as String?,
+      allTransactionsErrorMessage:
+          allTransactionsErrorMessage ?? this.allTransactionsErrorMessage,
+      lastRealtimeTransaction:
+          lastRealtimeTransaction ?? this.lastRealtimeTransaction,
       transferPurposes: transferPurposes ?? this.transferPurposes,
       transferPurposesStatus:
           transferPurposesStatus ?? this.transferPurposesStatus,

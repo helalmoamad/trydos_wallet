@@ -4,34 +4,45 @@ import 'dart:typed_data';
 
 import 'package:pointycastle/export.dart';
 
-/// Prefix that identifies an encrypted payment-request QR payload.
+import 'payment_code.dart';
+
+/// Prefix that identifies a payment-request QR payload.
 ///
 /// Example QR string:
-///   `PAYREQ:XIO91X37S5FHsxnjgTZ5c1oec4gsM6wfoC24N9uWmRqMKCkmOQJjswQ+sv4=|0000-0030`
+///   `PAYREQ:pr.88DqTiedSJmUbIKA-SmSkA|0000-0038`
 const String kPayreqPrefix = 'PAYREQ:';
 
-/// Utility class for encrypting / decrypting payment-request codes.
+/// Reads and writes the payment-request QR payload.
 ///
-/// **Algorithm** : AES-256-GCM
-/// **Key**       : requester's account number, UTF-8 encoded and null-padded /
-///                 truncated to exactly 32 bytes (matches JS `padEnd(32,'\0').slice(0,32)`).
-/// **IV**        : 12 cryptographically-random bytes, prepended to the cipher blob.
-///
-/// **QR payload layout** (identical to the JS implementation):
+/// **Layout**, the same one the web wallet produces:
 /// ```
-/// PAYREQ:{base64(iv[12] + ciphertext + tag[16])}|{accountNumber}
+/// PAYREQ:{requestCode}|{accountNumber}
 /// ```
 ///
-/// ### Encrypt side (requester / receive screen)
+/// ### Write side (requester / receive screen)
 /// ```dart
-/// final qr = PaymentRequestCrypto.encrypt(requestCode, myAccountNumber);
+/// final qr = PaymentRequestCrypto.build(requestCode, myAccountNumber);
 /// ```
 ///
-/// ### Decrypt side (payer / send screen after scan)
+/// ### Read side (payer / send screen after scan)
 /// ```dart
-/// final code = PaymentRequestCrypto.decrypt(scannedQrString);
-/// // code is the original requestCode, or null if parsing/decryption fails.
+/// final code = PaymentRequestCrypto.readCode(scannedQrString);
 /// ```
+///
+/// ## The legacy encrypted body
+///
+/// This wallet used to put an AES-256-GCM blob where the code now sits —
+/// `PAYREQ:{base64(iv[12] + ciphertext + tag[16])}|{accountNumber}` — while the
+/// web wallet wrote the code in the clear. The two could not read each other:
+/// base64-decoding `pr.…` throws, so a web QR failed the scan outright.
+///
+/// They are unified on the web's plain form. The encryption bought nothing to
+/// begin with: its key was derived from the account number, which travels in
+/// plaintext in the very same string, so anyone able to scan the QR could also
+/// decrypt it.
+///
+/// [readCode] still accepts the old encrypted body, so QRs already printed,
+/// screenshotted or shared keep working.
 class PaymentRequestCrypto {
   PaymentRequestCrypto._();
 
@@ -60,13 +71,50 @@ class PaymentRequestCrypto {
     return account.isEmpty ? null : account;
   }
 
+  /// Builds the QR string this wallet renders:
+  ///   `PAYREQ:{requestCode}|{accountNumber}`
+  ///
+  /// Byte-for-byte what the web wallet produces for the same request.
+  static String build(String requestCode, String accountNumber) =>
+      '$kPayreqPrefix${requestCode.trim()}|${accountNumber.trim()}';
+
+  /// Reads the request code out of a scanned PAYREQ payload.
+  ///
+  /// Accepts both bodies: the plain code this wallet and the web now write, and
+  /// the AES-GCM blob older wallet versions wrote. Returns null when the string
+  /// carries no code at all.
+  static String? readCode(String qrString) {
+    final withoutPrefix = qrString.startsWith(kPayreqPrefix)
+        ? qrString.substring(kPayreqPrefix.length)
+        : qrString;
+
+    final pipeIdx = withoutPrefix.lastIndexOf('|');
+    if (pipeIdx < 0) return null;
+
+    final body = withoutPrefix.substring(0, pipeIdx).trim();
+    final accountNumber = withoutPrefix.substring(pipeIdx + 1).trim();
+    if (body.isEmpty || accountNumber.isEmpty) return null;
+
+    // A plain code is never valid base64 (`pr.` alone makes decoding throw),
+    // and a GCM tag makes a false positive on the other side implausible, so
+    // trying the legacy path first tells the two apart with no ambiguity.
+    final decrypted = decrypt(qrString);
+    if (decrypted != null && decrypted.isNotEmpty) {
+      return decrypted;
+    }
+
+    // Not the legacy blob. Hand back the body only if it is a code the lookup
+    // endpoint can route; a corrupted or foreign payload must be refused here
+    // rather than spend one of the ten wrong-code attempts allowed per quarter
+    // hour — see [PaymentCode.isResolvable].
+    return PaymentCode.isResolvable(body) ? PaymentCode.normalize(body) : null;
+  }
+
   /// Encrypts [requestCode] using AES-256-GCM.
   ///
-  /// [accountNumber] is the requester's account number and acts as the key
-  /// (same convention as the JS `usePaymentRequestEncryption` hook).
-  ///
-  /// Returns the full QR string:
-  ///   `PAYREQ:{base64(iv + ciphertext + tag)}|{accountNumber}`
+  /// **Legacy.** Kept to produce payloads in the old format — nothing in the
+  /// app writes one any more; [build] does. See the class doc for why the
+  /// encryption was dropped.
   static String encrypt(String requestCode, String accountNumber) {
     final keyBytes = _deriveKey(accountNumber);
     final iv = _randomIv();
@@ -91,9 +139,10 @@ class PaymentRequestCrypto {
     return '$kPayreqPrefix$b64|$accountNumber';
   }
 
-  /// Decrypts a `PAYREQ:{base64}|{accountNumber}` QR string.
+  /// Decrypts a legacy `PAYREQ:{base64}|{accountNumber}` QR string.
   ///
-  /// Returns the original [requestCode], or `null` if:
+  /// Prefer [readCode], which handles this and the plain form. Returns the
+  /// original request code, or `null` if:
   /// - the string is not a valid PAYREQ payload,
   /// - the base64 is malformed,
   /// - the GCM authentication tag fails (tampered / wrong key).

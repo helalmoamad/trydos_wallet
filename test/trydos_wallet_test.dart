@@ -96,6 +96,86 @@ void main() {
     await bloc.close();
   });
 
+  test('الكردية الواصلة كـ ar + isKurdish تعرض كردية لا عربية', () async {
+    TrydosWallet.init(
+      buildConfig(
+        baseUrl: 'https://first.example',
+        languageCode: 'en',
+        firstName: 'First',
+      ),
+    );
+
+    final bloc = WalletBloc();
+
+    // The documented host contract for Kurdish: 'ar' plus the isKurdish flag.
+    TrydosWallet.init(
+      TrydosWalletConfig(
+        baseUrl: 'https://first.example',
+        languageCode: 'ar',
+        isKurdish: true,
+        firstName: 'First',
+        lastName: 'User',
+        applicationVersion: '1.0.0',
+      ),
+    );
+
+    await Future<void>.delayed(Duration.zero);
+
+    expect(bloc.state.languageCode, 'ku');
+    expect(bloc.state.isRtl, isTrue);
+    // The API headers already resolved this pair; they must stay resolved.
+    expect(TrydosWallet.apiClient.dio.options.headers['lang'], 'ku');
+
+    await bloc.close();
+  });
+
+  test('الكردية المختارة داخل المحفظة تبقى كردية', () async {
+    TrydosWallet.init(
+      buildConfig(
+        baseUrl: 'https://first.example',
+        languageCode: 'en',
+        firstName: 'First',
+      ),
+    );
+
+    final bloc = WalletBloc();
+    bloc.add(const WalletLanguageChanged('ku'));
+
+    await Future<void>.delayed(Duration.zero);
+
+    expect(bloc.state.languageCode, 'ku');
+    expect(TrydosWallet.config.isKurdish, isTrue);
+
+    await bloc.close();
+  });
+
+  test('ar بدون isKurdish تبقى عربية', () async {
+    TrydosWallet.init(
+      buildConfig(
+        baseUrl: 'https://first.example',
+        languageCode: 'en',
+        firstName: 'First',
+      ),
+    );
+
+    final bloc = WalletBloc();
+
+    TrydosWallet.init(
+      buildConfig(
+        baseUrl: 'https://first.example',
+        languageCode: 'ar',
+        firstName: 'First',
+      ),
+    );
+
+    await Future<void>.delayed(Duration.zero);
+
+    expect(bloc.state.languageCode, 'ar');
+    expect(TrydosWallet.apiClient.dio.options.headers['lang'], 'ar');
+
+    await bloc.close();
+  });
+
   testWidgets('شاشة البداية تعرض splash بلغة الإعداد', (
     WidgetTester tester,
   ) async {
