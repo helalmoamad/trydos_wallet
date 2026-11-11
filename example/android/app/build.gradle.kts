@@ -15,6 +15,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Required by the Amplify libraries the wallet's Face Liveness step
+        // pulls in: they use java.time APIs that do not exist below API 26,
+        // and refuse to be consumed by an app that has not enabled this.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -35,6 +39,11 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
+
+dependencies {
+    // Backs the desugaring enabled above.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
 
 // Replaces the removed `android { kotlinOptions { ... } }` block.

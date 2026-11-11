@@ -407,6 +407,10 @@ class AppStrings {
       'kyc_liveness_look_up': 'Raise your face a little up',
       'kyc_liveness_blink': 'Please blink both eyes',
       'kyc_align_face': 'Position your face in the frame',
+      'kyc_light_too_bright': 'Too bright — find less direct light',
+      'kyc_light_backlit': 'Light behind you — turn to face the light',
+      'kyc_light_too_dark': 'Too dark — move to a brighter area',
+      'kyc_light_too_blurry': 'Hold the phone steady',
       'kyc_liveness_verifying': 'Verifying liveness...',
       'kyc_liveness_done': 'Liveness verified successfully',
       'kyc_liveness_failed': 'Liveness check failed. Please try again.',
@@ -570,12 +574,14 @@ class AppStrings {
       'linked_devices_scan_approve_button': 'الموافقة',
       'linked_devices_scan_reject_button': 'رفض',
       // QR scanner switch page (Switch to Web)
-      'qr_switch_scanner_hint': 'امسح الرمز الموجود على الجهة المقابلة لتسجيل الدخول',
+      'qr_switch_scanner_hint':
+          'امسح الرمز الموجود على الجهة المقابلة لتسجيل الدخول',
       'qr_switch_title': 'التبديل إلى الويب',
       'qr_switch_subtitle': 'يمكنك استخدام حسابك على الويب بأمان وسهولة.',
       'qr_switch_step_open_web': '- افتح الموقع من متصفح الويب',
       'qr_switch_step_choose_login': '- اختر تسجيل الدخول عبر مسح الرمز',
-      'qr_switch_step_read_code': '- امسح الرمز الموجود على الجهة المقابلة من هنا',
+      'qr_switch_step_read_code':
+          '- امسح الرمز الموجود على الجهة المقابلة من هنا',
       'qr_switch_privacy_safe': 'خصوصيتك آمنة تمامًا',
       'qr_login_dialog_title': 'تسجيل الدخول إلى الويب — {browser} على {os}',
       'qr_login_dialog_expires': 'تنتهي صلاحية طلب تسجيل الدخول هذا في {time}.',
@@ -878,6 +884,10 @@ class AppStrings {
       'kyc_liveness_look_up': 'ارفع وجهك قليلاً للأعلى',
       'kyc_liveness_blink': 'يرجى الرمش بكلتا العينين',
       'kyc_align_face': 'ضع وجهك داخل الإطار',
+      'kyc_light_too_bright': 'الإضاءة قوية — ابتعد عن الضوء المباشر',
+      'kyc_light_backlit': 'الضوء خلفك — استدر لتواجه مصدر الضوء',
+      'kyc_light_too_dark': 'الإضاءة خافتة — انتقل إلى مكان أكثر إضاءة',
+      'kyc_light_too_blurry': 'ثبّت الهاتف',
       'kyc_liveness_verifying': 'جارٍ التحقق من الحيوية...',
       'kyc_liveness_done': 'تم التحقق من الحيوية بنجاح',
       'kyc_liveness_failed': 'فشل التحقق من الحيوية. حاول مرة أخرى.',
@@ -914,8 +924,7 @@ class AppStrings {
       'merchant_return_to_shop': 'العودة إلى المتجر',
       'merchant_receipt_number': 'رقم الإيصال',
       'merchant_checking_payment': 'جارٍ التحقّق من دفعتك…',
-      'merchant_payment_not_completed':
-          'لم تتم الدفعة. يمكنك إعادة المحاولة.',
+      'merchant_payment_not_completed': 'لم تتم الدفعة. يمكنك إعادة المحاولة.',
       'merchant_paid_without_receipt':
           'تمت دفعتك بنجاح. ستجد الإيصال في مدفوعات التجار.',
       'merchant_payments_title': 'مدفوعات التجار',
@@ -943,8 +952,7 @@ class AppStrings {
           'هذا الطلب لا يدفعه إلا العميل الصادر له.',
       'merchant_error_insufficient_balance':
           'رصيدك غير كافٍ. اشحن محفظتك ثم أعد المحاولة.',
-      'merchant_error_already_paid':
-          'هذا الطلب دُفع بالفعل أو لم يعد صالحًا.',
+      'merchant_error_already_paid': 'هذا الطلب دُفع بالفعل أو لم يعد صالحًا.',
       'merchant_error_unsupported_code':
           'هذا الرمز غير مدعوم في هذه النسخة من التطبيق.',
       'qr_not_recognized': 'رمز QR غير معروف. امسح رمز دفع أو رمز حساب.',
@@ -1001,7 +1009,8 @@ class AppStrings {
       'login_city': 'شار',
       'login_country': 'وڵات',
       'login_ip': 'ناونیشانی IP',
-      'login_history_load_failed': 'بارکردنی مێژووی چوونەژوورەوە سەرکەوتوو نەبوو',
+      'login_history_load_failed':
+          'بارکردنی مێژووی چوونەژوورەوە سەرکەوتوو نەبوو',
       'login_history_empty': 'مێژووی چوونەژوورەوەت بەتاڵە',
       'withdrawal': 'ڕاکێشان',
       'refund': 'گێڕانەوە',
@@ -1049,7 +1058,8 @@ class AppStrings {
       'qr_switch_step_read_code': '- کۆدی لای بەرامبەر لێرەوە بخوێنەرەوە',
       'qr_switch_privacy_safe': 'تایبەتمەندیت بە تەواوی پارێزراوە',
       'qr_login_dialog_title': 'چوونەژوورەوە بۆ وێب — {browser} لەسەر {os}',
-      'qr_login_dialog_expires': 'ئەم داواکاریی چوونەژوورەوەیە لە {time} بەسەردەچێت.',
+      'qr_login_dialog_expires':
+          'ئەم داواکاریی چوونەژوورەوەیە لە {time} بەسەردەچێت.',
       'qr_login_dialog_location_warning':
           '⚠️ وادیارە ئەم کۆمپیوتەرە لە {webCity}ـە، بەڵام مۆبایلەکەت لە {appCity}ـە. تەنها ئەگەر ئەمە تۆیت پەسەندی بکە.',
       'select_language': 'زمانی هەڵبژێرە',
@@ -1348,7 +1358,8 @@ class AppStrings {
       'kyc_low_light_warning': 'ڕووناکی کەم! تکایە ڕووناکی باشتر بکە',
       'kyc_align_id': 'ناسنامەکەت لەناو چوارچێوەکەدا راست بکەرەوە',
       'kyc_camera_error': 'کامێرا بەردەست نییە. مۆڵەتەکان بپشکنە.',
-      'kyc_no_info_try_again': 'زانیارییەکان وەرنەگیران، تکایە دووبارە هەوڵ بدەرەوە.',
+      'kyc_no_info_try_again':
+          'زانیارییەکان وەرنەگیران، تکایە دووبارە هەوڵ بدەرەوە.',
       'kyc_flip_to_back':
           'ناسنامەکە بگەڕێنەوە — لای دواوە لەناو چوارچێوەکەدا راست بکەرەوە',
       'kyc_too_far': 'بەلگەنامەکە بنێرە نزیکتر بۆ کامێرا',
@@ -1358,6 +1369,10 @@ class AppStrings {
       'kyc_liveness_look_up': 'ڕووخسارەکەت کەمێک بەرز بکەرەوە',
       'kyc_liveness_blink': 'تکایە هەر دوو چاوەکەت دابخە',
       'kyc_align_face': 'ڕووخسارەکەت لە ناو چوارچێوەکەدا دابنێ',
+      'kyc_light_too_bright': 'ڕووناکی زۆرە — لە ڕووناکی ڕاستەوخۆ دوورکەوە',
+      'kyc_light_backlit': 'ڕووناکی لە پشتتەوەیە — ئاوڕ بدەوە بەرەو ڕووناکی',
+      'kyc_light_too_dark': 'ڕووناکی کەمە — بڕۆ بۆ شوێنێکی ڕووناکتر',
+      'kyc_light_too_blurry': 'مۆبایلەکە بجەنگێنە',
       'kyc_liveness_verifying': 'پشکنینی زیندوویی دەکرێت...',
       'kyc_liveness_done': 'زیندوویی بە سەرکەوتوویی پشتڕاست کرایەوە',
       'kyc_liveness_failed':
@@ -1402,7 +1417,8 @@ class AppStrings {
           'پارەدانەکەت سەرکەوتوو بوو. پسووڵەکە لە پارەدانەکانی بازرگاندا دەدۆزیتەوە.',
       'merchant_payments_title': 'پارەدانەکانی بازرگان',
       'merchant_payments_empty': 'هێشتا هیچ پارەدانێکی بازرگان نییە',
-      'merchant_payments_load_failed': 'بارکردنی پارەدانەکانی بازرگان سەرنەکەوت',
+      'merchant_payments_load_failed':
+          'بارکردنی پارەدانەکانی بازرگان سەرنەکەوت',
       'merchant_paid_amount': 'دراوە',
       'merchant_refunded_amount': 'گەڕێنراوەتەوە',
 
@@ -1536,7 +1552,8 @@ class AppStrings {
       'qr_switch_step_read_code': '- Karşı taraftaki kodu buradan okutun',
       'qr_switch_privacy_safe': 'Gizliliğiniz tamamen güvende',
       'qr_login_dialog_title': 'Web\'e giriş yap — {os} üzerinde {browser}',
-      'qr_login_dialog_expires': 'Bu giriş isteğinin süresi {time} tarihinde dolacak.',
+      'qr_login_dialog_expires':
+          'Bu giriş isteğinin süresi {time} tarihinde dolacak.',
       'qr_login_dialog_location_warning':
           '⚠️ Bu bilgisayar {webCity} konumunda görünüyor, ancak telefonunuz {appCity} konumunda. Yalnızca bu sizseniz onaylayın.',
       'select_language': 'Dili Seçin',
@@ -1841,6 +1858,10 @@ class AppStrings {
       'kyc_liveness_look_up': 'Yüzünüzü biraz yukarı kaldırın',
       'kyc_liveness_blink': 'Lütfen her iki gözünüzü kırpın',
       'kyc_align_face': 'Yüzünüzü çerçeveye yerleştirin',
+      'kyc_light_too_bright': 'Çok parlak — doğrudan ışıktan uzaklaşın',
+      'kyc_light_backlit': 'Işık arkanızda — ışığa dönün',
+      'kyc_light_too_dark': 'Çok karanlık — daha aydınlık bir yere geçin',
+      'kyc_light_too_blurry': 'Telefonu sabit tutun',
       'kyc_liveness_verifying': 'Canlılık doğrulanıyor...',
       'kyc_liveness_done': 'Canlılık başarıyla doğrulandı',
       'kyc_liveness_failed':

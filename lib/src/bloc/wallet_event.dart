@@ -300,6 +300,30 @@ class WalletKycLivenessResetRequested extends WalletEvent {
   const WalletKycLivenessResetRequested();
 }
 
+/// An AWS Face Liveness run that AWS judged a success.
+///
+/// [selfieImageData] is the reference image AWS returned — the selfie of
+/// record for both compare-face and submit; the device captures none of its
+/// own on this path. [confidence] is AWS's own 0–100 liveness score, carried
+/// through untouched for the backend to threshold.
+class WalletKycAwsLivenessSucceeded extends WalletEvent {
+  const WalletKycAwsLivenessSucceeded({
+    required this.selfieImageData,
+    required this.confidence,
+  });
+
+  final String selfieImageData;
+  final double confidence;
+}
+
+/// The KYC session id changed mid-flow — opened on demand, or renewed after
+/// the credentials call reported it spent.
+class WalletKycSessionIdChanged extends WalletEvent {
+  const WalletKycSessionIdChanged(this.sessionId);
+
+  final String? sessionId;
+}
+
 /// KYC Compare Face (selfie vs ID)
 class WalletKycCompareFaceRequested extends WalletEvent {
   const WalletKycCompareFaceRequested({

@@ -72,6 +72,9 @@ class KycApiService {
         if (sessionHint != null && sessionHint.isNotEmpty)
           'sessionHint': sessionHint,
       },
+      // Textract, then OCR fallbacks, then transliteration — slower than the
+      // client's default deadline allows for.
+      options: Options(receiveTimeout: const Duration(seconds: 30)),
       fromJson: (d) =>
           KycAnalyzeIdResponse.fromJson(Map<String, dynamic>.from(d as Map)),
     );
@@ -79,13 +82,25 @@ class KycApiService {
 
   /// Submit the final KYC request (user-authed, Worker origin). Terminal step
   /// of the flow: the backend makes the approved/pending/rejected decision.
+  ///
+  /// Given a longer deadline than the rest: the Worker uploads three images to
+  /// NestJS and then makes a signed commit, with no timeout of its own on any
+  /// of it.
+  ///
+  /// **Never auto-retried.** This call creates a record, and a request that
+  /// timed out may well have succeeded — a blind second attempt risks a
+  /// duplicate. Retrying is the user's choice, on a fresh session.
   Future<ApiResult<Map<String, dynamic>>> submitKyc({
     required Map<String, dynamic> payload,
   }) {
+    final options = _userAuthOptions() ?? Options();
     return _client.post<Map<String, dynamic>>(
       ApiPaths.kycSubmit,
       data: payload,
-      options: _userAuthOptions(),
+      options: options.copyWith(
+        sendTimeout: const Duration(seconds: 45),
+        receiveTimeout: const Duration(seconds: 45),
+      ),
       fromJson: (d) => Map<String, dynamic>.from(d as Map),
     );
   }

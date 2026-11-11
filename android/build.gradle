@@ -1,0 +1,76 @@
+group 'com.trydos.trydos_wallet'
+version '1.0'
+
+buildscript {
+    // Must match the Kotlin the host applies — its settings.gradle declares
+    // org.jetbrains.kotlin.android, and the Compose compiler plugin ships
+    // inside Kotlin itself from 2.0, so the two versions move together.
+    //
+    // Override from the host when it upgrades Kotlin, rather than editing
+    // this file:
+    //   gradle.properties →  trydosKotlinVersion=2.4.0
+    ext.kotlin_version = project.findProperty('trydosKotlinVersion') ?: '2.3.20'
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // Required from Kotlin 2.0: `buildFeatures { compose true }` alone
+        // fails configuration without it.
+        classpath "org.jetbrains.kotlin:compose-compiler-gradle-plugin:$kotlin_version"
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+android {
+    namespace 'com.trydos.trydos_wallet'
+    // 36, not 34: the AndroidX libraries Amplify Liveness pulls in refuse to
+    // be consumed by a module compiled against anything older. Unrelated to
+    // minSdk — this only decides which APIs compile, not which devices run.
+    compileSdk 36
+
+    defaultConfig {
+        // Imposed by Amplify UI Liveness. The host app must be at least this,
+        // or its build fails when this library is merged in.
+        minSdk 24
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    buildFeatures {
+        compose true
+    }
+    // No composeOptions block: from Kotlin 2.0 the compiler version is the
+    // Kotlin version, set by the plugin applied above. Declaring
+    // kotlinCompilerExtensionVersion here would pin a 1.x compiler against a
+    // 2.x Kotlin.
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation 'androidx.activity:activity-compose:1.8.2'
+    implementation 'androidx.compose.ui:ui:1.6.1'
+    implementation 'androidx.compose.material3:material3:1.2.0'
+
+    // The Face Liveness challenge itself: the oval, the countdown and the
+    // light sequence are this component's, and none of it is ours to restyle.
+    implementation 'com.amplifyframework.ui:liveness:1.5.0'
+}

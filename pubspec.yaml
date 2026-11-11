@@ -13,7 +13,6 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_svg: ^2.2.3
-  qr_flutter: ^4.1.0
   mobile_scanner: ^7.1.2
   dio: ^5.7.0
   socket_io_client: ^3.0.2
@@ -32,15 +31,12 @@ dependencies:
   connectivity_plus: ^6.1.4
   pointycastle: ^3.9.1
   flutter_screenutil: ^5.9.0
-  device_info_plus: ^12.4.0
   cupertino_back_gesture: ^0.1.0
   dotted_border: ^2.1.0
   camera: ^0.11.0+2
   google_mlkit_object_detection: ^0.13.0
   image: ^4.2.0
   permission_handler: ^11.3.1
-  image_cropper: ^9.1.0
-  photo_manager: ^3.9.0
   flutter_spinkit: ^5.2.0
   # Analytics / Session Replay. The HOST app owns Posthog().setup() + PostHogWidget;
   # the library only calls the singleton API (screen/capture) and masking widgets.
@@ -59,6 +55,20 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   uses-material-design: true
+
+  # Native side of AWS Face Liveness. The challenge (oval, countdown, light
+  # sequence) is an Amplify UI component that only exists for Jetpack Compose
+  # and SwiftUI, so the package ships it itself rather than asking the host to
+  # wire it up.
+  #
+  # Host build minimums this imposes: Android minSdk 24, iOS 14.0.
+  plugin:
+    platforms:
+      android:
+        package: com.trydos.trydos_wallet
+        pluginClass: TrydosWalletPlugin
+      ios:
+        pluginClass: TrydosWalletPlugin
 
   assets:
     - assets/svg/

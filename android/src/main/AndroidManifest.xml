@@ -1,0 +1,18 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The liveness challenge films the user. Runtime permission is still
+         requested before the activity opens; this only declares the need. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <application>
+        <!-- Portrait-locked on purpose: AWS refuses to run the challenge in
+             landscape (MOBILE_LANDSCAPE_ERROR). Not exported — only this
+             plugin starts it. -->
+        <activity
+            android:name=".FaceLivenessActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.TrydosFaceLiveness" />
+    </application>
+
+</manifest>

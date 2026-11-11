@@ -26,6 +26,8 @@ import 'package:trydos_wallet/src/services/wallet_websocket_service.dart';
 import '../analytics/wallet_analytics.dart';
 import '../api/api_interceptors.dart';
 import '../config/trydos_wallet_config.dart';
+import '../utils/id_side_verifier.dart';
+import '../utils/image_similarity.dart';
 import '../utils/kyc_image_compressor.dart';
 import 'wallet_event.dart';
 import 'wallet_state.dart';
@@ -143,6 +145,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletKycAnalyzeIdResetRequested>(_onKycAnalyzeIdResetRequested);
     on<WalletKycLivenessRequested>(_onKycLivenessRequested);
     on<WalletKycLivenessResetRequested>(_onKycLivenessResetRequested);
+    on<WalletKycAwsLivenessSucceeded>(_onKycAwsLivenessSucceeded);
+    on<WalletKycSessionIdChanged>(_onKycSessionIdChanged);
     on<WalletKycCompareFaceRequested>(_onKycCompareFaceRequested);
     on<WalletKycCompareFaceResetRequested>(_onKycCompareFaceResetRequested);
     on<BalanceCardIsSelected>(_onBalanceCardIsSelected);
@@ -1988,6 +1992,22 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
 
     try {
       final bytes = await File(event.imagePath).readAsBytes();
+
+      // The front photographed twice. Refused here rather than sent: the
+      // server would answer WRONG_SIDE, but that costs a round trip and one
+      // of the attempts the endpoint rate-limits.
+      if (!isFront && await _isFrontPhotographedAgain(bytes)) {
+        emit(
+          state.copyWith(
+            kycBackAnalyzeStatus: WalletStatus.failure,
+            kycBackAnalyzeErrorMessage:
+                'This looks like the front side again. Please flip the card.',
+            kycBackAnalyzeIsNetworkError: false,
+          ),
+        );
+        return;
+      }
+
       final imageData = 'data:image/jpeg;base64,${base64Encode(bytes)}';
 
       final result = await _kycApi.analyzeId(
@@ -2026,6 +2046,50 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
 
       final data = result.data!;
 
+      // A front that read fine but carries no face photo cannot be matched
+      // later, so it is refused here — the same call the web makes. Passing
+      // the whole card on to compare-face instead would burn a liveness
+      // attempt and fail with FACE_NOT_DETECTED minutes later.
+      if (data.frontMissingIdFace) {
+        final message = data.isPassport
+            ? 'No face photo found. Open the passport to the photo page and '
+                  'try again.'
+            : 'No face photo found on your ID. Make sure the front side with '
+                  'your photo is facing the camera.';
+        emit(
+          state.copyWith(
+            kycFrontAnalyzeStatus: WalletStatus.failure,
+            kycFrontAnalyzeErrorMessage: message,
+            kycFrontAnalyzeIsNetworkError: false,
+            kycExtractedData: null,
+          ),
+        );
+        return;
+      }
+
+      // The back read fine, but is it the back of *this* card? The server
+      // reads each side on its own and has no opinion on that, so a user who
+      // photographed another document would otherwise reach submit first.
+      if (!isFront && data.isSuccess) {
+        final front = state.kycExtractedData;
+        final back = data.extractedData;
+        if (front != null && back != null) {
+          final verdict = verifyBackMatchesFront(front: front, back: back);
+          if (!verdict.matched) {
+            emit(
+              state.copyWith(
+                kycBackAnalyzeStatus: WalletStatus.failure,
+                kycBackAnalyzeErrorMessage:
+                    'This is not the back of your ID. Please use the back of '
+                    'the same document.',
+                kycBackAnalyzeIsNetworkError: false,
+              ),
+            );
+            return;
+          }
+        }
+      }
+
       if (data.isSuccess) {
         // Write the cropped crop back to the file so the UI can preview it.
         final croppedImageData = data.croppedImageData;
@@ -2053,8 +2117,11 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
                 ? data.extractedData
                 : state.kycExtractedData,
             kycNextStep: data.nextStep,
+            // Only ever the real ID photo: frontMissingIdFace above already
+            // refused a front without one, so there is nothing to fall back
+            // to and nothing that could reach compare-face as a whole card.
             kycIdFaceImageData: isFront
-                ? (data.idFaceImageData ?? data.croppedImageData)
+                ? data.idFaceImageData
                 : state.kycIdFaceImageData,
             kycFrontAnalyzeErrorMessage: isFront
                 ? null
@@ -2126,6 +2193,30 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           kycExtractedData: isFront ? null : state.kycExtractedData,
         ),
       );
+    }
+  }
+
+  /// Whether this back capture is the front crop over again.
+  ///
+  /// Both decode and compare run off the UI thread — this sits between the
+  /// shutter and the request, where a stutter is felt. A comparison that
+  /// cannot be made lets the capture through: the server still has the final
+  /// word on which side it was shown.
+  Future<bool> _isFrontPhotographedAgain(Uint8List backBytes) async {
+    final frontDataUrl = state.kycFrontImageData;
+    if (frontDataUrl == null || frontDataUrl.isEmpty) return false;
+
+    try {
+      final commaIndex = frontDataUrl.indexOf(',');
+      final frontBytes = base64Decode(
+        commaIndex >= 0 ? frontDataUrl.substring(commaIndex + 1) : frontDataUrl,
+      );
+      return await compute(
+        compareCaptures,
+        CapturePair(front: frontBytes, back: backBytes),
+      );
+    } catch (_) {
+      return false;
     }
   }
 
@@ -2238,6 +2329,34 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     );
   }
 
+  /// Records an AWS Face Liveness pass.
+  ///
+  /// The reference image AWS returned becomes the selfie of record in both
+  /// slots the submit step reads, and its confidence is stored as given — the
+  /// device never thresholds it, and it must never be confused with the
+  /// single-frame path's face-*detection* confidence.
+  void _onKycAwsLivenessSucceeded(
+    WalletKycAwsLivenessSucceeded event,
+    Emitter<WalletState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        kycLivenessStatus: WalletStatus.success,
+        selfieImageData: event.selfieImageData,
+        kycFrontSelfieImageData: event.selfieImageData,
+        kycLivenessConfidence: event.confidence,
+        kycLivenessErrorMessage: null,
+      ),
+    );
+  }
+
+  void _onKycSessionIdChanged(
+    WalletKycSessionIdChanged event,
+    Emitter<WalletState> emit,
+  ) {
+    emit(state.copyWith(kycSessionId: event.sessionId));
+  }
+
   Future<void> _onKycCompareFaceRequested(
     WalletKycCompareFaceRequested event,
     Emitter<WalletState> emit,
@@ -2274,9 +2393,22 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       if (data.isSuccess) {
         // Face matched → submit is the terminal step (video interview removed).
         final extracted = state.kycExtractedData;
-        final sessionId = state.kycSessionId;
 
-        // A fresh single-use session is mandatory to submit.
+        // The session is single-use, and the one opened at entry has since
+        // been spent validating the liveness credentials. Open a fresh one
+        // here, exactly as the submission step prescribes; the existing id is
+        // only a fallback for when that call itself fails, so a completed
+        // flow is not thrown away over it.
+        final freshSession = await _kycApi.startSession();
+        final sessionId =
+            (freshSession.isSuccess &&
+                (freshSession.data?.sessionId.isNotEmpty ?? false))
+            ? freshSession.data!.sessionId
+            : state.kycSessionId;
+        if (sessionId != state.kycSessionId) {
+          emit(state.copyWith(kycSessionId: sessionId));
+        }
+
         if (sessionId == null || sessionId.isEmpty) {
           const msg = 'Missing verification session. Please restart.';
           emit(
@@ -2347,6 +2479,10 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           'extracted': {
             'idType': extracted?.idType ?? '',
             'country': extracted?.country ?? '',
+            // Sent whenever the server resolved one. The SY/TR/LB parser paths
+            // do not, and the backend then falls back to the country name.
+            if (extracted?.countryIso3?.trim().isNotEmpty ?? false)
+              'countryIso3': extracted!.countryIso3!.trim(),
             'name': fullName,
             'nationalNumber': nationalId,
             'documentNumber': nationalId,

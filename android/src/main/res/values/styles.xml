@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The challenge owns the whole screen: no action bar, and a light
+         background so the component's own light sequence is not fighting a
+         dark theme behind it. -->
+    <style name="Theme.TrydosFaceLiveness" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+</resources>
