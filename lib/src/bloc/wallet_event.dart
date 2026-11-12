@@ -300,6 +300,17 @@ class WalletKycLivenessResetRequested extends WalletEvent {
   const WalletKycLivenessResetRequested();
 }
 
+/// A selfie captured by the app itself, after the face-mesh stage.
+///
+/// Carries no liveness confidence on purpose: nothing measured one. The
+/// submit payload omits the field rather than inventing a number — a
+/// fabricated confidence would silently disable the backend's own threshold.
+class WalletKycSelfieCaptured extends WalletEvent {
+  const WalletKycSelfieCaptured(this.selfieImageData);
+
+  final String selfieImageData;
+}
+
 /// An AWS Face Liveness run that AWS judged a success.
 ///
 /// [selfieImageData] is the reference image AWS returned — the selfie of

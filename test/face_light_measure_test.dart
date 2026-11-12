@@ -92,4 +92,104 @@ void main() {
     expect(measureFaceLight(Uint8List.fromList([1, 2, 3, 4])), isNull);
     expect(measureFaceLight(Uint8List(0)), isNull);
   });
+
+  group('measureLumaPlane — القياس من تدفّق الكاميرا', () {
+    Uint8List plane({
+      required int centre,
+      required int frame,
+      int width = 120,
+      int height = 160,
+      bool noisyCentre = false,
+    }) {
+      final bytes = Uint8List(width * height);
+      final left = width ~/ 4;
+      final top = height ~/ 4;
+      for (var y = 0; y < height; y++) {
+        for (var x = 0; x < width; x++) {
+          final inCentre =
+              x >= left && x < width - left && y >= top && y < height - top;
+          var value = inCentre ? centre : frame;
+          // 4-px blocks, not single pixels: the measurement steps over the
+          // frame, so a 1-px checkerboard would alias away to a flat field
+          // and the test would be asserting against its own artefact.
+          if (inCentre && noisyCentre && (((x ~/ 4) + (y ~/ 4)) % 2 == 0)) {
+            value = (centre + 70).clamp(0, 255);
+          }
+          bytes[y * width + x] = value;
+        }
+      }
+      return bytes;
+    }
+
+    test('يفصل سطوع المركز عن الإطار', () {
+      final sample = measureLumaPlane(
+        luma: plane(centre: 130, frame: 40),
+        width: 120,
+        height: 160,
+      );
+      expect(sample, isNotNull);
+      expect(sample!.centreLuminance, closeTo(130, 6));
+      expect(sample.frameLuminance, lessThan(sample.centreLuminance));
+    });
+
+    test('مركز مسطّح = ضبابي، ومركز فيه تفاصيل يجتاز', () {
+      final flat = measureLumaPlane(
+        luma: plane(centre: 130, frame: 130),
+        width: 120,
+        height: 160,
+      );
+      expect(flat, isNotNull);
+      expect(flat!.sharpness, lessThan(8));
+
+      final detailed = measureLumaPlane(
+        luma: plane(centre: 130, frame: 130, noisyCentre: true),
+        width: 120,
+        height: 160,
+      );
+      expect(detailed!.sharpness, greaterThan(8));
+    });
+
+    test('إضاءة خلفية تُميَّز', () {
+      final sample = measureLumaPlane(
+        luma: plane(centre: 25, frame: 230),
+        width: 120,
+        height: 160,
+      );
+      final gate = FaceLightGate();
+      gate.accept(sample!);
+      expect(gate.verdict, FaceLightVerdict.backlit);
+    });
+
+    test('بايتات أقصر من الحجم المعلَن تُعيد null', () {
+      // A truncated buffer must not be read past its end.
+      expect(
+        measureLumaPlane(luma: Uint8List(100), width: 120, height: 160),
+        isNull,
+      );
+      expect(
+        measureLumaPlane(luma: Uint8List(64), width: 4, height: 4),
+        isNull,
+      );
+    });
+
+    test('stride أكبر من العرض يُحترَم', () {
+      const width = 120;
+      const height = 160;
+      const stride = 128;
+      final bytes = Uint8List(stride * height);
+      for (var y = 0; y < height; y++) {
+        for (var x = 0; x < width; x++) {
+          bytes[y * stride + x] = 120;
+        }
+      }
+      final sample = measureLumaPlane(
+        luma: bytes,
+        width: width,
+        height: height,
+        bytesPerRow: stride,
+      );
+      expect(sample, isNotNull);
+      expect(sample!.centreLuminance, closeTo(120, 1));
+    });
+  });
 }

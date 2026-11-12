@@ -124,6 +124,87 @@ FaceLightSample? measureFaceLight(Uint8List jpeg) {
 
 const int _sampleWidth = 96;
 
+/// Measures a luma plane straight off the camera stream.
+///
+/// The stream is already running to track the face, so reading the light from
+/// the same frames costs nothing — where capturing a JPEG every 150 ms would
+/// fight the stream for the camera and stutter the preview.
+///
+/// [luma] is one byte per pixel: the Y plane of an NV21 frame on Android, or
+/// a greyscale pass over BGRA on iOS. Returns null when the buffer does not
+/// describe the stated size.
+FaceLightSample? measureLumaPlane({
+  required Uint8List luma,
+  required int width,
+  required int height,
+  int bytesPerRow = 0,
+}) {
+  final stride = bytesPerRow > 0 ? bytesPerRow : width;
+  if (width < 8 || height < 8 || luma.length < stride * height) return null;
+
+  // Step over the frame rather than reading every pixel: this runs per frame,
+  // and ~96 columns is as much as the measurement needs.
+  final step = (width / _sampleWidth).ceil().clamp(1, 16);
+
+  final left = width ~/ 4;
+  final top = height ~/ 4;
+  final right = width - left;
+  final bottom = height - top;
+
+  var frameSum = 0;
+  var frameCount = 0;
+  var centreSum = 0;
+  var centreCount = 0;
+
+  // Sobel needs neighbours, so the centre box is also kept as a small grid.
+  final centreRow = <int>[];
+  var previousRow = <int>[];
+  var gradSum = 0.0;
+  var gradSquareSum = 0.0;
+  var gradCount = 0;
+
+  for (var y = 0; y < height; y += step) {
+    centreRow.clear();
+    for (var x = 0; x < width; x += step) {
+      final value = luma[y * stride + x];
+      frameSum += value;
+      frameCount++;
+      if (x >= left && x < right && y >= top && y < bottom) {
+        centreSum += value;
+        centreCount++;
+        centreRow.add(value);
+      }
+    }
+
+    // Vertical and horizontal differences against the row above: a cheap
+    // stand-in for the full Sobel, and enough to separate focus from blur.
+    if (previousRow.length == centreRow.length && centreRow.length > 1) {
+      for (var i = 1; i < centreRow.length; i++) {
+        final magnitude =
+            (centreRow[i] - centreRow[i - 1]).abs() +
+            (centreRow[i] - previousRow[i]).abs();
+        gradSum += magnitude;
+        gradSquareSum += magnitude * magnitude;
+        gradCount++;
+      }
+    }
+    previousRow = List<int>.of(centreRow);
+  }
+
+  if (frameCount == 0 || centreCount == 0) return null;
+
+  final mean = gradCount == 0 ? 0.0 : gradSum / gradCount;
+  final sharpness = gradCount == 0
+      ? 0.0
+      : (gradSquareSum / gradCount) - mean * mean;
+
+  return FaceLightSample(
+    centreLuminance: centreSum / centreCount,
+    frameLuminance: frameSum / frameCount,
+    sharpness: sharpness < 0 ? 0 : sharpness,
+  );
+}
+
 /// One frame's measurements, as read from a 96-px-wide downsample.
 class FaceLightSample {
   const FaceLightSample({

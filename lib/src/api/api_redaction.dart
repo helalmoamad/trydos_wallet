@@ -73,5 +73,37 @@ dynamic redactData(dynamic data) {
   if (data is List) {
     return data.map(redactData).toList();
   }
+  if (data is String) return _elideBulk(data);
   return data;
+}
+
+/// Longest string printed in full. Past this it is almost certainly an
+/// encoded blob rather than anything a reader would parse by eye.
+const int _bulkStringThreshold = 256;
+
+/// Replaces an encoded blob with a description of it.
+///
+/// KYC alone sends three images per submission, each a few hundred KB of
+/// base64. Printed verbatim they bury every other line in the log, cost real
+/// time to serialise on the UI thread, and spill the user's face and ID into
+/// logcat where the session's end does not reach. What a log reader actually
+/// needs is that an image was there and roughly how big — the bytes tell them
+/// nothing.
+String _elideBulk(String value) {
+  if (value.length <= _bulkStringThreshold) return value;
+
+  final comma = value.indexOf(',');
+  final isDataUrl = value.startsWith('data:') && comma > 0;
+  final payloadLength = isDataUrl ? value.length - comma - 1 : value.length;
+  // base64 carries 3 bytes per 4 characters.
+  final bytes = (payloadLength * 3) ~/ 4;
+  final kb = (bytes / 1024).toStringAsFixed(0);
+
+  if (isDataUrl) {
+    // Keep the media type: "was it a JPEG?" is a real question when the
+    // server rejects an image.
+    final mime = value.substring(5, comma).split(';').first;
+    return '<$mime ~${kb}KB>';
+  }
+  return '<${value.length} chars ~${kb}KB>';
 }

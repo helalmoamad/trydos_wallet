@@ -1,5 +1,6 @@
 import '../api/api.dart';
 import '../models/kyc/kyc_aws_liveness.dart';
+import '../utils/kyc_trace.dart';
 import 'face_liveness_detector.dart';
 import 'kyc_api_service.dart';
 import 'kyc_liveness_api_service.dart';
@@ -92,11 +93,14 @@ class FaceLivenessController {
     required String? kycSessionId,
     required void Function(String? sessionId) onSessionChanged,
   }) async {
+    KycTrace.begin('liveness attempt');
     var sessionId = kycSessionId;
 
     // 1. A KYC session has to exist before credentials can be minted.
     if (sessionId == null || sessionId.isEmpty) {
+      KycTrace.step('session → (none held)');
       sessionId = await _openSession();
+      KycTrace.step('session ←', {'id': KycTrace.id(sessionId)});
       onSessionChanged(sessionId);
       if (sessionId == null) {
         return const FaceLivenessOutcome.failed(
@@ -108,16 +112,27 @@ class FaceLivenessController {
 
     // 2. A fresh AWS session for this attempt — never reuse one after a
     //    failure.
+    KycTrace.step('liveness-aws →');
     final sessionResult = await _livenessApi.createAwsSession();
     final awsSession = sessionResult.data;
     if (!sessionResult.isSuccess || awsSession == null || !awsSession.isValid) {
+      KycTrace.fail('liveness-aws', {
+        'http': sessionResult.statusCode,
+        'msg': sessionResult.errorMessage,
+      });
       return FaceLivenessOutcome.failed(
         errorKind: FaceLivenessErrorKind.setupFailed,
         errorMessage: sessionResult.errorMessage,
       );
     }
 
+    KycTrace.ok('liveness-aws', {
+      'aws': KycTrace.id(awsSession.sessionId),
+      'region': awsSession.region,
+    });
+
     // 3. The detector owns the screen until the challenge ends.
+    KycTrace.step('native detector opening');
     try {
       await _detector.present(
         sessionId: awsSession.sessionId,
@@ -137,11 +152,17 @@ class FaceLivenessController {
         },
       );
     } on FaceLivenessException catch (e) {
+      KycTrace.fail('native detector', {
+        'kind': e.kind.name,
+        'code': e.code,
+        'msg': e.message,
+      });
       return FaceLivenessOutcome.failed(
         errorKind: e.kind,
         errorMessage: e.message,
       );
     }
+    KycTrace.ok('native detector completed');
 
     // 4. Only now does the verdict exist; earlier it reads CREATED.
     final resultResponse = await _livenessApi.awsResult(
@@ -149,18 +170,30 @@ class FaceLivenessController {
     );
     final result = resultResponse.data;
     if (!resultResponse.isSuccess || result == null) {
+      KycTrace.fail('liveness result', {
+        'http': resultResponse.statusCode,
+        'msg': resultResponse.errorMessage,
+      });
       return FaceLivenessOutcome.failed(
         errorKind: FaceLivenessErrorKind.setupFailed,
         errorMessage: resultResponse.errorMessage,
       );
     }
 
+    KycTrace.step('liveness result ←', {
+      'status': result.status,
+      'confidence': result.confidence,
+      'image': KycTrace.image(result.livenessImageData),
+    });
+
     if (!result.isUsable) {
+      KycTrace.fail('liveness not usable', {'status': result.status});
       // A SUCCEEDED verdict with no image is as unusable as a FAILED one:
       // compare-face and submit both need that image.
       return FaceLivenessOutcome.failed(status: result.status);
     }
 
+    KycTrace.ok('liveness passed', {'confidence': result.confidence});
     return FaceLivenessOutcome.passed(
       confidence: result.confidence,
       selfieImageData: result.livenessImageData!,
@@ -173,12 +206,23 @@ class FaceLivenessController {
     required String kycSessionId,
     required void Function(String sessionId) onRenewed,
   }) async {
+    KycTrace.step('liveness-credentials →', {
+      'session': KycTrace.id(kycSessionId),
+    });
     final first = await _livenessApi.awsCredentials(kycSessionId: kycSessionId);
     if (first.isSuccess && (first.data?.isComplete ?? false)) {
+      KycTrace.ok('liveness-credentials', {
+        'expires': first.data?.expiration?.toIso8601String(),
+      });
       return first.data;
     }
 
+    KycTrace.fail('liveness-credentials', {
+      'http': first.statusCode,
+      'msg': first.errorMessage,
+    });
     if (!_isSessionRejected(first)) return null;
+    KycTrace.step('session spent — opening a new one');
 
     final renewed = await _openSession();
     if (renewed == null) return null;

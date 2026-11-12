@@ -27,6 +27,7 @@ import '../analytics/wallet_analytics.dart';
 import '../api/api_interceptors.dart';
 import '../config/trydos_wallet_config.dart';
 import '../utils/id_side_verifier.dart';
+import '../utils/kyc_trace.dart';
 import '../utils/image_similarity.dart';
 import '../utils/kyc_image_compressor.dart';
 import 'wallet_event.dart';
@@ -145,6 +146,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<WalletKycAnalyzeIdResetRequested>(_onKycAnalyzeIdResetRequested);
     on<WalletKycLivenessRequested>(_onKycLivenessRequested);
     on<WalletKycLivenessResetRequested>(_onKycLivenessResetRequested);
+    on<WalletKycSelfieCaptured>(_onKycSelfieCaptured);
     on<WalletKycAwsLivenessSucceeded>(_onKycAwsLivenessSucceeded);
     on<WalletKycSessionIdChanged>(_onKycSessionIdChanged);
     on<WalletKycCompareFaceRequested>(_onKycCompareFaceRequested);
@@ -1990,6 +1992,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       ),
     );
 
+    KycTrace.step('analyze-id →', {'side': side});
+
     try {
       final bytes = await File(event.imagePath).readAsBytes();
 
@@ -1997,6 +2001,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       // server would answer WRONG_SIDE, but that costs a round trip and one
       // of the attempts the endpoint rate-limits.
       if (!isFront && await _isFrontPhotographedAgain(bytes)) {
+        KycTrace.fail('analyze-id refused locally', {
+          'reason': 'same image as front',
+        });
         emit(
           state.copyWith(
             kycBackAnalyzeStatus: WalletStatus.failure,
@@ -2018,6 +2025,12 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
 
       if (result.isFailure || result.data == null) {
         final isNetworkErr = _isNetworkDioError(result.error);
+        KycTrace.fail('analyze-id', {
+          'side': side,
+          'http': result.statusCode,
+          'network': isNetworkErr,
+          'msg': result.errorMessage,
+        });
         emit(
           state.copyWith(
             kycFrontAnalyzeStatus: isFront
@@ -2051,6 +2064,10 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       // the whole card on to compare-face instead would burn a liveness
       // attempt and fail with FACE_NOT_DETECTED minutes later.
       if (data.frontMissingIdFace) {
+        KycTrace.fail('analyze-id rejected', {
+          'reason': 'no face on ID front',
+          'passport': data.isPassport,
+        });
         final message = data.isPassport
             ? 'No face photo found. Open the passport to the photo page and '
                   'try again.'
@@ -2076,6 +2093,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         if (front != null && back != null) {
           final verdict = verifyBackMatchesFront(front: front, back: back);
           if (!verdict.matched) {
+            KycTrace.fail('back does not match front', {
+              'field': verdict.field.name,
+            });
             emit(
               state.copyWith(
                 kycBackAnalyzeStatus: WalletStatus.failure,
@@ -2091,6 +2111,12 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       }
 
       if (data.isSuccess) {
+        KycTrace.ok('analyze-id', {
+          'side': data.side,
+          'nextStep': data.nextStep,
+          'idFace': KycTrace.image(data.idFaceImageData),
+          'crop': KycTrace.image(data.croppedImageData),
+        });
         // Write the cropped crop back to the file so the UI can preview it.
         final croppedImageData = data.croppedImageData;
         if (croppedImageData != null && croppedImageData.isNotEmpty) {
@@ -2144,6 +2170,15 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       final errorMessage = data.isError
           ? (data.message ?? data.code ?? 'Upload failed')
           : 'Document not found. Try again.';
+      // HTTP 200 carrying status:"error" — the shape the guide warns about.
+      KycTrace.fail('analyze-id', {
+        'side': side,
+        'status': data.status,
+        'code': data.code,
+        'missing': data.missingFields.isEmpty
+            ? null
+            : data.missingFields.join(','),
+      });
 
       // data.isError / isNotFound = structured server response → always server error
       emit(
@@ -2329,6 +2364,29 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     );
   }
 
+  /// Records the selfie the app captured after the face-mesh stage.
+  ///
+  /// Sets it in both slots the submit step reads, and clears any liveness
+  /// confidence left over from an earlier attempt — there is no measurement
+  /// behind this image, and submit omits the field rather than send a number
+  /// nothing produced.
+  void _onKycSelfieCaptured(
+    WalletKycSelfieCaptured event,
+    Emitter<WalletState> emit,
+  ) {
+    KycTrace.ok('selfie captured', {
+      'image': KycTrace.image(event.selfieImageData),
+    });
+    emit(
+      state.copyWith(
+        kycLivenessStatus: WalletStatus.success,
+        selfieImageData: event.selfieImageData,
+        kycFrontSelfieImageData: event.selfieImageData,
+        kycLivenessErrorMessage: null,
+      ),
+    );
+  }
+
   /// Records an AWS Face Liveness pass.
   ///
   /// The reference image AWS returned becomes the selfie of record in both
@@ -2369,6 +2427,11 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       ),
     );
 
+    KycTrace.step('compare-face →', {
+      'selfie': KycTrace.image(event.selfieImageData),
+      'idFace': KycTrace.image(event.idFaceImageData),
+    });
+
     try {
       final result = await _kycCompareFaceApi.compareFace(
         selfieImageData: event.selfieImageData,
@@ -2377,11 +2440,20 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
 
       if (result.isFailure || result.data == null) {
         final msg = result.errorMessage ?? 'Face comparison failed';
+        // compare-face answers 400 with the same {status,code,message} shape
+        // it uses at 200, so the code is worth keeping here too — it is what
+        // the screen branches on, and losing it turns a precise cause into a
+        // generic failure.
+        KycTrace.fail('compare-face', {
+          'http': result.statusCode,
+          'code': result.errorCode,
+          'msg': msg,
+        });
         emit(
           state.copyWith(
             kycCompareFaceStatus: WalletStatus.failure,
             kycCompareFaceErrorMessage: msg,
-            kycCompareFaceErrorCode: null,
+            kycCompareFaceErrorCode: result.errorCode,
           ),
         );
         emitApiErrorEvent(ApiErrorEvent(msg));
@@ -2391,6 +2463,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       final data = result.data!;
 
       if (data.isSuccess) {
+        KycTrace.ok('compare-face', {'score': data.matchScore});
         // Face matched → submit is the terminal step (video interview removed).
         final extracted = state.kycExtractedData;
 
@@ -2474,8 +2547,10 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
             'backImageData': backPayload,
           'selfieImageData': selfiePayload,
           'selfieVsIdScore': data.matchScore ?? 0,
-          if (state.kycLivenessConfidence != null)
-            'livenessConfidence': state.kycLivenessConfidence,
+          // No livenessConfidence: the app captures the selfie itself and
+          // measures nothing, and §5.7 does not list the field as required.
+          // Sending a made-up number would read as a passing liveness score
+          // and disable the backend's KYC_MIN_LIVENESS check.
           'extracted': {
             'idType': extracted?.idType ?? '',
             'country': extracted?.country ?? '',
@@ -2491,11 +2566,25 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           },
         };
 
+        KycTrace.step('submit →', {
+          'session': KycTrace.id(sessionId),
+          'front': KycTrace.image(frontPayload),
+          'back': KycTrace.image(backPayload),
+          'selfie': KycTrace.image(selfiePayload),
+          'score': data.matchScore,
+          'idType': extracted?.idType,
+          'iso3': extracted?.countryIso3,
+        });
+
         final submitResult = await _kycApi.submitKyc(payload: submitPayload);
         // The single-use session is spent on a successful POST; clear it so any
         // retry starts a fresh one.
         if (submitResult.isFailure || submitResult.data == null) {
           final msg = submitResult.errorMessage ?? 'KYC submit failed';
+          KycTrace.fail('submit', {
+            'http': submitResult.statusCode,
+            'msg': msg,
+          });
           emit(
             state.copyWith(
               kycCompareFaceStatus: WalletStatus.failure,
@@ -2515,6 +2604,11 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
             .toString()
             .trim()
             .toLowerCase();
+        KycTrace.ok('submit', {
+          'decision': decision.isEmpty ? '<none>' : decision,
+          'requestId': KycTrace.id(kycRequest['id']?.toString()),
+          'rejection': kycRequest['rejectionReason'],
+        });
 
         // The backend is the source of truth. 'rejected' → failure (let the
         // user restart with a new session); 'approved'/'pending' → success.
@@ -2554,6 +2648,12 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         );
       } else {
         final msg = data.message ?? 'Face match failed';
+        // HTTP 200 carrying status:"error" — the shape the guide warns about.
+        KycTrace.fail('compare-face', {
+          'status': data.status,
+          'code': data.code,
+          'msg': msg,
+        });
         emit(
           state.copyWith(
             kycCompareFaceStatus: WalletStatus.failure,

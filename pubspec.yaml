@@ -35,6 +35,13 @@ dependencies:
   dotted_border: ^2.1.0
   camera: ^0.11.0+2
   google_mlkit_object_detection: ^0.13.0
+  # Face contours for the steadying overlay. Not face_mesh_detection: that
+  # gives 468 points but ships for Android only, and the wallet needs both
+  # platforms. Contours (~130 points) draw the same web on iPhone too.
+  # Pinned to the 0.11.x line, not the newest: 0.13 wants
+  # google_mlkit_commons ^0.11, which object_detection 0.13 cannot share.
+  # Raise both together or not at all.
+  google_mlkit_face_detection: ^0.11.1
   image: ^4.2.0
   permission_handler: ^11.3.1
   flutter_spinkit: ^5.2.0

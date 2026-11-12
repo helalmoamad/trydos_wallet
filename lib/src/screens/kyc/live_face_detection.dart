@@ -3,8 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
-import 'package:dotted_border/dotted_border.dart';
-import 'package:flutter/foundation.dart';
+import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,23 +13,24 @@ import 'package:trydos_wallet/src/constent/assets.dart';
 import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
-import 'package:trydos_wallet/src/services/face_liveness_controller.dart';
-import 'package:trydos_wallet/src/services/face_liveness_detector.dart';
-import 'package:trydos_wallet/src/services/platform_face_liveness_detector.dart';
+import 'package:trydos_wallet/src/screens/kyc/widgets/face_mesh_overlay.dart';
+import 'package:trydos_wallet/src/services/face_tracker.dart';
+import 'package:trydos_wallet/src/utils/face_framing_guide.dart';
+import 'package:trydos_wallet/src/utils/kyc_trace.dart';
 import 'package:trydos_wallet/src/utils/face_light_gate.dart';
 import 'package:trydos_wallet/trydos_wallet.dart';
 
-/// The liveness step of the KYC flow.
+/// The liveness step: two short stages in the app's own design, then the AWS
+/// challenge, then a green hold before the ID comparison.
 ///
-/// The challenge itself is AWS Face Liveness, presented full screen by the
-/// native Amplify UI component — its oval, countdown and light sequence are
-/// not ours to restyle, and shrinking it into this page's card would dim the
-/// light it reads off the user's face.
+/// Stage one reads the room's light; stage two finds the face and asks the
+/// user to frame and hold it, drawing a web over it so they can see they have
+/// been found. Both run off one camera stream — the same frames feed the
+/// luma reading and the face detector.
 ///
-/// So this screen is everything around it, in the app's own design: the
-/// preview, the light gate that turns a likely failure into an instruction
-/// before a billed AWS session is spent, and the result. The selfie of record
-/// is the reference image AWS returns — the device captures none of its own.
+/// The challenge in between belongs to AWS: the native Amplify component owns
+/// its whole screen, and the selfie of record comes back from the server
+/// rather than from this camera.
 class LiveFaceDetection extends StatefulWidget {
   final Function(String selfiePath)? onSuccessTap;
   final bool isActive;
@@ -40,66 +40,67 @@ class LiveFaceDetection extends StatefulWidget {
   State<LiveFaceDetection> createState() => _LiveFaceDetectionState();
 }
 
-/// What the screen is doing, which is also what the user is being told.
 enum _Stage {
-  /// Reading the light before offering to start.
-  checking,
+  /// "Checking the lighting…" — stage one.
+  checkingLight,
 
-  /// Light is good — holding green briefly, then starting.
-  ready,
+  /// Finding and framing the face — stage two, the web is drawn here.
+  framing,
 
-  /// The native detector is on screen.
-  running,
+  /// The shutter has fired and the shot is being prepared.
+  capturing,
 
-  /// AWS judged the person live.
-  completed,
+  /// Captured. The face holds inside a green frame before the flow moves on.
+  passed,
 
-  /// The attempt ended without a verdict, or with a failing one.
   failed,
 }
 
 class _LiveFaceDetectionState extends State<LiveFaceDetection> {
   CameraController? _cameraController;
+  CameraDescription? _cameraDescription;
   static const double _defaultFrontZoomLevel = 1.15;
 
   bool _isCameraInitialized = false;
   bool _isCameraError = false;
   bool _isCameraTimedOut = false;
+  bool _isStreaming = false;
   Timer? _cameraInactivityTimer;
 
-  _Stage _stage = _Stage.checking;
-  double _progress = 0.0;
+  _Stage _stage = _Stage.checkingLight;
   String? _capturedSelfiePath;
   String? _failureMessage;
   bool _didNotifySuccess = false;
-
-  /// Guards the light-gate sampling loop and the attempt against a page the
-  /// user has already left.
   int _flowToken = 0;
 
   final FaceLightGate _lightGate = FaceLightGate();
-  late final FaceLivenessController _controller = FaceLivenessController(
-    detector: _detector,
-  );
-  final FaceLivenessDetector _detector = PlatformFaceLivenessDetector();
+  final FaceFramingGuide _framingGuide = FaceFramingGuide();
+  final FaceTracker _faceTracker = FaceTracker();
 
-  /// False on a build whose host never wired the native side. Checked up
-  /// front so the user is told before photographing anything, not after.
-  bool _detectorAvailable = true;
+  /// What the overlay draws, one polyline per contour. Empty until a face is
+  /// found.
+  List<List<Offset>> _meshContours = const [];
+  Size _meshSourceSize = Size.zero;
+  double _progress = 0;
 
-  Timer? _lightTimer;
-  bool _isSamplingLight = false;
-  DateTime? _checkingSince;
-
-  /// The guide holds the "checking" state for at least this long, so a gate
-  /// that passes instantly does not flash past unread.
-  static const Duration _minCheckingTime = Duration(milliseconds: 1200);
-
-  /// And holds green this long once it passes, before the detector opens.
-  static const Duration _readyHold = Duration(milliseconds: 1000);
-
+  /// Throttles light sampling: the stream runs at camera rate, and the light
+  /// does not change thirty times a second.
+  DateTime _lastLightSample = DateTime.fromMillisecondsSinceEpoch(0);
   static const Duration _lightSampleInterval = Duration(milliseconds: 150);
-  static const Duration _cameraInactivityTimeout = Duration(seconds: 30);
+
+  /// Stage one is held briefly even when the light passes at once, so the
+  /// message is read rather than flashed.
+  DateTime? _lightStageSince;
+  static const Duration _minLightStage = Duration(milliseconds: 1200);
+
+  static const Duration _greenHold = Duration(seconds: 3);
+  static const Duration _cameraInactivityTimeout = Duration(seconds: 45);
+
+  static const Color _ink = Color(0xff1D1D1D);
+  static const Color _blue = Color(0xff388CFF);
+  static const Color _green = Color(0xffA3FF38);
+  static const Color _red = Color(0xffFF6B6B);
+  static const Color _webPink = Color(0xFFFF8E8E);
 
   @override
   void initState() {
@@ -108,20 +109,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
     // AWS refuses the challenge in landscape (MOBILE_LANDSCAPE_ERROR), so the
     // whole step is pinned upright.
     SystemChrome.setPreferredOrientations(const [DeviceOrientation.portraitUp]);
-    _checkDetector();
-    if (widget.isActive) {
-      _initCamera();
-    }
-  }
-
-  Future<void> _checkDetector() async {
-    final available = await _detector.isAvailable();
-    if (!mounted || available) return;
-    setState(() {
-      _detectorAvailable = false;
-      _stage = _Stage.failed;
-      _failureMessage = null;
-    });
+    if (widget.isActive) _initCamera();
   }
 
   @override
@@ -145,11 +133,10 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
 
     if (_cameraController == null || !_cameraController!.value.isInitialized) {
       await _initCamera();
-      return;
     }
-
-    _startLightGate();
   }
+
+  // ── Camera ────────────────────────────────────────────────────────────────
 
   Future<void> _initCamera() async {
     try {
@@ -157,6 +144,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
       if (_isCameraTimedOut && mounted) {
         setState(() => _isCameraTimedOut = false);
       }
+
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
         if (mounted) setState(() => _isCameraError = true);
@@ -167,6 +155,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
         (cam) => cam.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
+      _cameraDescription = frontCamera;
 
       _cameraController = CameraController(
         frontCamera,
@@ -180,38 +169,81 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
       await _cameraController!.initialize();
       await _applyDefaultCameraZoom();
       if (!mounted) return;
-      setState(() => _isCameraInitialized = true);
-      _resetCameraInactivityTimer();
 
-      _startLightGate();
+      _lightGate.reset();
+      _framingGuide.reset();
+      _lightStageSince = DateTime.now();
+      setState(() {
+        _isCameraInitialized = true;
+        _stage = _Stage.checkingLight;
+        _progress = 0;
+        _meshContours = const [];
+        _failureMessage = null;
+      });
+      _resetCameraInactivityTimer();
+      await _startStream();
     } catch (_) {
+      if (mounted) setState(() => _isCameraError = true);
+    }
+  }
+
+  Future<void> _startStream() async {
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized) return;
+    if (_isStreaming) return;
+
+    final token = ++_flowToken;
+    _isStreaming = true;
+    try {
+      await controller.startImageStream((image) => _onFrame(image, token));
+    } catch (_) {
+      _isStreaming = false;
       if (mounted) setState(() => _isCameraError = true);
     }
   }
 
   /// Hands the camera back to the system.
   ///
-  /// Required before the detector opens: the native component takes the front
-  /// camera for itself, and a preview still holding it makes that fail.
+  /// Required before the AWS detector opens: the native component takes the
+  /// front camera for itself, and a stream still holding it makes that fail.
   Future<void> _releaseCamera() async {
-    _lightTimer?.cancel();
-    _lightTimer = null;
     final controller = _cameraController;
     _cameraController = null;
+    if (controller == null) return;
+
     try {
-      await controller?.dispose();
+      if (_isStreaming) {
+        _isStreaming = false;
+        await controller.stopImageStream();
+      }
     } catch (_) {}
+    try {
+      await controller.dispose();
+    } catch (_) {}
+  }
+
+  Future<void> _applyDefaultCameraZoom() async {
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized) return;
+    try {
+      final minZoom = await controller.getMinZoomLevel();
+      final maxZoom = await controller.getMaxZoomLevel();
+      await controller.setZoomLevel(
+        _defaultFrontZoomLevel.clamp(minZoom, maxZoom).toDouble(),
+      );
+    } catch (_) {
+      // Keep the device default when zoom levels are unavailable.
+    }
   }
 
   void _resetCameraInactivityTimer() {
     _cameraInactivityTimer?.cancel();
     if (!widget.isActive ||
-        _stage == _Stage.completed ||
-        _stage == _Stage.running ||
+        _stage == _Stage.passed ||
+        _stage == _Stage.capturing ||
         _isCameraError) {
       return;
     }
-
     _cameraInactivityTimer = Timer(
       _cameraInactivityTimeout,
       _handleCameraInactivityTimeout,
@@ -219,12 +251,10 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
   }
 
   Future<void> _handleCameraInactivityTimeout() async {
-    if (!mounted || !widget.isActive || _stage == _Stage.completed) return;
-
+    if (!mounted || !widget.isActive || _stage == _Stage.passed) return;
     _flowToken++;
     _cameraInactivityTimer?.cancel();
     await _releaseCamera();
-
     if (!mounted) return;
     setState(() {
       _isCameraInitialized = false;
@@ -234,8 +264,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
   }
 
   Future<void> _reopenCameraAfterTimeout() async {
-    if (!widget.isActive || _stage == _Stage.completed) return;
-
+    if (!widget.isActive || _stage == _Stage.passed) return;
     if (mounted) {
       setState(() {
         _isCameraTimedOut = false;
@@ -245,163 +274,160 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
     await _initCamera();
   }
 
-  Future<void> _applyDefaultCameraZoom() async {
-    final controller = _cameraController;
-    if (controller == null || !controller.value.isInitialized) return;
+  // ── One stream, both stages ───────────────────────────────────────────────
 
-    try {
-      final minZoom = await controller.getMinZoomLevel();
-      final maxZoom = await controller.getMaxZoomLevel();
-      final targetZoom = _defaultFrontZoomLevel
-          .clamp(minZoom, maxZoom)
-          .toDouble();
-      await controller.setZoomLevel(targetZoom);
-    } catch (_) {
-      // Keep default device zoom if zoom levels are unavailable.
+  Future<void> _onFrame(CameraImage image, int token) async {
+    if (!_isTokenValid(token)) return;
+
+    switch (_stage) {
+      case _Stage.checkingLight:
+        _readLight(image);
+        return;
+      case _Stage.framing:
+        await _trackFace(image, token);
+        return;
+      case _Stage.capturing:
+      case _Stage.passed:
+      case _Stage.failed:
+        return;
     }
   }
 
-  // ── Light gate ────────────────────────────────────────────────────────────
+  /// Stage one: is the room lit well enough to be worth a billed attempt?
+  void _readLight(CameraImage image) {
+    final now = DateTime.now();
+    if (now.difference(_lastLightSample) < _lightSampleInterval) return;
+    _lastLightSample = now;
 
-  void _startLightGate() {
-    if (!mounted || !widget.isActive || !_detectorAvailable) return;
-    if (_stage == _Stage.running || _stage == _Stage.completed) return;
-    if (!_isCameraInitialized) return;
+    final sample = measureLumaPlane(
+      luma: image.planes.first.bytes,
+      width: image.width,
+      height: image.height,
+      bytesPerRow: image.planes.first.bytesPerRow,
+    );
 
-    _lightGate.reset();
-    _checkingSince = DateTime.now();
-    _lightTimer?.cancel();
+    // A frame that yields no reading waives the gate rather than stranding a
+    // user whose camera will not give one.
+    final passed = sample == null ? true : _lightGate.accept(sample, now: now);
+    final since = _lightStageSince ?? now;
+    final heldLongEnough = now.difference(since) >= _minLightStage;
+
+    if (!mounted) return;
     setState(() {
-      _stage = _Stage.checking;
+      _progress = passed ? 1.0 : (_progress + 0.05).clamp(0.0, 0.9).toDouble();
+    });
+
+    if (passed && heldLongEnough) _enterFramingStage();
+  }
+
+  void _enterFramingStage() {
+    if (_stage != _Stage.checkingLight || !mounted) return;
+    _framingGuide.reset();
+    setState(() {
+      _stage = _Stage.framing;
       _progress = 0;
-      _failureMessage = null;
     });
     _resetCameraInactivityTimer();
+  }
 
-    final token = ++_flowToken;
-    _lightTimer = Timer.periodic(_lightSampleInterval, (_) {
-      _sampleLight(token);
+  /// Stage two: find the face, draw the web on it, and wait for it to settle.
+  Future<void> _trackFace(CameraImage image, int token) async {
+    final camera = _cameraDescription;
+    if (camera == null) return;
+
+    final result = await _faceTracker.process(image, camera, 0);
+    // Null means the previous frame is still in flight — skipped, not failed.
+    if (result == null || !_isTokenValid(token)) return;
+    if (_stage != _Stage.framing) return;
+
+    final ready = _framingGuide.accept(result.frame);
+
+    if (!mounted) return;
+    setState(() {
+      _meshContours = result.contours;
+      _meshSourceSize = result.sourceSize;
+      _progress = _framingGuide.progress;
     });
+
+    if (ready) await _captureSelfie(token);
   }
 
-  Future<void> _sampleLight(int token) async {
-    if (!_isTokenValid(token) || _isSamplingLight) return;
-    if (_stage != _Stage.checking) return;
+  // ── The selfie ────────────────────────────────────────────────────────────
 
-    _isSamplingLight = true;
-    try {
-      final sample = await _readLight();
-      if (!_isTokenValid(token) || _stage != _Stage.checking) return;
-
-      // A camera that will not give a reading should not strand the user: the
-      // guide waives the gate rather than blocking the flow on it.
-      final passed = sample == null ? true : _lightGate.accept(sample);
-      final since = _checkingSince ?? DateTime.now();
-      final heldLongEnough =
-          DateTime.now().difference(since) >= _minCheckingTime;
-
-      setState(() {
-        _progress = passed
-            ? 1.0
-            : (_progress + 0.06).clamp(0.0, 0.9).toDouble();
-      });
-
-      if (passed && heldLongEnough) {
-        _lightTimer?.cancel();
-        await _onLightGatePassed(token);
-      }
-    } finally {
-      _isSamplingLight = false;
-    }
-  }
-
-  /// Reads one frame's luminance and sharpness.
+  /// Takes the selfie the rest of the flow compares against the ID.
   ///
-  /// Returns null when no reading could be taken, which the caller treats as
-  /// "waive the gate" rather than "fail".
-  Future<FaceLightSample?> _readLight() async {
-    final controller = _cameraController;
-    if (controller == null || !controller.value.isInitialized) return null;
-
-    try {
-      final shot = await controller.takePicture();
-      final bytes = await File(shot.path).readAsBytes();
-      // The probe frame is a measurement, not evidence — delete it rather
-      // than leaving face images around the temp directory.
-      unawaited(File(shot.path).delete().catchError((_) => File(shot.path)));
-      return await _measure(bytes);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<FaceLightSample?> _measure(Uint8List jpeg) =>
-      compute(measureFaceLight, jpeg);
-
-  Future<void> _onLightGatePassed(int token) async {
-    if (!_isTokenValid(token)) return;
-    setState(() => _stage = _Stage.ready);
-
-    // Hold green so the pass is seen before the screen is taken over.
-    await Future<void>.delayed(_readyHold);
-    if (!_isTokenValid(token)) return;
-
-    await _runChallenge(token);
-  }
-
-  // ── The challenge ─────────────────────────────────────────────────────────
-
-  Future<void> _runChallenge(int token) async {
-    if (!_isTokenValid(token)) return;
+  /// Fired by the framing guide, not by a button: the user has already held
+  /// still long enough to satisfy it, and asking them to then press something
+  /// would move the face they just steadied.
+  Future<void> _captureSelfie(int token) async {
+    if (!_isTokenValid(token) || _stage != _Stage.framing) return;
 
     final bloc = context.read<WalletBloc>();
     _cameraInactivityTimer?.cancel();
-    setState(() => _stage = _Stage.running);
+    setState(() => _stage = _Stage.capturing);
 
-    // The native detector claims the front camera; ours must let go first.
-    await _releaseCamera();
-    if (mounted) setState(() => _isCameraInitialized = false);
-
-    final outcome = await _controller.run(
-      kycSessionId: bloc.state.kycSessionId,
-      onSessionChanged: (sessionId) {
-        if (!mounted) return;
-        bloc.add(WalletKycSessionIdChanged(sessionId));
-      },
-    );
-
-    if (!mounted || !widget.isActive) return;
-
-    if (!outcome.succeeded) {
-      await _failLiveness(outcome);
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized) {
+      _failCapture();
       return;
     }
 
-    bloc.add(
-      WalletKycAwsLivenessSucceeded(
-        selfieImageData: outcome.selfieImageData!,
-        confidence: outcome.confidence,
-      ),
-    );
-    await _completeLivenessSuccessfully(outcome.selfieImageData!);
+    try {
+      // takePicture cannot run while the stream is on; the stream has done
+      // its job anyway now that the face is framed.
+      if (_isStreaming) {
+        _isStreaming = false;
+        await controller.stopImageStream();
+      }
+
+      final shot = await controller.takePicture();
+      if (!_isTokenValid(token)) return;
+
+      await _bakeOrientation(shot.path);
+      final bytes = await File(shot.path).readAsBytes();
+      if (!_isTokenValid(token)) return;
+
+      final dataUrl = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+      bloc.add(WalletKycSelfieCaptured(dataUrl));
+
+      await _completeWithSelfie(shot.path);
+    } catch (e) {
+      KycTrace.fail('selfie capture', {'error': e.toString()});
+      _failCapture();
+    }
   }
 
-  Future<void> _completeLivenessSuccessfully(String selfieImageData) async {
-    if (_stage == _Stage.completed) return;
+  /// Writes the JPEG's EXIF rotation into its pixels.
+  ///
+  /// The server crops the face from these bytes and never reads EXIF, so a
+  /// front-camera shot left at 90° would be compared sideways against the ID.
+  Future<void> _bakeOrientation(String path) async {
+    try {
+      final file = File(path);
+      final decoded = img.decodeImage(await file.readAsBytes());
+      if (decoded == null) return;
+      await file.writeAsBytes(
+        img.encodeJpg(img.bakeOrientation(decoded), quality: 92),
+        flush: true,
+      );
+    } catch (_) {
+      // Keep the original capture if processing fails — a sideways image
+      // still beats no image.
+    }
+  }
 
-    // The downstream pages preview the selfie with Image.file, so the data URL
-    // AWS returned is written out once here.
-    final savedPath = await _saveFaceImageToFile(selfieImageData);
-    if (!mounted) return;
+  Future<void> _completeWithSelfie(String path) async {
+    if (_stage == _Stage.passed || !mounted) return;
 
     setState(() {
-      _stage = _Stage.completed;
-      _progress = 1.0;
-      _capturedSelfiePath = savedPath;
+      _stage = _Stage.passed;
+      _progress = 1;
+      _capturedSelfiePath = path;
     });
 
-    // Stay on the green frame long enough for the user to register the pass.
-    await Future<void>.delayed(const Duration(seconds: 3));
+    // The face holds inside the green frame long enough to register before
+    // the flow moves on to the ID comparison.
+    await Future<void>.delayed(_greenHold);
 
     if (!_didNotifySuccess && mounted) {
       _didNotifySuccess = true;
@@ -409,31 +435,14 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
     }
   }
 
-  Future<void> _failLiveness(FaceLivenessOutcome outcome) async {
+  void _failCapture() {
     if (!mounted) return;
     setState(() {
       _stage = _Stage.failed;
       _progress = 0;
-      _failureMessage = outcome.errorKind == null
-          ? null
-          : _errorText(outcome.errorKind!);
+      _meshContours = const [];
+      _failureMessage = null;
     });
-  }
-
-  /// Maps a detector failure onto the one thing the user can act on.
-  String? _errorText(FaceLivenessErrorKind kind) {
-    final lang = context.read<WalletBloc>().state.languageCode;
-    switch (kind) {
-      case FaceLivenessErrorKind.cameraBlocked:
-        return AppStrings.get(lang, 'kyc_camera_error');
-      case FaceLivenessErrorKind.landscape:
-        return AppStrings.get(lang, 'kyc_align_face');
-      case FaceLivenessErrorKind.cancelled:
-        return null;
-      case FaceLivenessErrorKind.cameraTooSlow:
-      case FaceLivenessErrorKind.setupFailed:
-        return null;
-    }
   }
 
   Future<void> _restartLiveness() async {
@@ -442,79 +451,43 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
     _capturedSelfiePath = null;
     _cameraInactivityTimer?.cancel();
     _lightGate.reset();
+    _framingGuide.reset();
 
     context.read<WalletBloc>().add(const WalletKycLivenessResetRequested());
-
     if (!mounted) return;
+
     setState(() {
-      _stage = _Stage.checking;
-      _progress = 0.0;
+      _stage = _Stage.checkingLight;
+      _progress = 0;
+      _meshContours = const [];
       _failureMessage = null;
     });
 
-    // Each retry is a brand-new AWS session; the old one is never reused.
+    // Every retry opens a brand-new AWS session; the old one is never reused.
     await _initCamera();
-  }
-
-  Future<String?> _saveFaceImageToFile(String rawFaceImageData) async {
-    if (rawFaceImageData.trim().isEmpty) return null;
-
-    try {
-      final commaIndex = rawFaceImageData.indexOf(',');
-      final base64Part = commaIndex >= 0
-          ? rawFaceImageData.substring(commaIndex + 1)
-          : rawFaceImageData;
-
-      final bytes = base64Decode(base64Part);
-      final path =
-          '${Directory.systemTemp.path}${Platform.pathSeparator}'
-          'kyc_liveness_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final file = File(path);
-      await file.writeAsBytes(bytes, flush: true);
-      return file.path;
-    } catch (_) {
-      return null;
-    }
   }
 
   bool _isTokenValid(int token) =>
       mounted && widget.isActive && _flowToken == token;
 
-  /// Color of the face-guide oval: yellow while checking, green once the
-  /// light is good or the person passed, red on a failure.
-  Color _faceOvalColor() {
-    switch (_stage) {
-      case _Stage.ready:
-      case _Stage.completed:
-        return const Color(0xffA3FF38);
-      case _Stage.failed:
-        return const Color(0xffFF6B6B);
-      case _Stage.checking:
-      case _Stage.running:
-        return const Color(0xffF5C518);
-    }
-  }
+  // ── What the user is told ─────────────────────────────────────────────────
 
   String _statusText(String lang) {
-    if (!_detectorAvailable) {
-      return AppStrings.get(lang, 'kyc_camera_error');
-    }
     switch (_stage) {
-      case _Stage.completed:
+      case _Stage.passed:
         return AppStrings.get(lang, 'kyc_liveness_done');
       case _Stage.failed:
         return _failureMessage ?? AppStrings.get(lang, 'kyc_liveness_failed');
-      case _Stage.running:
+      case _Stage.capturing:
         return AppStrings.get(lang, 'kyc_liveness_verifying');
-      case _Stage.ready:
-        return AppStrings.get(lang, 'kyc_align_face');
-      case _Stage.checking:
-        return _lightGateText(lang);
+      case _Stage.checkingLight:
+        return _lightText(lang);
+      case _Stage.framing:
+        return _framingText(lang);
     }
   }
 
-  /// What is wrong with the light, in the one sentence that fixes it.
-  String _lightGateText(String lang) {
+  String _lightText(String lang) {
     switch (_lightGate.verdict) {
       case FaceLightVerdict.tooBright:
         return AppStrings.get(lang, 'kyc_light_too_bright');
@@ -525,48 +498,62 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
       case FaceLightVerdict.tooBlurry:
         return AppStrings.get(lang, 'kyc_light_too_blurry');
       case FaceLightVerdict.ok:
-        return AppStrings.get(lang, 'kyc_align_face');
+        return AppStrings.get(lang, 'kyc_light_ok');
     }
   }
 
-  Widget _buildCameraPreview() {
-    final controller = _cameraController;
-    if (controller == null || !controller.value.isInitialized) {
-      return Container(color: const Color(0xffF5F5F5));
+  String _framingText(String lang) {
+    switch (_framingGuide.hint) {
+      case FaceFramingHint.noFace:
+        return AppStrings.get(lang, 'kyc_face_not_found');
+      case FaceFramingHint.moveCloser:
+        return AppStrings.get(lang, 'kyc_face_move_closer');
+      case FaceFramingHint.moveBack:
+        return AppStrings.get(lang, 'kyc_face_move_back');
+      case FaceFramingHint.centreFace:
+        return AppStrings.get(lang, 'kyc_face_centre');
+      case FaceFramingHint.holdSteady:
+        return AppStrings.get(lang, 'kyc_face_hold_steady');
+      case FaceFramingHint.ready:
+        return AppStrings.get(lang, 'kyc_face_ready');
     }
+  }
 
-    final previewSize = controller.value.previewSize;
-    if (previewSize == null) {
-      return CameraPreview(controller);
+  /// Pink while finding the face, green once AWS has passed the person.
+  Color get _webColor => _stage == _Stage.passed ? _green : _webPink;
+
+  Color get _borderColor {
+    switch (_stage) {
+      case _Stage.passed:
+        return _green;
+      case _Stage.failed:
+        return _red;
+      case _Stage.checkingLight:
+      case _Stage.framing:
+      case _Stage.capturing:
+        return _blue;
     }
-
-    return FittedBox(
-      fit: BoxFit.cover,
-      child: SizedBox(
-        width: previewSize.height,
-        height: previewSize.width,
-        child: CameraPreview(controller),
-      ),
-    );
   }
 
   @override
   void dispose() {
     _flowToken++;
-    _lightTimer?.cancel();
     _cameraInactivityTimer?.cancel();
-    _cameraController?.dispose();
+    unawaited(_releaseCamera());
+    unawaited(_faceTracker.close());
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     super.dispose();
   }
+
+  // ── Layout ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<WalletBloc, WalletState>(
       builder: (context, state) {
         final lang = state.languageCode;
-        final isCompleted = _stage == _Stage.completed;
-        final hasFailed = _stage == _Stage.failed;
+        final passed = _stage == _Stage.passed;
+        final failed = _stage == _Stage.failed;
 
         return Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -575,21 +562,19 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
             Text(
               AppStrings.get(lang, 'kyc_identity_verification'),
               style: context.textTheme.titleLarge?.bq.copyWith(
-                color: const Color(0xff1D1D1D),
+                color: _ink,
                 letterSpacing: 0.14,
                 height: 1.43,
                 fontSize: 30.sp,
               ),
             ),
             SizedBox(height: 15.h),
-
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 30.w),
               child: SizedBox(
                 height: 20.h,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     SvgPicture.asset(
                       TrydosWalletAssets.liveFace,
@@ -600,7 +585,7 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                     Text(
                       AppStrings.get(lang, 'kyc_live_face_detection'),
                       style: context.textTheme.titleLarge?.mq.copyWith(
-                        color: const Color(0xff1D1D1D),
+                        color: _ink,
                         letterSpacing: 0.14,
                         height: 1.1,
                         fontSize: 16.sp,
@@ -617,15 +602,10 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                 height: 400.h,
                 width: 1.sw,
                 margin: EdgeInsets.symmetric(horizontal: 40.w),
-
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: isCompleted
-                        ? const Color(0xffA3FF38)
-                        : hasFailed
-                        ? const Color(0xffFF6B6B)
-                        : const Color(0xff388CFF),
-                    width: isCompleted ? 2 : 0.5,
+                    color: _borderColor,
+                    width: passed ? 2 : 0.5,
                   ),
                   borderRadius: BorderRadius.circular(30.r),
                 ),
@@ -633,189 +613,40 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(30.r),
-                      child: _isCameraError
-                          ? Container(
-                              color: const Color(0xffF5F5F5),
-                              alignment: Alignment.center,
-                              child: Text(
-                                AppStrings.get(lang, 'kyc_camera_error'),
-                                textAlign: TextAlign.center,
-                                style: context.textTheme.titleLarge?.rq
-                                    .copyWith(
-                                      color: const Color(0xff1D1D1D),
-                                      fontSize: 14.sp,
-                                    ),
-                              ),
-                            )
-                          : _isCameraTimedOut
-                          ? Container(
-                              color: Colors.black,
-                              alignment: Alignment.center,
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 24.w),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      AppStrings.get(
-                                        lang,
-                                        'kyc_camera_auto_closed',
-                                      ),
-                                      textAlign: TextAlign.center,
-                                      style: context.textTheme.titleLarge?.rq
-                                          .copyWith(
-                                            color: Colors.white,
-                                            fontSize: 12.sp,
-                                          ),
-                                    ),
-                                    SizedBox(height: 12.h),
-                                    InkWell(
-                                      onTap: _reopenCameraAfterTimeout,
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 16.w,
-                                          vertical: 10.h,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xff388CFF),
-                                          borderRadius: BorderRadius.circular(
-                                            10.r,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          AppStrings.get(
-                                            lang,
-                                            'kyc_reopen_camera',
-                                          ),
-                                          style: context
-                                              .textTheme
-                                              .titleLarge
-                                              ?.rq
-                                              .copyWith(
-                                                color: Colors.white,
-                                                fontSize: 12.sp,
-                                              ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                          : isCompleted && _capturedSelfiePath != null
-                          ? SizedBox.expand(
-                              child: Image.file(
-                                File(_capturedSelfiePath!),
-                                fit: BoxFit.cover,
-                              ),
-                            )
-                          : _isCameraInitialized && _cameraController != null
-                          ? SizedBox.expand(child: _buildCameraPreview())
-                          : Container(color: const Color(0xffF5F5F5)),
+                      child: _buildCardBody(lang, context),
                     ),
-                    Positioned(
-                      left: 15.w,
-                      top: 20.h,
-                      child: SvgPicture.asset(
-                        TrydosWalletAssets.topLeft,
-                        package: TrydosWalletStyles.packageName,
-                        height: 18.h,
-                      ),
-                    ),
-                    Positioned(
-                      right: 15.w,
-                      top: 20.h,
-                      child: SvgPicture.asset(
-                        TrydosWalletAssets.topRight,
-                        package: TrydosWalletStyles.packageName,
-                        height: 18.h,
-                      ),
-                    ),
-                    Positioned(
-                      left: 15.w,
-                      bottom: 20.h,
-                      child: SvgPicture.asset(
-                        TrydosWalletAssets.bottomLeft,
-                        package: TrydosWalletStyles.packageName,
-                        height: 18.h,
-                      ),
-                    ),
-                    Positioned(
-                      right: 15.w,
-                      bottom: 20.h,
-                      child: SvgPicture.asset(
-                        TrydosWalletAssets.bottomRight,
-                        package: TrydosWalletStyles.packageName,
-                        height: 18.h,
-                      ),
-                    ),
-                    // Face-guide oval: keep the face inside it while the light
-                    // is read. Hidden once completed (the selfie shows alone).
-                    if (!_isCameraError && !_isCameraTimedOut && !isCompleted)
+                    ..._corners(),
+                    // The web: the user watches it find their face, grow as
+                    // they lean in, and turn green when they pass.
+                    if (!_isCameraError &&
+                        !_isCameraTimedOut &&
+                        _meshContours.isNotEmpty)
                       Positioned.fill(
-                        child: IgnorePointer(
-                          child: Center(
-                            child: DottedBorder(
-                              borderType: BorderType.Oval,
-                              color: _faceOvalColor(),
-                              strokeWidth: 2.5,
-                              dashPattern: const [8, 6],
-                              child: SizedBox(width: 190.w, height: 250.h),
-                            ),
+                        // Clipped to the card: without this the painter draws
+                        // on the whole Stack and the web spills past the
+                        // preview's rounded edge.
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(30.r),
+                          child: FaceMeshOverlay(
+                            contours: _meshContours,
+                            sourceSize: _meshSourceSize,
+                            color: _webColor,
                           ),
                         ),
+                      ),
+                    if (!_isCameraError && !_isCameraTimedOut)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 14.h,
+                        child: Center(child: _hintPill(lang, context)),
                       ),
                   ],
                 ),
               ),
             ),
-            SizedBox(height: 10.h),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 60.w),
-              child: Text(
-                _statusText(lang),
-                textAlign: TextAlign.center,
-                style: context.textTheme.titleLarge?.rq.copyWith(
-                  color: hasFailed
-                      ? const Color(0xffFF6B6B)
-                      : const Color(0xff1D1D1D),
-                  letterSpacing: 0.14,
-                  height: 1.43,
-                  fontSize: 14.sp,
-                ),
-              ),
-            ),
-            SizedBox(height: 10.h),
-            if (_stage == _Stage.running)
-              SizedBox(
-                width: 22.r,
-                height: 22.r,
-                child: const CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xff388CFF),
-                ),
-              ),
-            if (hasFailed && _detectorAvailable) ...[
-              InkWell(
-                highlightColor: Colors.transparent,
-                splashColor: Colors.transparent,
-                onTap: _restartLiveness,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.h),
-                  child: Text(
-                    AppStrings.get(lang, 'kyc_incorrect_try_again'),
-                    style: context.textTheme.titleLarge?.rq.copyWith(
-                      color: const Color(0xff4D84FF),
-                      letterSpacing: 0.14,
-                      height: 1.43,
-                      fontSize: 14.sp,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 10.h),
-            ],
-            if (!isCompleted && !hasFailed)
+            SizedBox(height: 12.h),
+            if (!passed && !failed)
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 45.w),
                 child: SizedBox(
@@ -828,31 +659,23 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                         Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(5.r),
-                            border: Border.all(
-                              color: const Color(0xff388CFF),
-                              width: 0.5,
-                            ),
+                            border: Border.all(color: _blue, width: 0.5),
                           ),
                         ),
                         TweenAnimationBuilder<double>(
                           tween: Tween(begin: 0, end: _progress),
-                          duration: const Duration(milliseconds: 120),
+                          duration: const Duration(milliseconds: 150),
                           curve: Curves.easeOut,
-                          builder: (context, value, child) {
-                            return FractionallySizedBox(
-                              alignment: Alignment.centerLeft,
-                              widthFactor: value,
-                              child: child,
-                            );
-                          },
+                          builder: (context, value, child) =>
+                              FractionallySizedBox(
+                                alignment: Alignment.centerLeft,
+                                widthFactor: value,
+                                child: child,
+                              ),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: const Color(0xff388CFF),
+                              color: _blue,
                               borderRadius: BorderRadius.circular(5.r),
-                              border: Border.all(
-                                color: const Color(0xff388CFF),
-                                width: 0.5,
-                              ),
                             ),
                           ),
                         ),
@@ -861,6 +684,24 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                   ),
                 ),
               ),
+            if (failed) ...[
+              SizedBox(height: 6.h),
+              InkWell(
+                highlightColor: Colors.transparent,
+                splashColor: Colors.transparent,
+                onTap: _restartLiveness,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.h),
+                  child: Text(
+                    AppStrings.get(lang, 'kyc_incorrect_try_again'),
+                    style: context.textTheme.titleLarge?.rq.copyWith(
+                      color: const Color(0xff4D84FF),
+                      fontSize: 14.sp,
+                    ),
+                  ),
+                ),
+              ),
+            ],
             const Spacer(),
             SvgPicture.asset(
               TrydosWalletAssets.privacy,
@@ -881,6 +722,141 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildCardBody(String lang, BuildContext context) {
+    if (_isCameraError) {
+      return Container(
+        color: const Color(0xffF5F5F5),
+        alignment: Alignment.center,
+        child: Text(
+          AppStrings.get(lang, 'kyc_camera_error'),
+          textAlign: TextAlign.center,
+          style: context.textTheme.titleLarge?.rq.copyWith(
+            color: _ink,
+            fontSize: 14.sp,
+          ),
+        ),
+      );
+    }
+
+    if (_isCameraTimedOut) {
+      return Container(
+        color: Colors.black,
+        alignment: Alignment.center,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                AppStrings.get(lang, 'kyc_camera_auto_closed'),
+                textAlign: TextAlign.center,
+                style: context.textTheme.titleLarge?.rq.copyWith(
+                  color: Colors.white,
+                  fontSize: 12.sp,
+                ),
+              ),
+              SizedBox(height: 12.h),
+              InkWell(
+                onTap: _reopenCameraAfterTimeout,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 10.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _blue,
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  child: Text(
+                    AppStrings.get(lang, 'kyc_reopen_camera'),
+                    style: context.textTheme.titleLarge?.rq.copyWith(
+                      color: Colors.white,
+                      fontSize: 12.sp,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_stage == _Stage.passed && _capturedSelfiePath != null) {
+      return SizedBox.expand(
+        child: Image.file(File(_capturedSelfiePath!), fit: BoxFit.cover),
+      );
+    }
+
+    if (_isCameraInitialized && _cameraController != null) {
+      return SizedBox.expand(child: _buildCameraPreview());
+    }
+    return Container(color: const Color(0xffF5F5F5));
+  }
+
+  /// The instruction, on a dark pill over the preview where the eye already
+  /// is — rather than below the card, where it would be missed.
+  Widget _hintPill(String lang, BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 7.h),
+      decoration: BoxDecoration(
+        color: _ink.withValues(alpha: 0.82),
+        borderRadius: BorderRadius.circular(20.r),
+      ),
+      child: Text(
+        _statusText(lang),
+        textAlign: TextAlign.center,
+        style: context.textTheme.titleLarge?.rq.copyWith(
+          color: Colors.white,
+          fontSize: 12.sp,
+          height: 1.2,
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _corners() {
+    final corners = <(String, double?, double?, double?, double?)>[
+      (TrydosWalletAssets.topLeft, 15.w, null, 20.h, null),
+      (TrydosWalletAssets.topRight, null, 15.w, 20.h, null),
+      (TrydosWalletAssets.bottomLeft, 15.w, null, null, 20.h),
+      (TrydosWalletAssets.bottomRight, null, 15.w, null, 20.h),
+    ];
+    return [
+      for (final (asset, left, right, top, bottom) in corners)
+        Positioned(
+          left: left,
+          right: right,
+          top: top,
+          bottom: bottom,
+          child: SvgPicture.asset(
+            asset,
+            package: TrydosWalletStyles.packageName,
+            height: 18.h,
+          ),
+        ),
+    ];
+  }
+
+  Widget _buildCameraPreview() {
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized) {
+      return Container(color: const Color(0xffF5F5F5));
+    }
+
+    final previewSize = controller.value.previewSize;
+    if (previewSize == null) return CameraPreview(controller);
+
+    return FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        width: previewSize.height,
+        height: previewSize.width,
+        child: CameraPreview(controller),
+      ),
     );
   }
 }

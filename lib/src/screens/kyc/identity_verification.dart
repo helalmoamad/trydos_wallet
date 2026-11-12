@@ -8,7 +8,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_mlkit_object_detection/google_mlkit_object_detection.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:trydos_wallet/src/bloc/wallet_bloc.dart';
 import 'package:trydos_wallet/src/bloc/wallet_event.dart';
 import 'package:trydos_wallet/src/bloc/wallet_state.dart';
@@ -17,6 +16,9 @@ import 'package:trydos_wallet/src/constent/build_context.dart';
 import 'package:trydos_wallet/src/constent/styles.dart';
 import 'package:trydos_wallet/src/constent/theme/typography.dart';
 import 'package:trydos_wallet/src/localization/app_strings.dart';
+import 'package:trydos_wallet/src/screens/kyc/widgets/document_lock_overlay.dart';
+import 'package:trydos_wallet/src/screens/kyc/widgets/scanning_line.dart';
+import 'package:trydos_wallet/src/utils/kyc_trace.dart';
 import 'package:trydos_wallet/src/utils/ui_utils.dart';
 import 'package:trydos_wallet/src/analytics/wallet_analytics.dart';
 
@@ -51,6 +53,17 @@ class _IdentityVerificationState extends State<IdentityVerification> {
   bool _isProcessing = false;
   bool _isStreamActive = false;
   bool _isCapturing = false;
+
+  /// The shot held on screen while the server reads it.
+  ///
+  /// Kept separate from [_frontImagePath] / [_backImagePath]: those are the
+  /// result of a side, and the analysis rewrites them with the server's crop.
+  /// This is only what to show in the viewfinder meanwhile.
+  String? _frozenCapturePath;
+
+  /// True from the shutter until the analysis answers. Freezes the preview,
+  /// runs the scanning line, and keeps the detector overlay out of the way.
+  bool _isAwaitingAnalysis = false;
   int _frameCounter = 0;
   Timer? _cameraInactivityTimer;
 
@@ -315,15 +328,25 @@ class _IdentityVerificationState extends State<IdentityVerification> {
       if (objects.isNotEmpty &&
           _isDocumentLike(objects.first, image.width, image.height)) {
         _consecutiveDocFrames++;
-        if (_consecutiveDocFrames >= _kConsecutiveRequired) {
-          _lastBoundingBox = objects.first.boundingBox;
-          // ML Kit rotates the image internally and returns bbox in the
-          // rotated (display-oriented) space. For 90°/270° sensors swap axes.
-          final orient = _cameraController!.description.sensorOrientation;
-          final swapAxes = orient == 90 || orient == 270;
-          _lastEffectiveStreamSize = swapAxes
-              ? Size(image.height.toDouble(), image.width.toDouble())
-              : Size(image.width.toDouble(), image.height.toDouble());
+
+        // Tracked from the first good frame, not from the confirmed one: the
+        // frame on screen is following the card, and waiting for the capture
+        // threshold would leave it parked while the card has already moved.
+        // ML Kit rotates the image internally and returns the box in the
+        // rotated (display-oriented) space. For 90°/270° sensors swap axes.
+        final orient = _cameraController!.description.sensorOrientation;
+        final swapAxes = orient == 90 || orient == 270;
+        final streamSize = swapAxes
+            ? Size(image.height.toDouble(), image.width.toDouble())
+            : Size(image.width.toDouble(), image.height.toDouble());
+        _lastBoundingBox = objects.first.boundingBox;
+        _lastEffectiveStreamSize = streamSize;
+
+        if (_consecutiveDocFrames < _kConsecutiveRequired) {
+          // Still only a candidate — show the frame moving onto it, but do
+          // not advance the capture countdown yet.
+          setState(() {});
+        } else {
           final next = (_detectProgress + 0.09).clamp(0.0, 1.0);
           setState(() => _detectProgress = next);
           if (next >= 1.0 && !_isCapturing) {
@@ -333,6 +356,12 @@ class _IdentityVerificationState extends State<IdentityVerification> {
         }
       } else {
         _consecutiveDocFrames = 0;
+        // The card left the frame: drop the box so the overlay returns to its
+        // resting window instead of leaving a frame around empty space.
+        if (_lastBoundingBox != null && !_isCapturing) {
+          _lastBoundingBox = null;
+          if (mounted) setState(() {});
+        }
         // Update distance only if no object at all (already set inside _isDocumentLike)
         if (objects.isEmpty) {
           if (_distanceStatus != _DistanceStatus.tooFar && mounted) {
@@ -502,11 +531,25 @@ class _IdentityVerificationState extends State<IdentityVerification> {
       final xFile = await _cameraController!.takePicture();
       await _cropToDocument(xFile.path);
       if (!mounted) return;
+      KycTrace.step('captured', {
+        'step': _step.name,
+        'path': xFile.path.split('/').last,
+      });
+      // Freeze what was shot. The preview stays on it, under a sweeping
+      // line, until the analysis comes back — a live preview here would
+      // suggest the user should keep aiming at something.
+      setState(() {
+        _frozenCapturePath = xFile.path;
+        _isAwaitingAnalysis = true;
+        _lastBoundingBox = null;
+      });
+
       if (_step == _ScanStep.front) {
         setState(() {
           _frontImagePath = xFile.path;
           _detectProgress = 0.0;
         });
+        KycTrace.step('dispatch analyze-id', {'side': 'front'});
         context.read<WalletBloc>().add(
           WalletKycAnalyzeIdRequested(
             imagePath: xFile.path,
@@ -519,6 +562,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
           _backImagePath = xFile.path;
           _detectProgress = 0.0;
         });
+        KycTrace.step('dispatch analyze-id', {'side': 'back'});
         context.read<WalletBloc>().add(
           WalletKycAnalyzeIdRequested(
             imagePath: xFile.path,
@@ -658,6 +702,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
 
   Future<void> _handleFrontAnalyzeSuccess(String imagePath) async {
     if (!mounted) return;
+    KycTrace.ok('front accepted → step=back');
     setState(() {
       _frontImagePath = imagePath;
       _step = _ScanStep.back;
@@ -680,6 +725,7 @@ class _IdentityVerificationState extends State<IdentityVerification> {
 
   Future<void> _handleBackAnalyzeSuccess(String imagePath) async {
     if (!mounted) return;
+    KycTrace.ok('back accepted → step=done');
     setState(() {
       _backImagePath = imagePath;
       _step = _ScanStep.done;
@@ -708,15 +754,11 @@ class _IdentityVerificationState extends State<IdentityVerification> {
     required bool isNetworkError,
   }) {
     if (uploadStatus == WalletStatus.loading) {
-      return Shimmer.fromColors(
-        baseColor: const Color(0xffE6E6E6),
-        highlightColor: const Color(0xffF7F7F7),
-        child: Container(
-          height: 96.h,
-          width: 153.w,
-          color: const Color(0xffEDEDED),
-        ),
-      );
+      // Nothing here while the request runs: the frozen capture above is
+      // carrying that, with the scanning line over it. A shimmer down here
+      // too would say the same thing twice, in the place the finished
+      // thumbnail is about to appear.
+      return const SizedBox.shrink();
     }
 
     if (uploadStatus == WalletStatus.failure) {
@@ -824,6 +866,31 @@ class _IdentityVerificationState extends State<IdentityVerification> {
       listener: (context, state) {
         final frontStatus = state.kycFrontAnalyzeStatus;
         final backStatus = state.kycBackAnalyzeStatus;
+
+        if (frontStatus != _lastFrontAnalyzeStatus ||
+            backStatus != _lastBackAnalyzeStatus) {
+          KycTrace.step('screen sees', {
+            'step': _step.name,
+            'front': frontStatus.name,
+            'back': backStatus.name,
+            'frontPath': state.kycFrontImagePath != null,
+            'backPath': state.kycBackImagePath != null,
+            'frozen': _isAwaitingAnalysis,
+          });
+        }
+
+        // The request has answered, either way: unfreeze. The thumbnail
+        // below now carries the result, and the viewfinder goes back to the
+        // camera for the next side.
+        final analysing =
+            (_step == _ScanStep.front ? frontStatus : backStatus) ==
+            WalletStatus.loading;
+        if (_isAwaitingAnalysis && !analysing) {
+          setState(() {
+            _isAwaitingAnalysis = false;
+            _frozenCapturePath = null;
+          });
+        }
 
         if (frontStatus != _lastFrontAnalyzeStatus) {
           _lastFrontAnalyzeStatus = frontStatus;
@@ -1030,8 +1097,50 @@ class _IdentityVerificationState extends State<IdentityVerification> {
                               ),
                       ),
                     ),
+                    // The frame on the card's own edges, with everything
+                    // outside it dimmed. Hidden while the capture is frozen —
+                    // the scanning line below takes over then.
+                    if (_isCameraInitialized &&
+                        !_isCameraTimedOut &&
+                        !_isAwaitingAnalysis)
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(30.r),
+                          child: DocumentLockOverlay(
+                            bounds: _lastBoundingBox,
+                            sourceSize: _lastEffectiveStreamSize ?? Size.zero,
+                            color: _detectProgress >= 1
+                                ? const Color(0xffA3FF38)
+                                : const Color(0xff388CFF),
+                            locked: _detectProgress >= 1,
+                          ),
+                        ),
+                      ),
+                    // The capture, frozen where it was taken, with a line
+                    // sweeping it while the server reads it.
+                    if (_isAwaitingAnalysis && _frozenCapturePath != null)
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(30.r),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Container(color: Colors.black),
+                              // contain, not cover: this is the shot being
+                              // read, and cropping its edges to fill the box
+                              // hides the very margins the user needs to see
+                              // were captured.
+                              Image.file(
+                                File(_frozenCapturePath!),
+                                fit: BoxFit.contain,
+                              ),
+                              const ScanningLine(),
+                            ],
+                          ),
+                        ),
+                      ),
                     // Low-light warning overlay
-                    if (_isLowLight)
+                    if (_isLowLight && !_isAwaitingAnalysis)
                       Positioned(
                         top: 48.h,
                         left: 20.w,
