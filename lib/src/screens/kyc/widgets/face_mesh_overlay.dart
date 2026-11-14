@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 /// The web drawn over the user's face while they steady it.
@@ -28,9 +26,11 @@ class FaceMeshOverlay extends StatelessWidget {
   /// oval first, when the detector found one.
   final List<List<Offset>> contours;
 
-  /// Size of the image the points were detected in — already in the detector's
-  /// rotated space. The painter maps them with the same "cover" transform the
-  /// preview uses, or the web floats away from the face.
+  /// Size of the frame the points were detected in — already in the
+  /// detector's rotated space.
+  ///
+  /// This widget is laid out inside the preview's own box, so the mapping is
+  /// a plain scale between two descriptions of the same field of view.
   final Size sourceSize;
 
   /// Web colour. Green once the challenge has been passed.
@@ -187,21 +187,23 @@ class _FaceMeshPainter extends CustomPainter {
     return best;
   }
 
-  /// Maps detector coordinates onto the widget with the preview's own
-  /// "cover" transform: scale by the larger ratio, then centre the overflow.
+  /// Maps detector coordinates onto this widget.
+  ///
+  /// A plain per-axis scale, with no cropping or centring: this painter is
+  /// laid out inside the preview's own box, so the two already describe the
+  /// same field of view and whatever letterboxing the preview does is applied
+  /// to both afterwards. Re-deriving a "cover" transform here — from the
+  /// stream frame's size, which need not match the preview surface's — is
+  /// what used to leave the web sitting below the face.
   List<Offset> _mapContour(List<Offset> contour, Size size) {
-    final scale = math.max(
-      size.width / sourceSize.width,
-      size.height / sourceSize.height,
-    );
-    final dx = (size.width - sourceSize.width * scale) / 2;
-    final dy = (size.height - sourceSize.height * scale) / 2;
+    final scaleX = size.width / sourceSize.width;
+    final scaleY = size.height / sourceSize.height;
 
     return [
       for (final point in contour)
         Offset(
-          mirror ? size.width - (point.dx * scale + dx) : point.dx * scale + dx,
-          point.dy * scale + dy,
+          mirror ? size.width - point.dx * scaleX : point.dx * scaleX,
+          point.dy * scaleY,
         ),
     ];
   }

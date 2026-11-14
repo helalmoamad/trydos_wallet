@@ -618,22 +618,6 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
                     ..._corners(),
                     // The web: the user watches it find their face, grow as
                     // they lean in, and turn green when they pass.
-                    if (!_isCameraError &&
-                        !_isCameraTimedOut &&
-                        _meshContours.isNotEmpty)
-                      Positioned.fill(
-                        // Clipped to the card: without this the painter draws
-                        // on the whole Stack and the web spills past the
-                        // preview's rounded edge.
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(30.r),
-                          child: FaceMeshOverlay(
-                            contours: _meshContours,
-                            sourceSize: _meshSourceSize,
-                            color: _webColor,
-                          ),
-                        ),
-                      ),
                     if (!_isCameraError && !_isCameraTimedOut)
                       Positioned(
                         left: 0,
@@ -850,12 +834,30 @@ class _LiveFaceDetectionState extends State<LiveFaceDetection> {
     final previewSize = controller.value.previewSize;
     if (previewSize == null) return CameraPreview(controller);
 
+    // The mesh lives inside this FittedBox, not beside it.
+    //
+    // Drawn as a sibling it had to re-derive the same "cover" transform from
+    // the stream frame's size — and on Android the preview surface and the
+    // image stream are routinely handed different resolutions for one preset.
+    // Two sources, two transforms, and the web sat a little below the face.
+    // Inside the box there is one transform, applied to both.
     return FittedBox(
       fit: BoxFit.cover,
       child: SizedBox(
         width: previewSize.height,
         height: previewSize.width,
-        child: CameraPreview(controller),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CameraPreview(controller),
+            if (_meshContours.isNotEmpty)
+              FaceMeshOverlay(
+                contours: _meshContours,
+                sourceSize: _meshSourceSize,
+                color: _webColor,
+              ),
+          ],
+        ),
       ),
     );
   }
