@@ -2084,6 +2084,51 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         return;
       }
 
+      // We asked for the front and the server read a back.
+      //
+      // Until now the side was taken from the request while the face check
+      // read it off the response, so the two could disagree silently: a
+      // driving licence answered `side:"back"` to a front capture, which
+      // switched the missing-face guard off and let a back-shaped record
+      // through as the front.
+      if (isFront && data.isSuccess && data.resolvedSide == 'back') {
+        KycTrace.fail('analyze-id rejected', {
+          'reason': 'server read a back for a front capture',
+          'idType': data.extractedData?.idType,
+        });
+        emit(
+          state.copyWith(
+            kycFrontAnalyzeStatus: WalletStatus.failure,
+            kycFrontAnalyzeErrorMessage:
+                'This is the back of your ID. Show the side with your photo.',
+            kycFrontAnalyzeIsNetworkError: false,
+            kycExtractedData: null,
+          ),
+        );
+        return;
+      }
+
+      // A front the server called a success but read nothing usable from.
+      // Storing it fills the summary with blank rows and submits a record
+      // with no name and no date of birth on it.
+      if (isFront && data.isSuccess && !data.hasCriticalFields) {
+        KycTrace.fail('analyze-id rejected', {
+          'reason': 'front success without critical fields',
+          'idType': data.extractedData?.idType,
+        });
+        emit(
+          state.copyWith(
+            kycFrontAnalyzeStatus: WalletStatus.failure,
+            kycFrontAnalyzeErrorMessage:
+                "We couldn't read your name and date of birth. Avoid glare, "
+                'keep the whole card in the frame, and try again.',
+            kycFrontAnalyzeIsNetworkError: false,
+            kycExtractedData: null,
+          ),
+        );
+        return;
+      }
+
       // The back read fine, but is it the back of *this* card? The server
       // reads each side on its own and has no opinion on that, so a user who
       // photographed another document would otherwise reach submit first.
@@ -2139,9 +2184,16 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
             kycBackImagePath: isFront
                 ? state.kycBackImagePath
                 : event.imagePath,
+            // The back is folded into the front rather than discarded: it
+            // back-fills the national number, document number and surname
+            // from the MRZ or barcode, and a card whose number the front
+            // could not read gets one from here. Stays null when the front
+            // never produced a record — the guards above see to that, and
+            // building one out of the back alone would mean a person with no
+            // name and no date of birth.
             kycExtractedData: isFront
                 ? data.extractedData
-                : state.kycExtractedData,
+                : state.kycExtractedData?.mergedWith(data.extractedData),
             kycNextStep: data.nextStep,
             // Only ever the real ID photo: frontMissingIdFace above already
             // refused a front without one, so there is nothing to fall back
